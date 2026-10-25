@@ -8,7 +8,7 @@
 | Karte | `components/requirements-map.tsx` | Liste (Handy) / Raster (Desktop), Badges |
 | Projektkarte | `components/project-card.tsx` | oberste Karte mit Link `/projekt` |
 | Kopfzeile | `components/site-header.tsx` | App-Name, Link „Über das Projekt“, Rolle + Abmelden (F01-AC16) |
-| Startseite | `app/page.tsx` | Projektkarte → Landkarte → Rollenwechsel; statisch |
+| Startseite | `app/page.tsx` | Projektkarte → Landkarte → Rollenwechsel; ohne API-Abfrage (pro Anfrage gerendert wegen CSP-Nonce, F11) |
 | Platzhalter | `app/projekt/page.tsx` | Phase-9-Platzhalter |
 
 Repo-Links werden aus `NEXT_PUBLIC_REPO_URL` + `repoPath` gebildet (Repo ist zunächst privat; ab Veröffentlichung funktionieren die Links für alle).

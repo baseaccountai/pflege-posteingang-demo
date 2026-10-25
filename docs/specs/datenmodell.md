@@ -1,15 +1,19 @@
 # Gemeinsames Datenmodell (Stufe 1)
 
-Stand: 25.10.2026 · Status: Entwurf · Gilt für alle Specs; jede Spec nennt, welche Tabellen sie anlegt (Migration in ihrer `tasks.md`).
+Stand: 25.10.2026 · Status: Entwurf (überarbeitet nach Codex-Review) · Gilt für alle Specs; jede Spec nennt, welche Tabellen sie anlegt (Migration in ihrer `tasks.md`).
 
 ## Grundsätze
 
-- **Jede Tabelle mit Bewohnerbezug hat eine Spalte `ward_id`** und eine RLS-Policy darauf. Rechte hängen nie nur am Backend-Code.
-- **Zugriff im Namen des Nutzers:** Das Backend setzt pro Transaktion `set local role authenticated` und `request.jwt.claims` mit den geprüften Claims (siehe F01-Design). Policies lesen die Claims über Hilfsfunktionen.
-- **Herkunft:** Jeder Akteneintrag hat `source_document_id`, `created_by` (Nutzer-ID aus dem IdP), `actor_type` (`human` | `agent`) und `confirmed_by`.
-- IDs sind `uuid` (`gen_random_uuid()`), Zeitstempel `timestamptz`.
+- **Jede Tabelle mit Bewohnerbezug hat `ward_id`** und RLS-Policies darauf. RLS ist aktiviert **und erzwungen** (`force row level security`).
+- **Verweise können den Wohnbereich nicht wechseln:** Bewohner- und Dokumentverweise sind **zusammengesetzte Fremdschlüssel** mit `ward_id` (z. B. `(resident_id, ward_id) references residents(id, ward_id)`). Eine WB2-Zeile kann so keinen WB1-Bewohner und kein WB1-Dokument referenzieren.
+- **Policies je Operation:** `select … using (ward_id = any(app.ward_ids()))`, `insert … with check (ward_id = any(app.ward_ids()))`, `update … using (…) with check (…)`. Ein Trigger verhindert Änderungen an `ward_id` und `resident_id` nach dem Anlegen.
+- **Kein `delete`** für `authenticated` auf Akten- und Dokumenttabellen (Ausnahme: `chunks`, abgeleitete Daten, F05).
+- **Keine Rechte für `anon`:** `revoke all … from anon` auf allen Tabellen und Funktionen (Supabase stellt `public` über die REST-API bereit).
+- **Zugriff im Namen des Nutzers:** Das Backend setzt pro Transaktion `set local role authenticated` und `set_config('request.jwt.claims', …, true)` (siehe F01-Design). Fehlen die Claims, liefern die Hilfsfunktionen leere Werte → keine Zeilen.
+- **Vertrauensannahme:** Das Backend ist für die korrekte Ableitung der Claims vertrauenswürdig. RLS schützt vor Programmierfehlern in Abfragen, nicht vor einem kompromittierten Backend.
+- IDs `uuid` (`gen_random_uuid()`), Zeitstempel `timestamptz`.
 
-## Claims (vom Backend aus dem OIDC-Token abgeleitet)
+## Claims (vom Backend aus dem geprüften OIDC-Token abgeleitet)
 
 | Claim | Beispiel | Bedeutung |
 |---|---|---|
@@ -19,32 +23,46 @@ Stand: 25.10.2026 · Status: Entwurf · Gilt für alle Specs; jede Spec nennt, w
 | `actor_type` | `human` (Stufe 2: `agent`) | Mensch oder Agent |
 | `display_name` | `Pflegekraft WB1` | für Herkunftsangaben |
 
-Hilfsfunktionen (Schema `app`, `stable`, `security invoker`): `app.ward_ids() → text[]`, `app.role() → text`, `app.uid() → text`, `app.actor_type() → text`.
+Hilfsfunktionen (Schema `app`, `stable`, `security invoker`): `app.ward_ids() → text[]` (leer, wenn Claims fehlen), `app.role()`, `app.uid()`, `app.actor_type()`, `app.display_name()`.
 
 ## Tabellen
 
-| Tabelle | Wichtige Spalten | Angelegt in | RLS |
-|---|---|---|---|
-| `wards` | `id text` (`wb1`, `wb2`), `name` | F01 | lesen: `id = any(app.ward_ids())` |
-| `residents` | `id`, `ward_id`, `display_name`, `birth_date`, `room` | F01 | lesen: eigener WB |
-| `documents` | `id`, `ward_id`, `resident_id` (null bis Freigabe), `doc_type`, `status`, `storage_path`, `ocr_markdown`, `suggestion jsonb`, `document_date`, `uploaded_by`, `approved_by`, `approved_at`, `error_code` | F02 | lesen/einfügen/ändern: eigener WB |
-| `medications` | `id`, `ward_id`, `resident_id`, `name`, `strength`, `dosage`, `status` (`active` \| `discontinued`), `source_document_id`, `created_by`, `actor_type`, `confirmed_by`, `created_at`, `discontinued_at` | F03 | eigener WB; kein `delete` |
-| `diagnoses` | `id`, `ward_id`, `resident_id`, `text`, `source_document_id`, Herkunftsspalten | F03 | eigener WB; kein `delete` |
-| `follow_ups` (Wiedervorlagen) | `id`, `ward_id`, `resident_id`, `title`, `due_date`, `status` (`open` \| `done`), `source_document_id`, Herkunftsspalten | F03 | eigener WB; kein `delete` |
-| `chunks` | `id`, `document_id`, `ward_id`, `resident_id`, `doc_type`, `document_date`, `page`, `heading`, `content`, `embedding vector(1024)` | F05 | lesen: eigener WB |
-| `usage_counters` | `day date`, `kind` (`ocr_page` \| `llm_call` \| `upload`), `subject` (global oder Nutzer), `count` | F10 | kein direkter Zugriff; nur über `app.consume_quota()` (`security definer`) |
+| Tabelle | Wichtige Spalten | Angelegt in |
+|---|---|---|
+| `wards` | `id text` (`wb1`, `wb2`), `name` | F01 |
+| `residents` | `id`, `ward_id`, `display_name`, `birth_date`, `room`; `unique (id, ward_id)` | F01 |
+| `documents` | `id`, `ward_id`, `resident_id` (null bis Freigabe), `doc_type`, `status`, `error_code`, `ocr_pages jsonb` (`[{page, markdown}]`), `suggestion jsonb`, `suggestion_model`, `document_date`, `uploaded_by`, `upload_session`, `attempts`, `status_changed_at`, `approved_by`, `approved_by_name`, `approved_at`, `indexing_status`; `unique (id, ward_id)` | F02 |
+| `document_files` | `document_id` (PK), `ward_id`, `mime`, `size_bytes`, `content bytea` (≤ 4 MB) | F02 |
+| `medications` | `id`, `ward_id`, `resident_id`, `name`, `strength`, `dosage jsonb` (morgens/mittags/abends/nachts), `status` (`active` \| `discontinued`) | F03 |
+| `medication_events` | `id`, `ward_id`, `medication_id`, `kind` (`new` \| `changed` \| `discontinued`), `document_id`, `before jsonb`, `after jsonb`, `actor_type`, `created_by`, `confirmed_by`, `confirmed_by_name`, `created_at` | F03 |
+| `diagnoses` | `id`, `ward_id`, `resident_id`, `text`, `source_document_id`, `actor_type`, `created_by`, `confirmed_by`, `confirmed_by_name`, `created_at` | F03 |
+| `follow_ups` (Wiedervorlagen) | wie `diagnoses` + `title`, `due_date`, `status` (`open` \| `done`), `done_by`, `done_by_name`, `done_at` | F03 |
+| `chunks` | `id`, `document_id`, `ward_id`, `resident_id`, `doc_type`, `document_date`, `page`, `heading`, `content`, `embedding vector(1024)`, `embedding_model` | F05 |
+| `usage_counters` | `day date`, `kind`, `subject`, `count`; `primary key (day, kind, subject)` | F10 |
+| `quota_limits` | `kind`, `scope` (`global` \| `session`), `daily_limit` | F10 |
+| `system_state` | `key`, `value` (z. B. `maintenance = true` während des Resets) | F10 |
 
-`doc_type`: `arztbrief` · `medikationsplan` · `ueberleitungsbogen` · `sonstiges`
-`documents.status`: `uploaded` → `processing` → `ready_for_review` → `approved` · Fehlerpfade: `unreadable`, `failed`, `rejected` · (Stufe 2: `suspicious`)
+Aufzählungen:
+- `doc_type`: `arztbrief` · `medikationsplan` · `ueberleitungsbogen` · `sonstiges`
+- `documents.status`: siehe Zustandsautomat in F02-Design
+- `indexing_status`: `pending` · `done` · `failed`
 
-## Speicher
+Herkunft eines Medikaments = letztes `medication_events`-Ereignis; „neu/geändert/abgesetzt in den letzten n Tagen“ wird aus `kind` und `created_at` der Ereignisse berechnet.
 
-Supabase Storage, Bucket `documents` (privat), Pfad `<ward_id>/<document_id>/<dateiname>`. Policies wie `documents`: nur eigener Wohnbereich.
+## Sitzungen (nicht über die REST-API erreichbar)
+
+| Tabelle | Spalten | Zugriff |
+|---|---|---|
+| `bff.sessions` | `id_hash` (SHA-256 der Sitzungs-ID), `sub`, `app_role`, `display_name`, `tokens_enc bytea` (AES-256-GCM mit `SESSION_ENC_KEY`: Access-, Refresh-, ID-Token), `access_expires_at`, `created_at`, `expires_at` (max. 8 h), `revoked_at` | nur Rolle `bff_session` |
+
+Schema `bff` ist nicht in den von Supabase veröffentlichten Schemata.
 
 ## Rollen in Postgres
 
 | Rolle | Zweck | Rechte |
 |---|---|---|
-| `api_gateway` | Login-Rolle des Backends | darf nur `set role authenticated`; **kein** `bypassrls`, keine Tabellenrechte |
-| `authenticated` | Nutzer/Agent im Namen von | Tabellenrechte + RLS |
-| `service_role` | nur Seed/Reset (F10) | umgeht RLS – nie im Anfragepfad |
+| `api_gateway` | Login-Rolle des Backends | nur `set role authenticated`; kein `bypassrls`, keine eigenen Tabellenrechte |
+| `authenticated` | Nutzer/Agent „im Namen von“ | Tabellenrechte wie oben + RLS |
+| `bff_session` | Login-Rolle des Next.js-BFF | nur `select/insert/update` auf `bff.sessions` |
+| `quota_owner` | Eigentümer von `app.consume_quota` | nur `usage_counters`, `quota_limits` |
+| `service_role` / DB-Admin | nur Reset und Migrationen (F10, F11) | umgeht RLS – nie im Anfragepfad |

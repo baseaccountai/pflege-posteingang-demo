@@ -8,7 +8,17 @@ Format im Kiro-Stil (siehe [ADR 0006](../architecture/adr/0006-kiro-spec-format.
 | `design.md` | Komponenten, Datenmodell, Schnittstellen, Sicherheit, Tests je Ebene |
 | `tasks.md` | TDD-Checkliste; jede Aufgabe verweist auf `Fxx-ACn` |
 
-Gemeinsames Datenmodell aller Features: [`datenmodell.md`](datenmodell.md).
+Gemeinsames Datenmodell aller Features: [`datenmodell.md`](datenmodell.md) · Alle Umgebungsvariablen: [`konfiguration.md`](konfiguration.md).
+
+## Umsetzungsreihenfolge Stufe 1 (vertikal zuerst)
+
+| Schritt | Phase | Inhalt | Ziel |
+|---|---|---|---|
+| 1 | 2 | F01 Spike → Login öffentlich, Rollen, RLS | Anmelden + Rechte |
+| 2 | 3 | F02 → F03 → F04, dazu F10 (Seeds, Kontingente) | Papier → Akte durchgängig |
+| 3 | 4 | F05 RAG, F09 Landkarte, F11 PWA + Deployment, F10 Reset/Hinweise | **online bis 02.11.** |
+
+Bei Zeitnot wird zuerst F11-PWA-Feinschliff verschoben, nie Rechte- oder Sicherheitskriterien.
 
 ## Ablauf
 

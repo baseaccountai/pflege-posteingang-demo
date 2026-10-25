@@ -9,19 +9,19 @@
 | Herkunft | `components/provenance.tsx` | eine Zeile „Arztbrief vom 12.10. · freigegeben von Pflegekraft WB1 am 24.10.“ bzw. Agenten-Variante |
 | Endpunkte | `apps/api/app/residents/routes.py` | Liste mit Zählern, Akte (eine Abfrage pro Abschnitt unter `as_principal`) |
 
-Die Herkunft wird per Join auf `documents` gebildet; Anzeigenamen der Freigebenden kommen aus `display_name` (Claim zum Freigabezeitpunkt gespeichert in `confirmed_by_name`).
+Die Herkunft wird per Join auf `documents` gebildet; Medikamente über ihr letztes `medication_events`-Ereignis. Anzeigenamen der Freigebenden stehen in `confirmed_by_name` (Claim zum Freigabezeitpunkt), damit die Akte keine IdP-Abfrage braucht.
 
 ## Datenmodell
 
-Keine neuen Tabellen. Ergänzung: Spalten `confirmed_by_name text` in `medications`, `diagnoses`, `follow_ups` (Migration `<ts>_f04_provenance_names.sql`), damit die Akte keine IdP-Abfrage braucht; `follow_ups.done_by`, `done_at`.
+Keine eigene Migration: Alle Spalten (`confirmed_by_name`, `medication_events`, `follow_ups.done_by/done_by_name/done_at`) legt F03 laut [Datenmodell](../datenmodell.md) an.
 
 ## Schnittstellen (API)
 
 | Methode | Pfad | Response |
 |---|---|---|
 | GET | `/residents` | `[{id, display_name, room, ward_id, has_new, open_follow_ups, overdue_follow_ups}]` |
-| GET | `/residents/{id}/record` | `{resident, medications{active[], discontinued[]}, diagnoses[], follow_ups[], documents[]}` jeweils mit `provenance` · 404 fremd/unbekannt |
-| POST | `/follow-ups/{id}/done` | 200 · 404 fremd |
+| GET | `/residents/{id}/record` | `{resident, medications{active[], discontinued[]} (je mit `events[]`), diagnoses[], follow_ups[], documents[]}` jeweils mit `provenance` · 404 fremd/unbekannt |
+| POST | `/follow-ups/{id}/done` | 200 · 404 fremd · 409 bereits erledigt |
 
 ## Sicherheitsaspekte
 

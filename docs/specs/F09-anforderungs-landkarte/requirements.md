@@ -1,6 +1,6 @@
 # F09 – Anforderungs-Landkarte: Anforderungen
 
-Status: Entwurf · Stufe: 1 · Bildschirm: 1 (Start)
+Status: Entwurf (überarbeitet nach Codex-Review) · Stufe: 1 · Bildschirm: 1 (Start)
 
 ## Einführung
 
@@ -21,7 +21,7 @@ Wer den Link öffnet, soll **in zwei Minuten** erkennen, wo die Anforderungen de
 | F09-AC4 | WENN ein Feature noch nicht umgesetzt ist, DANN soll der Eintrag „in Arbeit (Stufe 2)“ zeigen statt eines toten Links. |
 | F09-AC5 | Die Inhalte der Landkarte sollen aus einer einzigen Datendatei (`apps/web/src/content/requirements-map.ts`) stammen; jeder App-Link soll auf eine existierende Route zeigen. |
 | F09-AC6 | Die Startseite soll den Rollenwechsel (F01-AC1, F01-AC2) unterhalb der Landkarte anzeigen, mit dem Hinweis, dass alle Daten erfundene Musterdaten sind. |
-| F09-AC7 | Die Startseite soll ohne Anmeldung erreichbar sein und ohne laufendes Backend vollständig angezeigt werden (statische Seite). |
+| F09-AC7 | Die Startseite soll ohne Anmeldung erreichbar sein und ohne laufende API vollständig angezeigt werden (keine API- oder Datenbankabfrage beim Rendern). |
 | F09-AC8 | Die Seite `/projekt` soll in Stufe 1 einen Platzhalter „Projektbeschreibung folgt“ mit Links zu Architektur, Specs und Repo zeigen (vollständige Fassung in Phase 9). |
 
 ## Nicht im Umfang

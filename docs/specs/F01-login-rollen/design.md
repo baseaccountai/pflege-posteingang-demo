@@ -3,84 +3,88 @@
 ## Überblick
 
 ```
-Browser ──(Cookie __Host-pp_session, verschlüsselt)──▶ Next.js BFF ──(Bearer Access-Token)──▶ FastAPI
-                                                          │ OIDC Code+PKCE                     │ JWKS-Prüfung, Claims ableiten
-                                                          ▼                                    ▼
-                                                  Zitadel / Keycloak            Postgres: set local role authenticated
-                                                                                + set_config('request.jwt.claims', …) → RLS
+Browser ──(Cookie __Host-pp_sid = zufällige ID)──▶ Next.js BFF ──(Bearer Access-Token + X-Bff-Assertion)──▶ FastAPI
+                                                     │  │                                                     │ JWKS-Prüfung, Claims ableiten
+                                                     │  └─ bff.sessions (Tokens AES-GCM-verschlüsselt)        ▼
+                                                     ▼                                     Postgres: set local role authenticated
+                                              Zitadel (OIDC)                               + set_config('request.jwt.claims', …) → RLS
 ```
 
 ## Komponenten
 
 | Komponente | Ort | Verantwortung |
 |---|---|---|
-| OIDC-Client | `apps/web/src/lib/auth/oidc.ts` | `openid-client` (v6): Discovery, Code+PKCE, Token-Einlösung, Refresh, Logout-URL |
-| Session | `apps/web/src/lib/auth/session.ts` | Session-Inhalt als **JWE** (A256GCM, Schlüssel `SESSION_SECRET`, `jose`) im Cookie `__Host-pp_session`; max. 8 h |
-| Route-Handler | `apps/web/src/app/auth/{login,callback,logout}/route.ts` | Login starten (`?role=wb1|wb2|pdl` → `login_hint`, `prompt=login`), Rücksprung, Logout |
-| API-Proxy | `apps/web/src/lib/api.ts` | serverseitige Aufrufe der API mit Access-Token; Refresh bei Ablauf |
-| Rollenwechsel-UI | `apps/web/src/components/role-switcher.tsx` | drei Knöpfe + Zugangsdaten mit Kopieren |
-| Token-Prüfung | `apps/api/app/auth/tokens.py` | PyJWT + `PyJWKClient`, erlaubte Algorithmen `RS256`, `ES256`; `iss`, `aud`, `exp`, `nbf`, Leeway 30 s |
+| OIDC-Client | `apps/web/src/lib/auth/oidc.ts` | `openid-client` v6: Discovery, Code + PKCE, Token-Einlösung, Refresh, `end_session`-URL |
+| Login-Zwischenzustand | `apps/web/src/lib/auth/login-state.ts` | `state`, `nonce`, `code_verifier`, Rolle in einem kurzlebigen, verschlüsselten Cookie `__Host-pp_oidc` (10 min, `HttpOnly`); wird beim Callback sofort gelöscht → Einmalverwendung (AC5). Enthält **keine** Tokens. |
+| Sitzungsspeicher | `apps/web/src/lib/auth/session-store.ts` | `postgres` (npm) als Rolle `bff_session` über den Pooler; Tokens AES-256-GCM mit `SESSION_ENC_KEY`; Tabelle speichert nur `sha256(sid)` |
+| Sitzung | `apps/web/src/lib/auth/session.ts` | `getSession()`: Cookie → Hash → Zeile (nicht widerrufen, nicht abgelaufen) → bei Ablauf des Access-Tokens Refresh mit Zeilensperre (`select … for update`), damit parallele Anfragen nur einmal erneuern |
+| Route-Handler | `apps/web/src/app/auth/{login,callback,logout}/route.ts` | Login (`?role=wb1|wb2|pdl`), Rücksprung, Logout (POST) |
+| CSRF-Schutz | `apps/web/src/proxy.ts` | schreibende Methoden: `Origin` muss `APP_ORIGIN` sein, sonst 403 (AC15) |
+| API-Client | `apps/web/src/lib/api.ts` | serverseitig: `Authorization: Bearer <access>`, `X-Bff-Assertion`: JWS (HS256, `BFF_API_SECRET`) mit `{sid_hash, aud: "pflege-api", iat, exp: +60 s}` |
+| Rollenwechsel-UI | `apps/web/src/components/role-switcher.tsx` | drei Knöpfe + Zugangsdaten mit Kopieren; Wechsel = POST `/auth/logout?next=/auth/login?role=…` → **harter Seitenwechsel** (kein Client-Routing) |
+| Token-Prüfung | `apps/api/app/auth/tokens.py` | PyJWT + `PyJWKClient` (Cache 10 min), erlaubte Algorithmen `RS256`, `ES256`; `iss`, `aud`, `exp`, `nbf`, Leeway 30 s |
+| BFF-Nachweis | `apps/api/app/auth/bff.py` | prüft `X-Bff-Assertion` (Signatur, `aud`, `exp`), liefert `sid_hash` für Zähler (F02) |
 | Claim-Mapping | `apps/api/app/auth/claims.py` | Rollen-Claim (konfigurierbar) → `Principal(sub, app_role, ward_ids, actor_type, display_name)` |
-| DB-Zugriff | `apps/api/app/db.py` | `psycopg` (async) Pool als `api_gateway`; Kontextmanager `as_principal(principal)`: Transaktion, `set local role authenticated`, `set_config('request.jwt.claims', json, true)` |
-| IdP-Setup | `infra/zitadel/setup.py`, `infra/keycloak/realm-pflege.json` | Projekt, App, Rollen, Demo-Nutzer als Code |
+| DB-Zugriff | `apps/api/app/db.py` | `psycopg` (async) Pool als `api_gateway`, `prepare_threshold=None` (Transaktions-Pooler); `as_principal(principal)`: Transaktion, `set local role authenticated`, `set_config('request.jwt.claims', json, true)`; `set local` endet mit der Transaktion, auch bei Rollback |
+| IdP-Setup | `infra/demo-users.json`, `infra/zitadel/setup.py` | Projekt, App, Rollen, Demo-Nutzer als Code; idempotent |
+| Passwort-Wächter | `.github/workflows/demo-passwords.yml` | nur falls Spike S4 negativ: alle 15 min Demo-Passwörter per Management-API setzen |
 
-### Entscheidung zur Freigabe: Session im verschlüsselten Cookie
+## OIDC-Vertrag (Zitadel)
 
-Die Tokens liegen **verschlüsselt** (JWE) im `HttpOnly`-Cookie. JavaScript im Browser kann das Cookie nicht lesen, und ohne `SESSION_SECRET` ist der Inhalt wertlos. Alternative wäre ein serverseitiger Session-Speicher (z. B. Redis); das kostet einen weiteren Dienst und widerspricht „Next.js bleibt dünn“. Um unter 4 KB zu bleiben, wird das ID-Token nicht gespeichert (Logout per `client_id` + `post_logout_redirect_uri`).
+| Punkt | Festlegung |
+|---|---|
+| App-Typ | Web-Anwendung, Authorization Code, Client-Authentifizierung **Basic** (`OIDC_CLIENT_SECRET` nur in Vercel/`.env`), zusätzlich PKCE S256 – Rückfall laut Spike S2: PKCE-Client ohne Secret |
+| Scopes | `openid profile offline_access urn:zitadel:iam:org:project:id:<PROJECT_ID>:aud urn:zitadel:iam:org:projects:roles` |
+| Access-Token-Typ | **JWT** (Projekt-/App-Einstellung, nicht opak) |
+| Rollen-Claim | `urn:zitadel:iam:org:project:roles` → Objekt `{ "nurse_wb1": { "<orgId>": "<domain>" } }`; ausgewertet werden nur die Schlüssel |
+| `aud` | enthält die Projekt-ID (`OIDC_AUDIENCE`) |
+| Redirect-URIs | `https://pflege-posteingang-demo.vercel.app/auth/callback`, `http://localhost:3000/auth/callback` |
+| Post-Logout-URI | `https://pflege-posteingang-demo.vercel.app/`, `http://localhost:3000/` |
+| Demo-Nutzer | `pflege-wb1`, `pflege-wb2`, `pdl` (Passwörter öffentlich auf der Startseite) |
+
+Das Setup-Skript nutzt die Management-API mit dem Personal Access Token eines Service-Users (`ZITADEL_ADMIN_PAT`, nur in `.env` und GitHub-Secrets).
+
+**Test-OIDC-Server (CI, lokal):** `ghcr.io/navikt/mock-oauth2-server` mit Konfiguration, die dieselben Rollen-Claims ausgibt. Er beweist zugleich die IdP-Austauschbarkeit (AC19).
 
 ## Datenmodell
 
-Migration `supabase/migrations/<ts>_f01_wards_residents.sql`:
-- Schema `app` mit Hilfsfunktionen `app.ward_ids()`, `app.role()`, `app.uid()`, `app.actor_type()` (lesen `current_setting('request.jwt.claims', true)::jsonb`).
-- Tabellen `wards`, `residents` (siehe [Datenmodell](../datenmodell.md)), RLS aktiviert und **erzwungen** (`force row level security`).
-- Policy `residents_select`: `using (ward_id = any(app.ward_ids()))`.
-- Rolle `api_gateway` (`login`, `noinherit`, kein `bypassrls`), `grant authenticated to api_gateway`.
+Migration `<ts>_f01_auth.sql`: Schema `app` mit Hilfsfunktionen; `wards`, `residents` mit Policies; Rollen `api_gateway`, `bff_session`; Schema `bff` mit `sessions`; `revoke all from anon`. Details: [Datenmodell](../datenmodell.md).
 
 ## Schnittstellen (API)
 
 | Methode | Pfad | Antwort | Rechte |
 |---|---|---|---|
-| GET | `/me` | `{sub, app_role, ward_ids, display_name}` | gültiges Token |
+| GET | `/me` | `{sub, app_role, ward_ids, display_name}` | Token + BFF-Nachweis |
 | GET | `/residents` | Liste eigener Bewohner (F04 erweitert) | `nurse`, `pdl` |
 | GET | `/residents/{id}` | Bewohner oder **404** (fremd = nicht vorhanden) | `nurse`, `pdl` |
 
-Fehler: 401 (Token ungültig/fehlt), 403 (keine bekannte Rolle), 404 (nicht gefunden oder fremder WB – bewusst gleich).
-
-## Identity Provider
-
-| Einstellung | Zitadel | Keycloak |
-|---|---|---|
-| App-Typ | Web, Code + PKCE, Auth-Methode „none“ oder Basic | Client `pflege-web`, public + PKCE S256 |
-| Access-Token | **JWT** (nicht opak) | JWT (Standard) |
-| Rollen-Claim | `urn:zitadel:iam:org:project:roles` (Projekt-Rollen `nurse_wb1`, `nurse_wb2`, `pdl`) | Mapper schreibt dieselben Rollen in denselben Claim-Namen |
-| `aud` | Projekt-ID | Audience-Mapper `pflege-api` |
-| Demo-Nutzer | `pflege-wb1`, `pflege-wb2`, `pdl` mit festen Demo-Passwörtern | gleich |
-| Redirect-URIs | `https://pflege-posteingang-demo.vercel.app/auth/callback`, `http://localhost:3000/auth/callback` | `http://localhost:3000/auth/callback` |
-
-Das Setup-Skript nutzt die Zitadel-Management-API mit einem **Personal Access Token eines Service-Users** (`ZITADEL_ADMIN_PAT`, nur in `.env`). Es ist idempotent (vorhandene Objekte werden aktualisiert). Passwortänderung durch Demo-Nutzer: Zitadel-Self-Service für das Projekt deaktivieren, soweit möglich; zusätzlich setzt der nächtliche Reset (F10) die Demo-Passwörter zurück.
+Fehler: 401 (Token/BFF-Nachweis ungültig oder fehlt), 403 (keine bekannte Rolle), 404 (nicht gefunden oder fremder WB – bewusst gleich). `/health`, `/health/ready` ohne Anmeldung.
 
 ## Sicherheitsaspekte
 
 | Bedrohung | Gegenmaßnahme | AC |
 |---|---|---|
-| Token-Diebstahl per XSS | Tokens nur serverseitig, Cookie `HttpOnly` + verschlüsselt | AC3, AC4 |
-| CSRF auf Login/Callback | `state` + PKCE, `SameSite=Lax` | AC1, AC5 |
+| Token-Diebstahl per XSS | Tokens nur serverseitig; Cookie enthält nur zufällige ID | AC3, AC4 |
+| Diebstahl der Sitzungstabelle | nur Hash der Sitzungs-ID, Tokens AES-GCM-verschlüsselt, Schlüssel nur in Vercel | AC3 |
+| Login-CSRF, Replay des Rücksprungs | `state`, `nonce`, PKCE, Einmal-Cookie | AC1, AC5 |
+| CSRF auf schreibende Aktionen | `Origin`-Prüfung + `SameSite=Lax`, keine GET-Mutationen | AC15 |
 | Gefälschte/fremde Tokens | JWKS, `iss`/`aud`/`exp`, feste Algorithmen (kein `none`, kein HS*) | AC6 |
-| Programmierfehler im Backend öffnet fremde WB | RLS erzwungen in der DB, `api_gateway` ohne `bypassrls` | AC8, AC9 |
-| Existenz-Leck fremder Bewohner | einheitlich 404 / Bildschirm 8 | AC10 |
-| Daten der alten Rolle nach Wechsel | Cookie löschen, `no-store`, harter Seitenwechsel statt Client-Navigation | AC11, AC12 |
+| Direktaufruf der API am BFF vorbei | BFF-Nachweis mit kurzer Gültigkeit | AC8 |
+| Programmierfehler öffnet fremden WB | RLS erzwungen, zusammengesetzte Fremdschlüssel, `api_gateway` ohne `bypassrls` | AC9–AC11 |
+| Claim-Reste auf gepoolter Verbindung | nur `set local` in Transaktion; Test Fehler→Rollback→andere Rolle | AC10 |
+| Existenz-Leck fremder Bewohner | einheitlich 404 / Bildschirm 8 | AC12 |
+| Daten der alten Rolle nach Wechsel | serverseitiger Widerruf, `no-store`, harter Seitenwechsel | AC13, AC14 |
+| Demo-Konto wird durch Passwortänderung gesperrt | Spike S4, sonst Rücksetzen alle 15 min | AC18 |
 
-Vertrauensgrenze BFF ↔ API und Claim-Ableitung werden im [Bedrohungsmodell](../../security/threat-model.md) ergänzt.
+Vertrauensgrenzen (Browser ↔ BFF, BFF ↔ API, API ↔ DB) werden im [Bedrohungsmodell](../../security/threat-model.md) ergänzt.
 
 ## Tests je Ebene
 
 | Ebene | Werkzeug | Kriterien |
 |---|---|---|
-| Unit Backend | pytest (Tokens mit Test-Schlüsselpaar signiert, JWKS gemockt) | AC6, AC7, AC15 |
-| RLS / Rechte | pytest gegen lokales Supabase (`supabase start`) | AC8, AC9 |
-| Integration | pytest + TestClient + lokales Supabase | AC6–AC10 |
-| Unit Web | Vitest | AC2, AC16, Session-Verschlüsselung (AC3) |
-| End-to-End | Playwright gegen lokales Keycloak (CI) | AC1, AC3, AC4, AC5, AC10, AC11, AC12, AC17 |
-| Manuell (Abnahme) | Login gegen Zitadel öffentlich | AC1, AC13, AC14 |
-
-CI: Job `rls` mit `supabase/setup-cli` + `supabase start`; Job `e2e-auth` mit Keycloak-Container.
+| Unit Backend | pytest (Tokens mit Test-Schlüsselpaar, JWKS gemockt) | AC6, AC7, AC8, AC19 |
+| RLS / DB | pytest gegen lokales Supabase | AC9, AC10 (inkl. Rollback- und Paralleltest), AC11 |
+| Integration | pytest + TestClient + lokales Supabase | AC6–AC12 |
+| Unit Web | Vitest | AC2, AC20, Sitzungsverschlüsselung, Login-State-Einmalverwendung |
+| End-to-End | Playwright gegen Test-OIDC-Server + lokales Supabase | AC1, AC3, AC4 (Suche nach Token-Mustern in HTML, Cookies, Storage, Netzwerkantworten), AC5, AC12–AC15, AC21 |
+| Manuell (Abnahme) | Zitadel öffentlich | AC1, AC16, AC17, AC18 |

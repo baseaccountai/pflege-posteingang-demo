@@ -28,7 +28,7 @@ Die Anwendung ist eine **Bewerbungsdemo** (Stelle Nr. 479, Projekt KLARA). Sie s
 | Identity Provider (OIDC) | Login, Rollen, Wohnbereich-Claim | Zitadel Cloud | Keycloak |
 | OCR | Bild/PDF → Markdown | Mistral OCR | Docling |
 | LLM + Embeddings | Feldvorschläge, Antworten, Agent, Vektoren | Mistral (Small, Ministral, mistral-embed) | Ollama |
-| Datenplattform | Postgres, pgvector, Storage, RLS | Supabase (Frankfurt) | Supabase self-hosted |
+| Datenplattform | Postgres, pgvector, RLS (Dateien in Postgres, ADR 0010) | Supabase (Frankfurt) | Supabase self-hosted |
 
 Nutzer: Pflegekraft Wohnbereich 1, Pflegekraft Wohnbereich 2, Pflegedienstleitung (PDL). Kontextdiagramm: [diagrams/context.md](diagrams/context.md).
 
@@ -36,7 +36,7 @@ Nutzer: Pflegekraft Wohnbereich 1, Pflegekraft Wohnbereich 2, Pflegedienstleitun
 
 | Baustein | Technik | Verantwortung |
 |---|---|---|
-| `apps/web` | Next.js (App Router), Tailwind, shadcn/ui, PWA | Oberfläche; **Backend-for-Frontend**: OIDC-Login serverseitig (Authorization Code + PKCE), HttpOnly-Session-Cookie, Weiterleitung an die API. Tokens gelangen nie in den Browser. |
+| `apps/web` | Next.js (App Router), Tailwind, shadcn/ui, PWA | Oberfläche; **Backend-for-Frontend**: OIDC-Login serverseitig (Authorization Code + PKCE), Cookie nur mit Sitzungs-ID, Tokens serverseitig in Postgres (ADR 0009), Weiterleitung an die API mit BFF-Nachweis. Tokens gelangen nie in den Browser. |
 | `apps/api` | Python, FastAPI | **Sicherheitsschicht**: Token prüfen, Rechte ableiten, pseudonymisieren, Injection filtern, LLM/OCR aufrufen, protokollieren. Anbieter hinter Schnittstellen. |
 | `apps/api/security/` | Python | Prompt-Injection-Erkennung (Muster getrennt vom Testkorpus), Pseudonymisierung. |
 | `supabase/` | SQL-Migrationen, Seed | Tabellen, pgvector, **RLS-Policies** pro Wohnbereich, Musterdaten. |
@@ -81,6 +81,10 @@ Gleiche Architektur in beiden Umgebungen, nur andere Anbieter. CI/CD: GitHub Act
 | [0004](adr/0004-nextjs-bff.md) | Next.js als Backend-for-Frontend |
 | [0005](adr/0005-zitadel-public-keycloak-local.md) | Zitadel öffentlich, Keycloak lokal |
 | [0006](adr/0006-kiro-spec-format.md) | Spec-Format im Kiro-Stil |
+| 0007 | Datenbankzugriff im Namen des Nutzers (Ergebnis Spike F01, folgt) |
+| 0008 | Eigener minimaler Service Worker (folgt mit F11) |
+| [0009](adr/0009-server-side-sessions.md) | Login-Sitzung serverseitig in Postgres |
+| [0010](adr/0010-files-in-postgres.md) | Originaldateien in Postgres statt Supabase Storage |
 
 ## 11. Risiken und technische Schulden
 

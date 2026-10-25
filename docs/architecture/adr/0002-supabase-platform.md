@@ -20,3 +20,6 @@ Benötigt werden relationale Daten (Bewohner, Dokumente, Felder, Wiedervorlagen,
 + Gleiche Plattform öffentlich und lokal.
 − Supabase erwartet eigene JWTs; Abbildung der OIDC-Claims (Zitadel/Keycloak) auf RLS-Claims ist ein Spike in F01.
 − Kostenloses Projekt pausiert nach einer Woche ohne Aktivität → Keep-alive.
+
+## Nachtrag 25.10.2026
+Originaldateien liegen nicht in Supabase Storage, sondern in Postgres (siehe [ADR 0010](0010-files-in-postgres.md)).
