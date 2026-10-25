@@ -1,0 +1,21 @@
+# Local operation: web (Next.js BFF) + api (FastAPI).
+# Start: make up  (= docker compose -f infra/docker-compose.yml up --build)
+name: pflege-posteingang
+
+services:
+  api:
+    build: ../apps/api
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-mistral}
+      OCR_PROVIDER: ${OCR_PROVIDER:-mistral}
+    ports:
+      - "8000:8000"
+
+  web:
+    build: ../apps/web
+    environment:
+      API_BASE_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
