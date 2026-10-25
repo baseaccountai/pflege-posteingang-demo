@@ -1,0 +1,13 @@
+# F05 – Fragen an Dokumente (RAG): Aufgaben
+
+- [ ] **1. Chunker** — `F05-AC2`, `F05-AC3`
+  - [ ] `tests/rag/test_chunker.py` mit Muster-Markdown (Arztbrief mit Abschnitten, Medikationsplan mit Tabelle, sehr langer Abschnitt, Riesentabelle) → rot → `chunker.py` → grün · Commit `feat(api): add structure-aware chunker`
+- [ ] **2. Embedding-Schnittstelle + Mistral-Adapter** — `F05-AC13` · Tests (`respx`, Batch, Dimension) → rot → grün · Commit
+- [ ] **3. Migration `chunks` + `match_chunks`** — `F05-AC4`, `F05-AC5`
+  - [ ] RLS-Tests: WB2 findet keine WB1-Chunks; Bewohnerfilter wirkt → rot → Migration → grün · Commit `feat(db): add vector chunks with ward isolation`
+- [ ] **4. Indexer (Auslöser F03-AC11)** — `F05-AC1` · Integrationstest: Freigabe → Chunks mit Metadaten; erneute Indizierung ersetzt → rot → grün · Commit
+- [ ] **5. Retrieval + Namensauflösung** — `F05-AC6`, `F05-AC7` · Tests: fremder und unbekannter Name → identische Antwort, LLM-Attrappe nicht aufgerufen → rot → grün · Commit
+- [ ] **6. Antwort mit Quellen** — `F05-AC8`, `F05-AC9`, `F05-AC10`, `F05-AC12` · Tests Prompt-Aufbau, Quellen nur bei Zitat, Längenlimit, 429 → rot → grün · Commit `feat(api): answer questions with sources`
+- [ ] **7. Fragen-UI** — `F05-AC5`, `F05-AC8`, `F05-AC10`, `F05-AC11`
+  - [ ] Vitest + Playwright (Frage aus Akte; Rollenwechsel → leer) → rot → grün · Commit `feat(web): add question screen with sources`
+- [ ] **8. Realtest** — 5 Fragen gegen echtes Mistral, Schwellwert kalibrieren, Ergebnis notieren
