@@ -8,7 +8,7 @@ Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
   - [ ] Dieselben Tests gegen Cloud-Supabase über den Pooler (manuell, Ergebnis notieren); BFF-Rolle von einer Vercel-Preview-Funktion
   - [ ] ADR 0007 „Datenbankzugriff im Namen des Nutzers“; **Halt, falls S1 scheitert** (Bewerber informieren)
   - [ ] Commit: `feat(db): add ward isolation with RLS (spike F01)`
-- [ ] **2. Spike S2 + S4: Zitadel** — Setup-Skript-Entwurf, Token holen, Claims/`aud`/Typ prüfen, Passwortänderung als Demo-Nutzer versuchen; Ergebnis in ADR 0007 · Commit
+- [ ] **2. Spike S2 + S4: Zitadel** — Setup-Skript-Entwurf, Token holen, Claims/`aud`/Typ prüfen, Token-Widerruf und `end_session` mit `client_id` ohne `id_token_hint` prüfen, Passwortänderung als Demo-Nutzer versuchen; Ergebnis in ADR 0007 · Commit
 - [ ] **3. Token-Prüfung** — `F01-AC6`, `F01-AC19`
   - [ ] `tests/auth/test_tokens.py`: gültig, abgelaufen, `nbf` in Zukunft, falscher `iss`, falscher `aud`, `alg=none`, `HS256` mit Public Key, unbekannter `kid` → rot → `tokens.py` → grün · Commit `feat(api): verify OIDC access tokens via JWKS`
 - [ ] **4. BFF-Nachweis** — `F01-AC8`
@@ -23,7 +23,7 @@ Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
 - [ ] **8. Sitzung serverseitig** — `F01-AC3`, `F01-AC21`
   - [ ] Vitest: Verschlüsselung Roundtrip, Manipulation erkannt, nur Hash gespeichert, Ablauf, Widerruf, paralleler Refresh nur einmal → rot → `session-store.ts`, `session.ts` → grün · Commit
 - [ ] **9. BFF-Login, CSRF** — `F01-AC1`, `F01-AC4`, `F01-AC5`, `F01-AC15`, `F01-AC19`
-  - [ ] Playwright (Test-OIDC-Server): Login WB1 → Cookie-Attribute; kein Token-Muster in HTML, `document.cookie`, Storage, Antworten; manipulierter `state` und zweiter Callback → Fehlerseite; POST ohne/mit fremdem `Origin` → 403 → rot
+  - [ ] Playwright (Test-OIDC-Server): Login WB1 → Cookie-Attribute; kein Token-Muster in HTML, `document.cookie`, Storage, Antworten und Redirect-URLs (auch beim Logout); manipulierter `state` und zweiter Callback → Fehlerseite; POST ohne/mit fremdem `Origin` → 403 → rot
   - [ ] Route-Handler + `proxy.ts` → grün · Commit `feat(web): add server-side OIDC login with session store`
 - [ ] **10. Rollenwechsel & Kein Zugriff** — `F01-AC2`, `F01-AC12`, `F01-AC13`, `F01-AC14`, `F01-AC20`
   - [ ] Vitest: Rollenknöpfe mit Zugangsdaten + Kopieren; Kopfzeile zeigt Rolle → rot → grün

@@ -18,10 +18,10 @@ Ein Medikationsplan in `samples/` ist bewusst **neuer** als der Seed-Stand (ein 
 | Schritt | Umsetzung |
 |---|---|
 | Zeitplan | `.github/workflows/nightly-reset.yml` mit zwei Cron-Einträgen `0 1 * * *` und `0 2 * * *` (UTC); der Job läuft nur weiter, wenn es in `Europe/Berlin` 03 Uhr ist → ganzjährig 03:00 |
-| 1. Wartung an | `system_state.maintenance = true`; API prüft das Flag vor jedem Schreibzugriff und jeder Pipeline-Stufe (AC7) |
-| 2. Warten | 10 s, damit laufende Hintergrundschritte ihr Flag-Check erreichen |
-| 3. Datenbank | **eine** Transaktion: Besuchertabellen leeren (Dateien liegen in `document_files`, also mit drin), `bff.sessions` leeren, Seeds einspielen, `chunks.jsonl` laden; `usage_counters` bleibt unberührt (AC6) |
-| 4. Wartung aus | auch im Fehlerfall (`finally`) |
+| Koordination | Jede schreibende API-Transaktion nimmt zu Beginn `pg_advisory_xact_lock_shared(<RESET_LOCK>)` und prüft `system_state.reset_generation`; Hintergrundaufgaben merken sich die Generation beim Start und schreiben nur, wenn sie noch gleich ist (sonst verwerfen sie ihr Ergebnis still). Der Reset nimmt `pg_advisory_xact_lock(<RESET_LOCK>)` exklusiv: er wartet auf laufende Schreibtransaktionen und blockiert neue bis zum Commit. |
+| 1. Wartung an | `system_state.maintenance = true` – nur für die Meldung an Besucher (AC7), nicht für die Korrektheit |
+| 2. Datenbank | **eine** Transaktion mit exklusiver Sperre: `reset_generation` erhöhen, Besuchertabellen leeren (Dateien liegen in `document_files`, also mit drin), `bff.sessions` leeren, Seeds einspielen, `chunks.jsonl` laden; `usage_counters` bleibt unberührt (AC6) |
+| 3. Wartung aus | auch im Fehlerfall (`finally`) |
 | Wiederholbarkeit | jeder Lauf erzeugt denselben Endstand (AC8) |
 | Rechte | **einziger** Ort mit DB-Admin-Zugang (`SUPABASE_DB_ADMIN_URL` nur als GitHub-Secret) |
 | Lokal | `make reset` gegen lokales Supabase |
@@ -30,8 +30,9 @@ Da die Dateien in Postgres liegen (Entscheidung F02), ist der gesamte Reset eine
 
 ## Kosten- und Missbrauchsschutz
 
-- `quota_limits(kind, scope, daily_limit)`: `upload/session/5`, `ocr_page/global/100`, `llm_call/global/300`, `embed_chunk/global/500` (per Migration, änderbar per SQL, nicht durch Aufrufer).
-- `app.consume_quota(kind text, subject text, amount int) returns boolean`: `security definer`, Eigentümer `quota_owner`, `set search_path = app, pg_temp`; `amount` muss 1–20 sein; Limit wird aus `quota_limits` gelesen; `insert … on conflict (day, kind, subject) do update set count = count + amount where count + amount <= limit returning`; `revoke execute … from public, anon`, `grant execute … to authenticated`. `subject` ist `'global'` oder der Sitzungs-Hash aus dem BFF-Nachweis (F01-AC8).
+- `quota_limits(kind, scope, max_count)`: `upload/session/5` (gilt für die **ganze Sitzung**, Zeitraum `lifetime`), `ocr_page/global/100`, `llm_call/global/300`, `embed_chunk/global/500` (je Kalendertag in `Europe/Berlin`); per Migration, änderbar per SQL, nicht durch Aufrufer.
+- `usage_counters(period, kind, subject, count)` mit `period` = Datum (`2026-10-25`) für globale Kontingente bzw. `lifetime` für Sitzungskontingente; Primärschlüssel `(period, kind, subject)`.
+- `app.consume_quota(kind text, subject text, amount int) returns boolean`: `security definer`, Eigentümer `quota_owner`, `set search_path = app, pg_temp`; `amount` muss 1–20 sein; Limit und Zeitraum werden aus `quota_limits` gelesen; ist `amount` größer als das Limit, sofort `false`; sonst `insert … values (period, kind, subject, amount) on conflict (period, kind, subject) do update set count = usage_counters.count + excluded.count where usage_counters.count + excluded.count <= limit returning` – damit ist auch die Erstbuchung begrenzt; `revoke execute … from public, anon`, `grant execute … to authenticated`. `subject` ist `'global'` oder der Sitzungs-Hash aus dem BFF-Nachweis (F01-AC8).
 - Buchung **vor** dem externen Aufruf; wird der Aufruf nicht ausgeführt, verfällt die Buchung (konservativ).
 - Längenbegrenzung: Extraktion ≤ 20 000 Zeichen Eingabe / 1500 Tokens Ausgabe; Fragen ≤ 6 Chunks × 800 Tokens / 600 Tokens Ausgabe.
 - Kostenrechnung in ADR 0003 (vor Phase 3, mit den Preisen aus dem Mistral-Konto): `Tagesmaximum = OCR-Seiten × Seitenpreis + LLM-Aufrufe × (max. Eingabe × Eingabepreis + max. Ausgabe × Ausgabepreis) + Embedding-Chunks × 800 × Embeddingpreis`; Limits so wählen, dass das Ergebnis ≤ 0,50 € ist (AC11). Zusätzlich Monatslimit im Mistral-Konto (10 €).
@@ -58,7 +59,7 @@ Da die Dateien in Postgres liegen (Entscheidung F02), ist der gesamte Reset eine
 | Ebene | Werkzeug | Kriterien |
 |---|---|---|
 | Unit Backend | pytest | AC3 (Generator: Wasserzeichen, nur erlaubte Namen), AC11 (Längenbegrenzung in Prompt-Bauern) |
-| DB | pytest + lokales Supabase | AC10 (parallele Aufrufe überschreiten Limit nicht; `amount` 0/negativ/zu groß abgelehnt; `anon` darf nicht ausführen; Limit nicht vom Aufrufer änderbar), AC5–AC8 (Upload anlegen → Reset → weg; Fehler mitten im Seed → alles zurückgerollt, Wartung aus; Zähler bleiben; zweiter Lauf gleiches Ergebnis), AC7 (Schreiben während Wartung → 503) |
+| DB | pytest + lokales Supabase | AC10 (parallele Aufrufe überschreiten Limit nicht; `amount` 0/negativ/zu groß abgelehnt; Erstbuchung über dem Limit und Limit 0 abgelehnt; Sitzungszähler über Mitternacht nicht zurückgesetzt; `anon` darf nicht ausführen; Limit nicht vom Aufrufer änderbar), AC5–AC8 (Upload anlegen → Reset → weg; Fehler mitten im Seed → alles zurückgerollt, Wartung aus; Zähler bleiben; zweiter Lauf gleiches Ergebnis), AC7 (Schreiben während Wartung → 503; laufende Hintergrundaufgabe über den Reset hinweg schreibt nichts mehr) |
 | Unit Web | Vitest | AC12, AC13 (Hinweistexte, Neuversuch, Link), AC14 (Musterakte aus JSON) |
 | End-to-End | Playwright mit API-Attrappe (503, 429, Verzögerung) | AC4 (Banner + Footer auf allen Seitentypen), AC12, AC13, AC14 (`/muster` bei gestoppter API) |
 | Betrieb | GitHub Actions | AC5 (Zeitlogik als Unit-Test des Prüfschritts), AC9 (manueller `workflow_dispatch` vor Abnahme) |

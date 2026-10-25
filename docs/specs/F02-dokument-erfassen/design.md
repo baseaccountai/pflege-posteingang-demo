@@ -24,11 +24,11 @@ Vercel begrenzt Anfragen auf 4,5 MB; deshalb gilt 4 MB als Obergrenze nach der V
 | `processing` | `extracting` | OCR lesbar, `ocr_pages` gespeichert |
 | `processing` | `unreadable` | Lesbarkeitsprüfung negativ (Endzustand) |
 | `extracting` | `ready_for_review` | Vorschlag gespeichert (auch „kein Vorschlag möglich“, F03-AC2) |
-| `processing` \| `extracting` | `failed` | Fehler, Kontingent erschöpft, > 5 min (`error_code`) |
+| `uploaded` \| `processing` \| `extracting` | `failed` | Fehler, Kontingent erschöpft, Zeitüberschreitung (`error_code`) |
 | `failed` | `processing` \| `extracting` | Neuversuch: weiter beim fehlgeschlagenen Schritt (OCR-Ergebnis bleibt erhalten); bucht Kontingent erneut |
 | `ready_for_review` | `approved` \| `rejected` | F03 (Endzustände, danach unveränderlich) |
 
-`status_changed_at` und `attempts` werden bei jedem Wechsel gesetzt. **Hängen-Erkennung (AC9):** `GET /documents` markiert vorher Dokumente in `processing`/`extracting` mit `status_changed_at` älter als 5 min als `failed`/`timeout`; derselbe Abgleich läuft beim Start der API.
+`status_changed_at` und `attempts` werden bei jedem Wechsel gesetzt. **Hängen-Erkennung (AC9):** `GET /documents` markiert vorher Dokumente in `uploaded` (älter als 2 min – Absturz zwischen Annahme und Start der Hintergrundaufgabe) und in `processing`/`extracting` (älter als 5 min) als `failed`/`timeout`; derselbe Abgleich läuft beim Start der API. Ein Neuversuch eines aus `uploaded` gefallenen Dokuments beginnt bei der OCR.
 
 ## Komponenten
 
@@ -72,7 +72,7 @@ Migration `<ts>_f02_documents.sql`: `documents`, `document_files` (siehe Datenmo
 | Ebene | Werkzeug | Kriterien |
 |---|---|---|
 | Unit Backend | pytest | AC4 (Beispieldateien, falscher Inhalt mit `.pdf`-Endung), AC7 (leer, 50 Zeichen, Kochrezept, Rechnung), AC11 |
-| Integration | pytest + OCR-/LLM-Attrappen + lokales Supabase | AC5 (Kontingent vor Annahme), AC6 (Statusfolge), AC8 (je Fehlercode, Neuversuch setzt richtig fort), AC9 (alter Zeitstempel → `timeout`), AC10, AC12, AC13 |
+| Integration | pytest + OCR-/LLM-Attrappen + lokales Supabase | AC5 (Kontingent vor Annahme), AC6 (Statusfolge), AC8 (je Fehlercode, Neuversuch setzt richtig fort), AC9 (alter Zeitstempel in `uploaded`, `processing`, `extracting` → `timeout`; Neuversuch aus `uploaded`-Absturz startet OCR), AC10, AC12, AC13 |
 | Unit Web | Vitest | AC1 (`accept`, `capture`), AC2 (Text exakt), AC3 (Verkleinerung: 4000×3000 → 2000×1500, Ausrichtung) |
 | End-to-End | Playwright (desktop + mobile), API mit Attrappen | AC5, AC6; `samples/bad/` (leer, unscharf, schief, Nicht-Pflegedokument) → passende Meldung |
 | Realtest (manuell, klein) | echte Mistral-OCR mit 3 Musterdokumenten + schiefem Foto | Markdown enthält Medikamententabelle |

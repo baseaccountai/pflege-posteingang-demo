@@ -18,7 +18,7 @@ Browser ──(Cookie __Host-pp_sid = zufällige ID)──▶ Next.js BFF ──
 | Login-Zwischenzustand | `apps/web/src/lib/auth/login-state.ts` | `state`, `nonce`, `code_verifier`, Rolle in einem kurzlebigen, verschlüsselten Cookie `__Host-pp_oidc` (10 min, `HttpOnly`); wird beim Callback sofort gelöscht → Einmalverwendung (AC5). Enthält **keine** Tokens. |
 | Sitzungsspeicher | `apps/web/src/lib/auth/session-store.ts` | `postgres` (npm) als Rolle `bff_session` über den Pooler; Tokens AES-256-GCM mit `SESSION_ENC_KEY`; Tabelle speichert nur `sha256(sid)` |
 | Sitzung | `apps/web/src/lib/auth/session.ts` | `getSession()`: Cookie → Hash → Zeile (nicht widerrufen, nicht abgelaufen) → bei Ablauf des Access-Tokens Refresh mit Zeilensperre (`select … for update`), damit parallele Anfragen nur einmal erneuern |
-| Route-Handler | `apps/web/src/app/auth/{login,callback,logout}/route.ts` | Login (`?role=wb1|wb2|pdl`), Rücksprung, Logout (POST) |
+| Route-Handler | `apps/web/src/app/auth/{login,callback,logout}/route.ts` | Login (`?role=wb1|wb2|pdl`), Rücksprung, Logout (POST): Refresh- und Access-Token serverseitig widerrufen → Sitzungszeile löschen → Redirect zu `end_session?client_id=…&post_logout_redirect_uri=…` (**kein** `id_token_hint`, damit kein Token den Browser berührt; Unterstützung von `client_id` in Spike S2 prüfen) |
 | CSRF-Schutz | `apps/web/src/proxy.ts` | schreibende Methoden: `Origin` muss `APP_ORIGIN` sein, sonst 403 (AC15) |
 | API-Client | `apps/web/src/lib/api.ts` | serverseitig: `Authorization: Bearer <access>`, `X-Bff-Assertion`: JWS (HS256, `BFF_API_SECRET`) mit `{sid_hash, aud: "pflege-api", iat, exp: +60 s}` |
 | Rollenwechsel-UI | `apps/web/src/components/role-switcher.tsx` | drei Knöpfe + Zugangsdaten mit Kopieren; Wechsel = POST `/auth/logout?next=/auth/login?role=…` → **harter Seitenwechsel** (kein Client-Routing) |
@@ -86,5 +86,5 @@ Vertrauensgrenzen (Browser ↔ BFF, BFF ↔ API, API ↔ DB) werden im [Bedrohun
 | RLS / DB | pytest gegen lokales Supabase | AC9, AC10 (inkl. Rollback- und Paralleltest), AC11 |
 | Integration | pytest + TestClient + lokales Supabase | AC6–AC12 |
 | Unit Web | Vitest | AC2, AC20, Sitzungsverschlüsselung, Login-State-Einmalverwendung |
-| End-to-End | Playwright gegen Test-OIDC-Server + lokales Supabase | AC1, AC3, AC4 (Suche nach Token-Mustern in HTML, Cookies, Storage, Netzwerkantworten), AC5, AC12–AC15, AC21 |
+| End-to-End | Playwright gegen Test-OIDC-Server + lokales Supabase | AC1, AC3, AC4 (Suche nach Token-Mustern in HTML, Cookies, Storage, Netzwerkantworten **und allen Redirect-URLs inkl. Logout**), AC5, AC12–AC15, AC21 |
 | Manuell (Abnahme) | Zitadel öffentlich | AC1, AC16, AC17, AC18 |

@@ -16,7 +16,7 @@
 
 ## Datenmodell
 
-Migration `<ts>_f03_record.sql`: `medications`, `medication_events`, `diagnoses`, `follow_ups` (siehe Datenmodell) mit zusammengesetzten Fremdschlüsseln auf Bewohner und Dokument, RLS `select/insert/update` eigener WB, **kein** `delete`; Trigger: Dokumente in `approved`/`rejected` sind unveränderlich. Der Vorschlag steht in `documents.suggestion` (je Feld `value`, `evidence`, `evidence_found`).
+Migration `<ts>_f03_record.sql`: `medications`, `medication_events`, `diagnoses`, `follow_ups` (siehe Datenmodell) mit zusammengesetzten Fremdschlüsseln auf Bewohner und Dokument, RLS `select/insert/update` eigener WB, **kein** `delete`; Trigger: Bei Dokumenten in `approved`/`rejected` sind die fachlichen Spalten (`status`, `resident_id`, `doc_type`, `document_date`, `ocr_pages`, `suggestion`, `approved_*`) unveränderlich; `indexing_status` bleibt für F05 änderbar. Der Vorschlag steht in `documents.suggestion` (je Feld `value`, `evidence`, `evidence_found`).
 
 ## Schnittstellen (API)
 

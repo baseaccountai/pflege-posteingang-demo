@@ -49,4 +49,5 @@ Zentrale Übersicht aller Variablen mit Dienst, Pflicht, Standardwert und Geheim
 | End-to-End | Playwright (Produktionsbuild) | AC2 (nach Login, Upload, Akte und Frage: alle Schlüssel im Cache Storage passen zur Allowlist), AC3 (offline → Offline-Seite), AC4 (mobile unten, desktop Seitenleiste), AC11 (Header vorhanden; `securitypolicyviolation`-Ereignisse = 0 auf allen Seitentypen) |
 | Integration API | pytest | AC12 (CORS-Preflight fremder Origin abgelehnt; gültiges Token ohne BFF-Nachweis → 401) |
 | CI | GitHub Actions | AC6, AC8 (Wegwerf-Branch), AC10 (gitleaks erkennt Test-Schlüssel im Wegwerf-Branch) |
-| Manuell (Abnahme) | Handy (Android/iOS) | AC1 Installation, AC7 Koyeb erreichbar, AC9 Region (`x-vercel-id` einer Funktionsantwort enthält `fra1`) |
+| Abnahme Deployment | GitHub Actions + Ausgaben | AC7: Migration, Koyeb-Image-Tag und Vercel-Deployment nennen dieselbe SHA (Workflow-Zusammenfassung prüft das automatisch); zwei schnell aufeinanderfolgende Pushes → zweiter Deploy wartet; AC9: Push auf `main` erzeugt in Vercel **kein** Git-Produktionsdeployment, nur das des Workflows; Region `fra1` im `x-vercel-id` einer Funktionsantwort |
+| Manuell (Abnahme) | Handy (Android/iOS) | AC1 Installation, Koyeb `/health/ready` |

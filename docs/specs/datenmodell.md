@@ -6,7 +6,7 @@ Stand: 25.10.2026 · Status: Entwurf (überarbeitet nach Codex-Review) · Gilt f
 
 - **Jede Tabelle mit Bewohnerbezug hat `ward_id`** und RLS-Policies darauf. RLS ist aktiviert **und erzwungen** (`force row level security`).
 - **Verweise können den Wohnbereich nicht wechseln:** Bewohner- und Dokumentverweise sind **zusammengesetzte Fremdschlüssel** mit `ward_id` (z. B. `(resident_id, ward_id) references residents(id, ward_id)`). Eine WB2-Zeile kann so keinen WB1-Bewohner und kein WB1-Dokument referenzieren.
-- **Policies je Operation:** `select … using (ward_id = any(app.ward_ids()))`, `insert … with check (ward_id = any(app.ward_ids()))`, `update … using (…) with check (…)`. Ein Trigger verhindert Änderungen an `ward_id` und `resident_id` nach dem Anlegen.
+- **Policies je Operation:** `select … using (ward_id = any(app.ward_ids()))`, `insert … with check (ward_id = any(app.ward_ids()))`, `update … using (…) with check (…)`. Ein Trigger verhindert Änderungen an `ward_id` und `resident_id` nach dem Anlegen. **Ausnahme:** `documents.resident_id` darf genau einmal von `null` auf den bestätigten Bewohner gesetzt werden (Freigabe, F03).
 - **Kein `delete`** für `authenticated` auf Akten- und Dokumenttabellen (Ausnahme: `chunks`, abgeleitete Daten, F05).
 - **Keine Rechte für `anon`:** `revoke all … from anon` auf allen Tabellen und Funktionen (Supabase stellt `public` über die REST-API bereit).
 - **Zugriff im Namen des Nutzers:** Das Backend setzt pro Transaktion `set local role authenticated` und `set_config('request.jwt.claims', …, true)` (siehe F01-Design). Fehlen die Claims, liefern die Hilfsfunktionen leere Werte → keine Zeilen.
@@ -38,9 +38,9 @@ Hilfsfunktionen (Schema `app`, `stable`, `security invoker`): `app.ward_ids() �
 | `diagnoses` | `id`, `ward_id`, `resident_id`, `text`, `source_document_id`, `actor_type`, `created_by`, `confirmed_by`, `confirmed_by_name`, `created_at` | F03 |
 | `follow_ups` (Wiedervorlagen) | wie `diagnoses` + `title`, `due_date`, `status` (`open` \| `done`), `done_by`, `done_by_name`, `done_at` | F03 |
 | `chunks` | `id`, `document_id`, `ward_id`, `resident_id`, `doc_type`, `document_date`, `page`, `heading`, `content`, `embedding vector(1024)`, `embedding_model` | F05 |
-| `usage_counters` | `day date`, `kind`, `subject`, `count`; `primary key (day, kind, subject)` | F10 |
-| `quota_limits` | `kind`, `scope` (`global` \| `session`), `daily_limit` | F10 |
-| `system_state` | `key`, `value` (z. B. `maintenance = true` während des Resets) | F10 |
+| `usage_counters` | `period text` (Datum oder `lifetime`), `kind`, `subject`, `count`; `primary key (period, kind, subject)` | F10 |
+| `quota_limits` | `kind`, `scope` (`global` je Tag \| `session` je Sitzung), `max_count` | F10 |
+| `system_state` | `key`, `value` (`maintenance`, `reset_generation`) | F10 |
 
 Aufzählungen:
 - `doc_type`: `arztbrief` · `medikationsplan` · `ueberleitungsbogen` · `sonstiges`
