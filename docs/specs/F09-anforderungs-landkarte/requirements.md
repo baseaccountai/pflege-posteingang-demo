@@ -1,6 +1,6 @@
 # F09 – Anforderungs-Landkarte: Anforderungen
 
-Status: Entwurf (überarbeitet nach Codex-Review) · Stufe: 1 · Bildschirm: 1 (Start)
+Status: freigegeben 25.10.2026 · Stufe: 1 · Bildschirm: 1 (Start)
 
 ## Einführung
 

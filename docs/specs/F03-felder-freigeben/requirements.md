@@ -1,6 +1,6 @@
 # F03 – Felder vorschlagen & freigeben: Anforderungen
 
-Status: Entwurf (überarbeitet nach Codex-Review) · Stufe: 1 · Bildschirm: 3 (Prüfen & Freigeben) · Datenmodell: [../datenmodell.md](../datenmodell.md)
+Status: freigegeben 25.10.2026 · Stufe: 1 · Bildschirm: 3 (Prüfen & Freigeben) · Datenmodell: [../datenmodell.md](../datenmodell.md)
 
 ## Einführung
 

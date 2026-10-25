@@ -1,6 +1,6 @@
 # F01 – Login & Rollen (OIDC), Rollenwechsel: Anforderungen
 
-Status: Entwurf (überarbeitet nach Codex-Review) · Stufe: 1 · Bildschirme: 1 (Rollenwechsel), 8 (Kein Zugriff) · Datenmodell: [../datenmodell.md](../datenmodell.md)
+Status: freigegeben 25.10.2026 · Stufe: 1 · Bildschirme: 1 (Rollenwechsel), 8 (Kein Zugriff) · Datenmodell: [../datenmodell.md](../datenmodell.md)
 
 ## Einführung
 

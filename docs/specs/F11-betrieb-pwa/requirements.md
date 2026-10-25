@@ -1,6 +1,6 @@
 # F11 – Docker Compose lokal, CI/CD, Deployment, PWA: Anforderungen
 
-Status: Entwurf (überarbeitet nach Codex-Review) · Stufe: 1 (Keycloak, Ollama, Docling: Phase 8) · Bildschirme: alle
+Status: freigegeben 25.10.2026 · Stufe: 1 (Keycloak, Ollama, Docling: Phase 8) · Bildschirme: alle
 
 ## Einführung
 

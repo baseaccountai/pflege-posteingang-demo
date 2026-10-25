@@ -1,6 +1,6 @@
 # F10 – Musterdaten, nächtlicher Reset, Hinweise: Anforderungen
 
-Status: Entwurf (überarbeitet nach Codex-Review) · Stufe: 1 · Bildschirme: alle · Datenmodell: [../datenmodell.md](../datenmodell.md)
+Status: freigegeben 25.10.2026 · Stufe: 1 · Bildschirme: alle · Datenmodell: [../datenmodell.md](../datenmodell.md)
 
 ## Einführung
 

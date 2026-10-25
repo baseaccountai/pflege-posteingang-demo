@@ -1,6 +1,6 @@
 # F02 – Dokument erfassen (Kamera/Upload, OCR): Anforderungen
 
-Status: Entwurf (überarbeitet nach Codex-Review) · Stufe: 1 · Bildschirm: 2 (Posteingang) · Datenmodell: [../datenmodell.md](../datenmodell.md)
+Status: freigegeben 25.10.2026 · Stufe: 1 · Bildschirm: 2 (Posteingang) · Datenmodell: [../datenmodell.md](../datenmodell.md)
 
 ## Einführung
 

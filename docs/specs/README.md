@@ -31,17 +31,17 @@ Bei Zeitnot wird zuerst F11-PWA-Feinschliff verschoben, nie Rechte- oder Sicherh
 
 | Nr. | Feature | Priorität | Stufe | Status |
 |---|---|---|---|---|
-| F01 | Login & Rollen (OIDC), Rollenwechsel | Muss | 1 | Entwurf |
-| F02 | Dokument erfassen (Kamera/Upload, OCR) | Muss | 1 | Entwurf |
-| F03 | Felder vorschlagen & freigeben | Muss | 1 | Entwurf |
-| F04 | Bewohnerakte mit Herkunft | Muss | 1 | Entwurf |
-| F05 | Fragen an Dokumente (RAG) mit Quellen | Muss | 1 | Entwurf |
+| F01 | Login & Rollen (OIDC), Rollenwechsel | Muss | 1 | freigegeben |
+| F02 | Dokument erfassen (Kamera/Upload, OCR) | Muss | 1 | freigegeben |
+| F03 | Felder vorschlagen & freigeben | Muss | 1 | freigegeben |
+| F04 | Bewohnerakte mit Herkunft | Muss | 1 | freigegeben |
+| F05 | Fragen an Dokumente (RAG) mit Quellen | Muss | 1 | freigegeben |
 | F06 | Pseudonymisierung vor dem LLM | Muss | 2 | offen |
 | F07 | Prompt-Injection-Schutz + Testdokument | Muss | 2 | offen |
 | F08 | Agenten-Rechte + bestätigte Aktionen | Muss | 2 | offen |
-| F09 | Anforderungs-Landkarte | Muss | 1 | Entwurf |
-| F10 | Musterdaten, nächtlicher Reset, Upload-Hinweis | Muss | 1 | Entwurf |
-| F11 | Docker Compose lokal + CI/CD | Muss | 1 | Entwurf |
+| F09 | Anforderungs-Landkarte | Muss | 1 | freigegeben |
+| F10 | Musterdaten, nächtlicher Reset, Upload-Hinweis | Muss | 1 | freigegeben |
+| F11 | Docker Compose lokal + CI/CD | Muss | 1 | freigegeben |
 | F12 | Protokoll für PDL | Sollte | 2 | offen |
 | F13 | Automatische Sicherheitstests mit Bericht | Sollte | 2 | offen |
 | F14 | Modellvergleich Cloud vs. lokal | Kann | – | offen |

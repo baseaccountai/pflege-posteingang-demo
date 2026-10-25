@@ -1,6 +1,6 @@
 # Gemeinsames Datenmodell (Stufe 1)
 
-Stand: 25.10.2026 · Status: Entwurf (überarbeitet nach Codex-Review) · Gilt für alle Specs; jede Spec nennt, welche Tabellen sie anlegt (Migration in ihrer `tasks.md`).
+Stand: 25.10.2026 · Status: freigegeben 25.10.2026 · Gilt für alle Specs; jede Spec nennt, welche Tabellen sie anlegt (Migration in ihrer `tasks.md`).
 
 ## Grundsätze
 
