@@ -1,6 +1,7 @@
-.PHONY: setup test test-api test-web e2e lint up down
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset e2e lint up down
 
 COMPOSE := docker compose -f infra/docker-compose.yml
+SUPABASE := pnpm dlx supabase@2.122.0
 
 # One-time install of all dependencies (incl. Playwright browser)
 setup:
@@ -14,6 +15,20 @@ test-api:
 
 test-web:
 	cd apps/web && pnpm test
+
+# Database tests need the local Supabase stack (make db-start)
+test-db:
+	cd apps/api && uv run pytest -m db -v
+
+db-start:
+	$(SUPABASE) start
+
+db-stop:
+	$(SUPABASE) stop
+
+# Re-create the local database from supabase/migrations
+db-reset:
+	$(SUPABASE) db reset
 
 e2e:
 	cd apps/web && pnpm e2e
