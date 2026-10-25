@@ -63,6 +63,6 @@ Schema `bff` ist nicht in den von Supabase veröffentlichten Schemata.
 |---|---|---|
 | `api_gateway` | Login-Rolle des Backends | nur `set role authenticated`; kein `bypassrls`, keine eigenen Tabellenrechte |
 | `authenticated` | Nutzer/Agent „im Namen von“ | Tabellenrechte wie oben + RLS |
-| `bff_session` | Login-Rolle des Next.js-BFF | nur `select/insert/update` auf `bff.sessions` |
+| `bff_session` | Login-Rolle des Next.js-BFF | nur `select/insert/update/delete` auf `bff.sessions` (Logout löscht die Zeile) |
 | `quota_owner` | Eigentümer von `app.consume_quota` | nur `usage_counters`, `quota_limits` |
 | `service_role` / DB-Admin | nur Reset und Migrationen (F10, F11) | umgeht RLS – nie im Anfragepfad |
