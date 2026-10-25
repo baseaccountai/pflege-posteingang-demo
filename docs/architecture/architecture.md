@@ -44,7 +44,7 @@ Nutzer: Pflegekraft Wohnbereich 1, Pflegekraft Wohnbereich 2, Pflegedienstleitun
 
 ## 6. Laufzeitsicht
 
-**Dokument einlesen:** Foto/PDF → OCR (Markdown) → Injection-Prüfung (verdächtige Abschnitte markiert, nicht indiziert) → Pseudonymisierung (ab Stufe 2) → KI-Feldvorschlag → **menschliche Freigabe** inkl. Bestätigung des Bewohners → Chunking (strukturbasiert, Tabellen ganz, Recursive Splitting als Rückfall) → Embeddings → pgvector mit Metadaten (Bewohner, Wohnbereich, Dokumenttyp, Datum, Seite, Dokument-ID).
+**Dokument einlesen:** Foto/PDF → OCR (Markdown) → **lokale** Injection-Prüfung (Regeln, versteckter Text; kein Cloud-Modell) → Pseudonymisierung (ab Stufe 2) → Klassifikator (öffentlich: Ministral, sieht nur pseudonymisierten Text) → verdächtige Abschnitte markiert, nicht indiziert → KI-Feldvorschlag → **menschliche Freigabe** inkl. Bestätigung des Bewohners → Chunking (strukturbasiert, Tabellen ganz, Recursive Splitting als Rückfall) → Embeddings → pgvector mit Metadaten (Bewohner, Wohnbereich, Dokumenttyp, Datum, Seite, Dokument-ID).
 
 **Frage stellen (RAG):** Frage → Rechte (RLS, nur eigener Wohnbereich) → Vektorsuche (optional pro Bewohner) → Pseudonymisierung → LLM → Ausgabe prüfen, zurückübersetzen, Quellen anhängen → Protokoll.
 

@@ -21,8 +21,12 @@ Pseudonymisierung vor dem LLM, Prompt-Injection-Erkennung.
 
 ## Schnellstart lokal
 
+Voraussetzungen: Python ≥ 3.12 mit [uv](https://docs.astral.sh/uv/), Node 22 mit pnpm, Docker mit Compose-Plugin, make.
+
 ```bash
+make setup  # einmalig: Abhängigkeiten + Playwright-Browser
 make test   # Unit-Tests API + Web
+make e2e    # End-to-End (Desktop + Handy)
 make up     # Web (http://localhost:3000) + API (http://localhost:8000)
 ```
 

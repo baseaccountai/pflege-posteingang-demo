@@ -3,3 +3,7 @@ node_modules
 e2e
 playwright-report
 test-results
+
+# Never bake secrets into images; provide them at runtime
+.env
+.env.*

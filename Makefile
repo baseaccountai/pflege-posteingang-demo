@@ -1,6 +1,11 @@
-.PHONY: test test-api test-web e2e lint up down
+.PHONY: setup test test-api test-web e2e lint up down
 
 COMPOSE := docker compose -f infra/docker-compose.yml
+
+# One-time install of all dependencies (incl. Playwright browser)
+setup:
+	cd apps/api && uv sync --frozen
+	cd apps/web && pnpm install --frozen-lockfile && pnpm exec playwright install chromium
 
 test: test-api test-web
 

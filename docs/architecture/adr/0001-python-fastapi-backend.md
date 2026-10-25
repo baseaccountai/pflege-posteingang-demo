@@ -11,7 +11,7 @@ Das Backend wird in **Python mit FastAPI** gebaut (Paketverwaltung `uv`, Tests `
 ## Alternativen
 | Alternative | Warum nicht |
 |---|---|
-| Alles in Next.js/TypeScript | Presidio, LLM Guard, Docling nur in Python; Sicherheitslogik vermischt mit Oberfläche |
+| Alles in Next.js/TypeScript | Presidio, LLM Guard und Docling sind Python-Bibliotheken (Stand Recherche 10/2026, zu prüfen); Sicherheitslogik vermischt mit Oberfläche |
 | Django | schwerer, ORM/Admin hier nicht nötig |
 | Node (NestJS) separat | gleiche Bibliotheksnachteile wie oben |
 

@@ -10,7 +10,7 @@ Die Demo braucht OCR, ein Chat-/Agentenmodell mit Function Calling, einen kleine
 |---|---|---|
 | OCR | Mistral OCR | Docling |
 | Chat/Agent, Feldvorschläge | Mistral Small | Mistral Small über Ollama (bei < 16 GB Speicher Ministral) |
-| Injection-Prüfer | Ministral | LLM Guard |
+| Injection-Prüfer | Ministral – **nur auf bereits pseudonymisiertem Text** | LLM Guard |
 | Embeddings | mistral-embed | lokales Embedding-Modell |
 
 Umschalten **nur per Konfiguration** (`LLM_PROVIDER`, `OCR_PROVIDER`). Öffentlich läuft kein lokales Modell.

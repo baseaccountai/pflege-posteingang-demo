@@ -11,7 +11,7 @@ Echter OIDC-Login mit drei Demo-Rollen (Pflegekraft WB1, Pflegekraft WB2, PDL) i
 ## Alternativen
 | Alternative | Warum nicht |
 |---|---|
-| Supabase Auth | kein Standard-OIDC-IdP-Beleg, kein Token Exchange |
+| Supabase Auth | belegt keinen eigenständigen OIDC-IdP; Token Exchange (RFC 8693) nach Stand der Recherche nicht unterstützt – Annahme, zu prüfen |
 | Auth0 / Entra ID | nicht europäisch, Kosten |
 | Keycloak auch öffentlich | eigener Server mit RAM-Bedarf, Budget |
 

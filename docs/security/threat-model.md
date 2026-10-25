@@ -18,7 +18,7 @@ Stand: 25.10.2026 · Orientierung: **OWASP Top 10 für LLM-Anwendungen (2025)** 
 | Browser ↔ BFF | nur Session-Cookie, keine Tokens im Browser |
 | BFF ↔ API | Access-Token; API prüft Signatur (JWKS), `iss`, `aud`, `exp`, Algorithmen |
 | API ↔ Supabase | Zugriff im Namen von Nutzer/Agent, RLS erzwingt Wohnbereich |
-| API ↔ Cloud-LLM | nur pseudonymisierte Texte |
+| API ↔ Cloud-LLM | nur pseudonymisierte Texte – gilt auch für den Injection-Klassifikator; die Prüfung davor (Regeln, versteckter Text) läuft lokal im Backend |
 | API ↔ Cloud-OCR | **sieht Rohdaten** (bekannte Grenze; lokal: Docling) |
 | Dokumentinhalt ↔ Prompt | Dokumente sind **Daten**, keine Anweisungen |
 

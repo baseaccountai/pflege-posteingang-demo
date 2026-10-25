@@ -3,3 +3,7 @@ __pycache__
 .pytest_cache
 .ruff_cache
 tests
+
+# Never bake secrets into images; provide them at runtime
+.env
+.env.*
