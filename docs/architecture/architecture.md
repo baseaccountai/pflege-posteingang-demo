@@ -28,7 +28,7 @@ Die Anwendung ist eine **Bewerbungsdemo** (Stelle Nr. 479, Projekt KLARA). Sie s
 | Identity Provider (OIDC) | Login, Rollen, Wohnbereich-Claim | Zitadel Cloud | Keycloak |
 | OCR | Bild/PDF → Markdown | Mistral OCR | Docling |
 | LLM + Embeddings | Feldvorschläge, Antworten, Agent, Vektoren | Mistral (Small, Ministral, mistral-embed) | Ollama |
-| Datenplattform | Postgres, pgvector, RLS (Dateien in Postgres, ADR 0010) | Supabase (Frankfurt) | Supabase self-hosted |
+| Datenplattform | Postgres, pgvector, RLS (Dateien in Postgres, ADR 0010) | Supabase (Irland, `eu-west-1`) | Supabase self-hosted |
 
 Nutzer: Pflegekraft Wohnbereich 1, Pflegekraft Wohnbereich 2, Pflegedienstleitung (PDL). Kontextdiagramm: [diagrams/context.md](diagrams/context.md).
 
@@ -54,7 +54,7 @@ Nutzer: Pflegekraft Wohnbereich 1, Pflegekraft Wohnbereich 2, Pflegedienstleitun
 
 | Umgebung | Web | API | Daten | IdP | KI |
 |---|---|---|---|---|---|
-| Öffentlich | Vercel | Koyeb Frankfurt (≥ 2 GB RAM) | Supabase Frankfurt | Zitadel Cloud | Mistral |
+| Öffentlich | Vercel | Koyeb Frankfurt (≥ 2 GB RAM) | Supabase Irland (`eu-west-1`) | Zitadel Cloud | Mistral |
 | Lokal | Docker | Docker | Supabase self-hosted | Keycloak (Docker) | Ollama + Docling (Docker) |
 
 Gleiche Architektur in beiden Umgebungen, nur andere Anbieter. CI/CD: GitHub Actions (Tests, Deployment, Keep-alive, nächtlicher Reset).
