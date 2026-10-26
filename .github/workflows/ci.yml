@@ -102,6 +102,12 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      # Playwright starts the API too (uv run uvicorn), against the same test IdP.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+        working-directory: apps/api
       - run: docker pull ghcr.io/navikt/mock-oauth2-server:2.1.10
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e

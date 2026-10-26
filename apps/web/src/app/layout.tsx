@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { Suspense } from "react";
+
 import { DemoBanner } from "@/components/demo-banner";
 import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
+import { currentSession } from "@/lib/auth/current";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -28,9 +32,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <DemoBanner />
+        <Suspense fallback={<SiteHeader />}>
+          <SessionHeader />
+        </Suspense>
         {children}
         <SiteFooter />
       </body>
     </html>
   );
+}
+
+async function SessionHeader() {
+  const state = await currentSession();
+  return <SiteHeader roleLabel={state.kind === "active" ? state.session.displayName : null} />;
 }

@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 import {
+  API_ENV,
+  API_PORT,
   APP_ENV,
   APP_PORT,
   MOCK_OIDC_CONTAINER,
@@ -9,7 +11,8 @@ import {
   MOCK_OIDC_PORT,
 } from "./e2e/support/env";
 
-// Needs the local Supabase stack (make db-start) and Docker for the test OIDC server.
+// Needs the local Supabase stack (make db-start), Docker for the test OIDC server and uv for
+// the API.
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/support/global-setup.ts",
@@ -37,6 +40,14 @@ export default defineConfig({
         `-e JSON_CONFIG ${MOCK_OIDC_IMAGE}`,
       env: { JSON_CONFIG: JSON.stringify({ interactiveLogin: true }) },
       url: `${MOCK_OIDC_ISSUER}/.well-known/openid-configuration`,
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+    {
+      // FastAPI with the same test IdP (needs uv); started after the IdP for JWKS discovery.
+      command: `uv run --directory ../api uvicorn app.main:app --port ${API_PORT}`,
+      env: API_ENV,
+      url: `http://127.0.0.1:${API_PORT}/health`,
       reuseExistingServer: false,
       timeout: 120_000,
     },

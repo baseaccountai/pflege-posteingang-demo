@@ -13,10 +13,14 @@ const demoUsers = JSON.parse(
 describe("demo roles", () => {
   it("match infra/demo-users.json", () => {
     const fromFile = Object.fromEntries(
-      demoUsers.users.map((u: { username: string; roles: string[] }) => [u.username, u.roles]),
+      demoUsers.users.map((u: { username: string; password: string; roles: string[] }) => [
+        u.username,
+        { roles: u.roles, password: u.password },
+      ]),
     );
     for (const role of Object.values(DEMO_ROLES)) {
-      expect(fromFile[role.username]).toEqual([role.idpRole]);
+      // The start page shows these passwords (F01-AC2); the IdP setup uses the file.
+      expect(fromFile[role.username]).toEqual({ roles: [role.idpRole], password: role.password });
     }
     expect(Object.keys(DEMO_ROLES)).toHaveLength(demoUsers.users.length);
   });

@@ -1,11 +1,23 @@
 // The three demo roles (same users as infra/demo-users.json, checked by a test).
 // The role decides only the login_hint and the label; access rights are derived again by
 // the API from the access token (apps/api/app/auth/claims.py).
+// The passwords are public on purpose: the start page shows them (F01-AC2), and the
+// demo-passwords workflow resets them every 15 minutes (F01-AC18).
 
 export const DEMO_ROLES = {
-  wb1: { username: "pflege-wb1", idpRole: "nurse_wb1", label: "Pflegekraft WB1" },
-  wb2: { username: "pflege-wb2", idpRole: "nurse_wb2", label: "Pflegekraft WB2" },
-  pdl: { username: "pdl", idpRole: "pdl", label: "Pflegedienstleitung" },
+  wb1: {
+    username: "pflege-wb1",
+    password: "Pflege-WB1-Demo!",
+    idpRole: "nurse_wb1",
+    label: "Pflegekraft WB1",
+  },
+  wb2: {
+    username: "pflege-wb2",
+    password: "Pflege-WB2-Demo!",
+    idpRole: "nurse_wb2",
+    label: "Pflegekraft WB2",
+  },
+  pdl: { username: "pdl", password: "Pflege-PDL-Demo1!", idpRole: "pdl", label: "Pflegedienstleitung" },
 } as const;
 
 export type RoleKey = keyof typeof DEMO_ROLES;

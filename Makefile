@@ -31,7 +31,7 @@ db-stop:
 db-reset:
 	$(SUPABASE) db reset
 
-# Needs the local Supabase stack (make db-start) and Docker (test OIDC server)
+# Needs the local Supabase stack (make db-start), Docker (test OIDC server) and uv (API)
 e2e:
 	cd apps/web && pnpm e2e
 
