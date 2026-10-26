@@ -12,8 +12,8 @@ Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
 - [x] **2. Spike S2 + S4: Zitadel** — Setup-Skript-Entwurf, Token holen, Claims/`aud`/Typ prüfen, Token-Widerruf und `end_session` mit `client_id` ohne `id_token_hint` prüfen, Passwortänderung als Demo-Nutzer versuchen; Ergebnis in ADR 0007 · Commit (26.10.2026: S2 bestanden, S4 negativ → Passwort-Wächter in Aufgabe 7)
 - [x] **3. Token-Prüfung** — `F01-AC6`, `F01-AC19`
   - [x] `tests/auth/test_tokens.py`: gültig, abgelaufen, `nbf` in Zukunft, falscher `iss`, falscher `aud`, `alg=none`, `HS256` mit Public Key, unbekannter `kid` → rot → `tokens.py` → grün · Commit `feat(api): verify OIDC access tokens via JWKS`
-- [ ] **4. BFF-Nachweis** — `F01-AC8`
-  - [ ] Tests: fehlt, abgelaufen, falsche Signatur, falsches `aud` → 401; gültig → `sid_hash` → rot → `bff.py` → grün · Commit
+- [x] **4. BFF-Nachweis** — `F01-AC8`
+  - [x] Tests: fehlt, abgelaufen, falsche Signatur, falsches `aud` → 401; gültig → `sid_hash` → rot → `bff.py` → grün · Commit
 - [ ] **5. Claim-Mapping** — `F01-AC7`
   - [ ] Tests: drei Rollen, unbekannte Rolle → 403, mehrere Rollen → Vereinigung, Zitadel-Objektform → rot → grün · Commit
 - [ ] **6. Endpunkte `/me`, `/residents`, `/residents/{id}`** — `F01-AC9`, `F01-AC10`, `F01-AC12`
