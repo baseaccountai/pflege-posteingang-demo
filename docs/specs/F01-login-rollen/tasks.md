@@ -10,8 +10,8 @@ Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
   - [x] ADR 0007 „Datenbankzugriff im Namen des Nutzers“; **Halt, falls S1 scheitert** (Bewerber informieren)
   - [x] Commit: `feat(db): add ward isolation with RLS (spike F01)`
 - [x] **2. Spike S2 + S4: Zitadel** — Setup-Skript-Entwurf, Token holen, Claims/`aud`/Typ prüfen, Token-Widerruf und `end_session` mit `client_id` ohne `id_token_hint` prüfen, Passwortänderung als Demo-Nutzer versuchen; Ergebnis in ADR 0007 · Commit (26.10.2026: S2 bestanden, S4 negativ → Passwort-Wächter in Aufgabe 7)
-- [ ] **3. Token-Prüfung** — `F01-AC6`, `F01-AC19`
-  - [ ] `tests/auth/test_tokens.py`: gültig, abgelaufen, `nbf` in Zukunft, falscher `iss`, falscher `aud`, `alg=none`, `HS256` mit Public Key, unbekannter `kid` → rot → `tokens.py` → grün · Commit `feat(api): verify OIDC access tokens via JWKS`
+- [x] **3. Token-Prüfung** — `F01-AC6`, `F01-AC19`
+  - [x] `tests/auth/test_tokens.py`: gültig, abgelaufen, `nbf` in Zukunft, falscher `iss`, falscher `aud`, `alg=none`, `HS256` mit Public Key, unbekannter `kid` → rot → `tokens.py` → grün · Commit `feat(api): verify OIDC access tokens via JWKS`
 - [ ] **4. BFF-Nachweis** — `F01-AC8`
   - [ ] Tests: fehlt, abgelaufen, falsche Signatur, falsches `aud` → 401; gültig → `sid_hash` → rot → `bff.py` → grün · Commit
 - [ ] **5. Claim-Mapping** — `F01-AC7`
