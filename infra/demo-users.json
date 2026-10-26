@@ -1,0 +1,47 @@
+{
+  "_comment": "Demo users, roles and OIDC app for Zitadel (infra/zitadel/setup.py) and later Keycloak. Invented people only. Passwords are PUBLIC on purpose: the start page shows them (F01-AC2).",
+  "project": "pflege-posteingang",
+  "app": {
+    "name": "pflege-posteingang-web",
+    "redirect_uris": [
+      "https://pflege-posteingang-demo.vercel.app/auth/callback",
+      "http://localhost:3000/auth/callback"
+    ],
+    "post_logout_redirect_uris": [
+      "https://pflege-posteingang-demo.vercel.app/",
+      "http://localhost:3000/"
+    ]
+  },
+  "roles": [
+    {"key": "nurse_wb1", "display_name": "Pflegekraft WB1"},
+    {"key": "nurse_wb2", "display_name": "Pflegekraft WB2"},
+    {"key": "pdl", "display_name": "Pflegedienstleitung"}
+  ],
+  "users": [
+    {
+      "username": "pflege-wb1",
+      "first_name": "Paula",
+      "last_name": "Beispiel",
+      "email": "pflege-wb1@example.invalid",
+      "password": "Pflege-WB1-Demo!",
+      "roles": ["nurse_wb1"]
+    },
+    {
+      "username": "pflege-wb2",
+      "first_name": "Ben",
+      "last_name": "Beispiel",
+      "email": "pflege-wb2@example.invalid",
+      "password": "Pflege-WB2-Demo!",
+      "roles": ["nurse_wb2"]
+    },
+    {
+      "username": "pdl",
+      "first_name": "Petra",
+      "last_name": "Leitung",
+      "email": "pdl@example.invalid",
+      "password": "Pflege-PDL-Demo1!",
+      "roles": ["pdl"]
+    }
+  ],
+  "remove_users": ["spike-wb1"]
+}

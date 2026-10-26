@@ -30,6 +30,8 @@ from pathlib import Path
 
 import jwt
 
+from app.auth.claims import NoKnownRole, principal_from_claims
+from app.auth.tokens import InvalidToken, TokenVerifier
 from scripts.provision_db_roles import read_env, upsert_env
 
 PROJECT_NAME = "pflege-posteingang"
@@ -295,7 +297,7 @@ def result(name: str, ok: bool, detail: str) -> None:
     print(f"[{'OK ' if ok else 'NEIN'}] {name}: {detail}")
 
 
-def login(env_path: Path) -> None:
+def login(env_path: Path, username: str = SPIKE_USER) -> None:
     env = read_env(env_path)
     needed = ["OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "OIDC_AUDIENCE"]
     if missing := [k for k in needed if not env.get(k)]:
@@ -323,7 +325,7 @@ def login(env_path: Path) -> None:
                 "state": state,
                 "nonce": nonce,
                 "prompt": "login",
-                "login_hint": SPIKE_USER,
+                "login_hint": username,
                 "code_challenge": challenge,
                 "code_challenge_method": "S256",
             }
@@ -407,6 +409,18 @@ def login(env_path: Path) -> None:
         print(f"     ID-Token-Claims: {sorted(id_claims)}")
     result("Refresh-Token erhalten (offline_access)", bool(refresh), "ja" if refresh else "nein")
 
+    # The API's own checks (F01 tasks 3 + 5) with this real Zitadel token.
+    try:
+        verified = TokenVerifier.from_issuer(issuer, audience).verify(access)
+        principal = principal_from_claims(verified, ROLES_CLAIM)
+        result(
+            "API-Prüfung (tokens.py + claims.py)",
+            True,
+            f"{principal.app_role} {list(principal.ward_ids)} '{principal.display_name}'",
+        )
+    except (InvalidToken, NoKnownRole) as error:
+        result("API-Prüfung (tokens.py + claims.py)", False, f"{type(error).__name__}: {error}")
+
     # App tokens must not be usable against Zitadel's own APIs (password change via auth API).
     status, _, _ = http(
         "PUT",  # Auth API v1: PUT /auth/v1/users/me/password
@@ -482,6 +496,9 @@ def login(env_path: Path) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in ("setup", "login"):
-        sys.exit("Aufruf: python -m scripts.zitadel_spike setup|login [../../.env]")
+        sys.exit("Aufruf: python -m scripts.zitadel_spike setup|login [../../.env] [benutzer]")
     path = Path(sys.argv[2] if len(sys.argv) > 2 else "../../.env")
-    {"setup": setup, "login": login}[sys.argv[1]](path)
+    if sys.argv[1] == "login" and len(sys.argv) > 3:
+        login(path, sys.argv[3])
+    else:
+        {"setup": setup, "login": login}[sys.argv[1]](path)

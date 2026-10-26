@@ -20,7 +20,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "../../infra"]
 markers = [
     "db: needs the local Supabase database (make test-db)",
 ]
