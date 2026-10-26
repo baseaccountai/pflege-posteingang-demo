@@ -3,11 +3,12 @@
 Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
 
 - [ ] **1. Spike S1 + S3: Datenbank im Namen des Nutzers** — `F01-AC9`, `F01-AC10`, `F01-AC11`
-  - [ ] Migration `f01_auth` (Schema `app`, `wards`, `residents`, Rollen, `bff.sessions`, `revoke … from anon`)
-  - [ ] `tests/rls/test_ward_isolation.py`: ohne Filter; WB1-Fehler→Rollback→WB2 auf derselben Verbindung; 20 parallele Anfragen gemischt; ohne Claims → 0 Zeilen und Schreibfehler → rot → `db.as_principal()` → grün
-  - [ ] Dieselben Tests gegen Cloud-Supabase über den Pooler (manuell, Ergebnis notieren); BFF-Rolle von einer Vercel-Preview-Funktion
-  - [ ] ADR 0007 „Datenbankzugriff im Namen des Nutzers“; **Halt, falls S1 scheitert** (Bewerber informieren)
-  - [ ] Commit: `feat(db): add ward isolation with RLS (spike F01)`
+  - [x] Migration `f01_auth` (Schema `app`, `wards`, `residents`, Rollen, `bff.sessions`, `revoke … from anon`)
+  - [x] `tests/rls/test_ward_isolation.py`: ohne Filter; WB1-Fehler→Rollback→WB2 auf derselben Verbindung; 20 parallele Anfragen gemischt; ohne Claims → 0 Zeilen und Schreibfehler → rot → `db.as_principal()` → grün
+  - [x] Dieselben Tests gegen Cloud-Supabase über den Pooler (26.10.2026: 9 bestanden)
+  - [ ] BFF-Rolle von einer Vercel-Preview-Funktion (S3, verschoben in Aufgabe 8)
+  - [x] ADR 0007 „Datenbankzugriff im Namen des Nutzers“; **Halt, falls S1 scheitert** (Bewerber informieren)
+  - [x] Commit: `feat(db): add ward isolation with RLS (spike F01)`
 - [ ] **2. Spike S2 + S4: Zitadel** — Setup-Skript-Entwurf, Token holen, Claims/`aud`/Typ prüfen, Token-Widerruf und `end_session` mit `client_id` ohne `id_token_hint` prüfen, Passwortänderung als Demo-Nutzer versuchen; Ergebnis in ADR 0007 · Commit
 - [ ] **3. Token-Prüfung** — `F01-AC6`, `F01-AC19`
   - [ ] `tests/auth/test_tokens.py`: gültig, abgelaufen, `nbf` in Zukunft, falscher `iss`, falscher `aud`, `alg=none`, `HS256` mit Public Key, unbekannter `kid` → rot → `tokens.py` → grün · Commit `feat(api): verify OIDC access tokens via JWKS`

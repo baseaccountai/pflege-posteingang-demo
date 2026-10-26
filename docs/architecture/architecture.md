@@ -81,7 +81,7 @@ Gleiche Architektur in beiden Umgebungen, nur andere Anbieter. CI/CD: GitHub Act
 | [0004](adr/0004-nextjs-bff.md) | Next.js als Backend-for-Frontend |
 | [0005](adr/0005-zitadel-public-keycloak-local.md) | Zitadel öffentlich, Keycloak lokal |
 | [0006](adr/0006-kiro-spec-format.md) | Spec-Format im Kiro-Stil |
-| 0007 | Datenbankzugriff im Namen des Nutzers (Ergebnis Spike F01, folgt) |
+| [0007](adr/0007-db-access-on-behalf-of-user.md) | Datenbankzugriff im Namen des Nutzers (Login-Rolle + `set local role`, Spike F01) |
 | 0008 | Eigener minimaler Service Worker (folgt mit F11) |
 | [0009](adr/0009-server-side-sessions.md) | Login-Sitzung serverseitig in Postgres |
 | [0010](adr/0010-files-in-postgres.md) | Originaldateien in Postgres statt Supabase Storage |
@@ -92,7 +92,7 @@ Gleiche Architektur in beiden Umgebungen, nur andere Anbieter. CI/CD: GitHub Act
 |---|---|
 | Supabase pausiert nach einer Woche Inaktivität; Backend schläft | Keep-alive per GitHub Action; Hinweis „Demo startet …“ |
 | Token Exchange im IdP nicht verfügbar | Rückfall: selbst signiertes Agenten-JWT (ADR) |
-| OIDC-Token und Supabase-RLS passen nicht direkt zusammen | Früher Spike in F01 (Backend stellt Supabase-kompatibles JWT aus oder Third-Party-Auth) |
+| OIDC-Token und Supabase-RLS passen nicht direkt zusammen | Gelöst durch Spike S1: Login-Rolle + Claims pro Transaktion (ADR 0007), lokal und in der Cloud getestet |
 | Docling braucht viel RAM | nur lokal; öffentlich Mistral OCR |
 | Kostenlose Kontingente ändern sich | Limits beim Anlegen der Konten prüfen |
 | Stufe 2 (Sicherheitskern) wird nicht fertig | Stufe 1 bis 02.11. online; Stufe 2 vor Feinschliff |
