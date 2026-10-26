@@ -19,6 +19,7 @@ test-web:
 # Database tests need the local Supabase stack (make db-start)
 test-db:
 	cd apps/api && uv run pytest -m db -v
+	cd apps/web && pnpm test:db
 
 db-start:
 	$(SUPABASE) start

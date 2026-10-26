@@ -20,7 +20,7 @@ Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `OIDC_SCOPES` | Web | ja | siehe F01-Design | nein | angeforderte Scopes |
 | `OIDC_ROLES_CLAIM` | API | ja | `urn:zitadel:iam:org:project:roles` | nein | Claim mit Rollen |
 | `APP_ORIGIN` | Web | ja | – | nein | erlaubter `Origin` (CSRF), Redirect-Basis |
-| `SESSION_ENC_KEY` | Web | ja | – | **ja** | AES-256-GCM für Tokens in `bff.sessions` |
+| `SESSION_ENC_KEY` | Web | ja | – | **ja** | AES-256-GCM für Tokens in `bff.sessions`; 32 Byte, Base64 (`openssl rand -base64 32`) |
 | `BFF_DATABASE_URL` | Web | ja | – | **ja** | Rolle `bff_session` über Pooler |
 | `BFF_API_SECRET` | Web, API | ja | – | **ja** | Signatur des BFF-Nachweises |
 | `API_BASE_URL` | Web | ja | `http://localhost:8000` | nein | API-Adresse |
