@@ -1,14 +1,14 @@
 // Server-side session store (F01-AC3): the browser only gets a random session id in
 // the cookie; the tokens live in bff.sessions, encrypted with AES-256-GCM. The table
 // stores only sha256(session id), so a stolen table row cannot be used as a cookie.
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type postgres from "postgres";
 
-export type TokenSet = { access: string; refresh: string | null; id: string | null };
+import { openJson, parseEncKey, sealJson } from "./crypto";
 
-const VERSION = 1; // first byte of tokens_enc, allows a later key/format change
-const IV_BYTES = 12;
-const TAG_BYTES = 16;
+export { parseEncKey };
+
+export type TokenSet = { access: string; refresh: string | null; id: string | null };
 
 /** 256 random bits, base64url: the value of the __Host-pp_sid cookie. */
 export function newSessionId(): string {
@@ -19,35 +19,14 @@ export function hashSessionId(sid: string): Buffer {
   return createHash("sha256").update(sid).digest();
 }
 
-/** SESSION_ENC_KEY: 32 random bytes, base64 (e.g. `openssl rand -base64 32`). */
-export function parseEncKey(value: string | undefined): Buffer {
-  const key = Buffer.from(value ?? "", "base64");
-  if (key.length !== 32) throw new Error("SESSION_ENC_KEY must be 32 bytes, base64-encoded");
-  return key;
-}
-
-/**
- * Layout: version (1) | iv (12) | ciphertext | tag (16).
- * The row's id_hash is authenticated data: the ciphertext only opens in its own row.
- */
+/** The row's id_hash is authenticated data: the ciphertext only opens in its own row. */
 export function sealTokens(tokens: TokenSet, key: Buffer, idHash: Buffer): Buffer {
-  const iv = randomBytes(IV_BYTES);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
-  cipher.setAAD(idHash);
-  const body = Buffer.concat([cipher.update(JSON.stringify(tokens), "utf8"), cipher.final()]);
-  return Buffer.concat([Buffer.from([VERSION]), iv, body, cipher.getAuthTag()]);
+  return sealJson(tokens, key, idHash);
 }
 
 /** Throws if the data was changed, belongs to another row or another key. */
 export function openTokens(sealed: Buffer, key: Buffer, idHash: Buffer): TokenSet {
-  if (sealed[0] !== VERSION) throw new Error("unknown token format");
-  const iv = sealed.subarray(1, 1 + IV_BYTES);
-  const tag = sealed.subarray(sealed.length - TAG_BYTES);
-  const decipher = createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAAD(idHash);
-  decipher.setAuthTag(tag);
-  const body = sealed.subarray(1 + IV_BYTES, sealed.length - TAG_BYTES);
-  return JSON.parse(Buffer.concat([decipher.update(body), decipher.final()]).toString("utf8"));
+  return openJson<TokenSet>(sealed, key, idHash);
 }
 
 // --- bff.sessions (role bff_session, see supabase/migrations/*_f01_auth.sql) ------------
@@ -156,7 +135,8 @@ export class SessionStore {
 
   /** Marks the session as revoked (kept for the record until it expires). */
   async revoke(sid: string): Promise<void> {
-    await this.sql`update bff.sessions set revoked_at = now() where id_hash = ${hashSessionId(sid)}`;
+    await this.sql`
+      update bff.sessions set revoked_at = now() where id_hash = ${hashSessionId(sid)}`;
   }
 
   /** Logout: the row is gone. */

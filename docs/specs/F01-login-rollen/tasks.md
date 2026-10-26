@@ -23,9 +23,9 @@ Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
   - [x] Bewerber führt das Skript aus (geführt); Workflow `demo-passwords.yml` (nötig laut S4); Spike-Nutzer `spike-wb1` löschen · Commit `feat(infra): define demo users and roles as code` (26.10.2026: Setup gelaufen, Workflow-Lauf 40355593552 grün, Echt-Token pflege-wb1 → nurse [wb1] von API akzeptiert)
 - [x] **8. Sitzung serverseitig** — `F01-AC3`, `F01-AC21`
   - [x] Vitest: Verschlüsselung Roundtrip, Manipulation erkannt, nur Hash gespeichert, Ablauf, Widerruf, paralleler Refresh nur einmal → rot → `session-store.ts`, `session.ts` → grün · Commit (S3 – Verbindung aus Vercel – wird mit der ersten Route in Aufgabe 9 geprüft)
-- [ ] **9. BFF-Login, CSRF** — `F01-AC1`, `F01-AC4`, `F01-AC5`, `F01-AC15`, `F01-AC19`
-  - [ ] Playwright (Test-OIDC-Server): Login WB1 → Cookie-Attribute; kein Token-Muster in HTML, `document.cookie`, Storage, Antworten und Redirect-URLs (auch beim Logout); manipulierter `state` und zweiter Callback → Fehlerseite; POST ohne/mit fremdem `Origin` → 403 → rot
-  - [ ] Route-Handler + `proxy.ts` → grün · Commit `feat(web): add server-side OIDC login with session store`
+- [x] **9. BFF-Login, CSRF** — `F01-AC1`, `F01-AC4`, `F01-AC5`, `F01-AC15`, `F01-AC19`
+  - [x] Playwright (Test-OIDC-Server): Login WB1 → Cookie-Attribute; kein Token-Muster in HTML, `document.cookie`, Storage, Antworten und Redirect-URLs (auch beim Logout); manipulierter `state` und zweiter Callback → Fehlerseite; POST ohne/mit fremdem `Origin` → 403 → rot
+  - [x] Route-Handler + `proxy.ts` → grün · Commit `feat(web): add server-side OIDC login with session store` (S3 aus Vercel: offen, braucht Deployment)
 - [ ] **10. Rollenwechsel & Kein Zugriff** — `F01-AC2`, `F01-AC12`, `F01-AC13`, `F01-AC14`, `F01-AC20`
   - [ ] Vitest: Rollenknöpfe mit Zugangsdaten + Kopieren; Kopfzeile zeigt Rolle → rot → grün
   - [ ] Playwright: WB1 anmelden, Bewohnerliste merken → Rolle WB2 → keine WB1-Namen; Zurück-Taste zeigt keine WB1-Daten; alte Sitzungs-ID wird von BFF abgelehnt; `Cache-Control: no-store`; WB1-Bewohner-URL als WB2 → Bildschirm 8 → rot → grün

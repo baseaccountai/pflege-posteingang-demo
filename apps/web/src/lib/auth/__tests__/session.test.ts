@@ -2,7 +2,7 @@
 // F01-AC3 (cookie attributes), F01-AC21 (no or ended session -> null, caller redirects).
 import { describe, expect, it, vi } from "vitest";
 
-import { SESSION_COOKIE, loadSession, sessionCookieOptions } from "../session";
+import { SESSION_COOKIE, endSession, loadSession, sessionCookieOptions } from "../session";
 import type { Session, SessionStore } from "../session-store";
 
 const SESSION = { sub: "u", appRole: "pdl" } as Session;
@@ -52,5 +52,40 @@ describe("loadSession", () => {
 
   it("passes through an ended session as null", async () => {
     expect(await loadSession("A".repeat(43), fakeStore(null), refresh)).toBeNull();
+  });
+});
+
+describe("endSession", () => {
+  const sid = "A".repeat(43);
+
+  function store(session: Session | null) {
+    return {
+      find: vi.fn().mockResolvedValue(session),
+      delete: vi.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  it("revokes the tokens at the IdP and deletes the row", async () => {
+    const s = store({ ...SESSION, tokens: { access: "a", refresh: "r", id: null } });
+    const revoke = vi.fn().mockResolvedValue(undefined);
+    await endSession(sid, s, revoke);
+    expect(revoke).toHaveBeenCalledWith({ access: "a", refresh: "r", id: null });
+    expect(s.delete).toHaveBeenCalledWith(sid);
+  });
+
+  it("still deletes the row of an expired or revoked session", async () => {
+    const s = store(null);
+    const revoke = vi.fn();
+    await endSession(sid, s, revoke);
+    expect(revoke).not.toHaveBeenCalled();
+    expect(s.delete).toHaveBeenCalledWith(sid);
+  });
+
+  it("does nothing without a well-formed cookie", async () => {
+    const s = store(SESSION);
+    await endSession(undefined, s, vi.fn());
+    await endSession("bad", s, vi.fn());
+    expect(s.find).not.toHaveBeenCalled();
+    expect(s.delete).not.toHaveBeenCalled();
   });
 });
