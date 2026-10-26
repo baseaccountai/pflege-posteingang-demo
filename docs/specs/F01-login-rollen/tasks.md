@@ -9,7 +9,7 @@ Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
   - [ ] BFF-Rolle von einer Vercel-Preview-Funktion (S3, verschoben in Aufgabe 8)
   - [x] ADR 0007 „Datenbankzugriff im Namen des Nutzers“; **Halt, falls S1 scheitert** (Bewerber informieren)
   - [x] Commit: `feat(db): add ward isolation with RLS (spike F01)`
-- [ ] **2. Spike S2 + S4: Zitadel** — Setup-Skript-Entwurf, Token holen, Claims/`aud`/Typ prüfen, Token-Widerruf und `end_session` mit `client_id` ohne `id_token_hint` prüfen, Passwortänderung als Demo-Nutzer versuchen; Ergebnis in ADR 0007 · Commit
+- [x] **2. Spike S2 + S4: Zitadel** — Setup-Skript-Entwurf, Token holen, Claims/`aud`/Typ prüfen, Token-Widerruf und `end_session` mit `client_id` ohne `id_token_hint` prüfen, Passwortänderung als Demo-Nutzer versuchen; Ergebnis in ADR 0007 · Commit (26.10.2026: S2 bestanden, S4 negativ → Passwort-Wächter in Aufgabe 7)
 - [ ] **3. Token-Prüfung** — `F01-AC6`, `F01-AC19`
   - [ ] `tests/auth/test_tokens.py`: gültig, abgelaufen, `nbf` in Zukunft, falscher `iss`, falscher `aud`, `alg=none`, `HS256` mit Public Key, unbekannter `kid` → rot → `tokens.py` → grün · Commit `feat(api): verify OIDC access tokens via JWKS`
 - [ ] **4. BFF-Nachweis** — `F01-AC8`
@@ -20,7 +20,7 @@ Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
   - [ ] Integrationstests: WB1 sieht WB1; WB2 bekommt 404 für WB1-ID und für Zufalls-ID (identische Antwort); PDL sieht beide; ohne BFF-Nachweis 401 → rot → grün · Commit `feat(api): add principal-scoped resident endpoints`
 - [ ] **7. Demo-Nutzer als Code** — `F01-AC16`, `F01-AC17`, `F01-AC18`
   - [ ] `infra/demo-users.json`; Test: Setup-Skript erzeugt aus der Datei die erwarteten API-Aufrufe (Attrappe), keine Admin-Rollen → rot → `infra/zitadel/setup.py` → grün
-  - [ ] Bewerber führt das Skript aus (geführt); ggf. Workflow `demo-passwords.yml` · Commit `feat(infra): define demo users and roles as code`
+  - [ ] Bewerber führt das Skript aus (geführt); Workflow `demo-passwords.yml` (nötig laut S4); Spike-Nutzer `spike-wb1` löschen · Commit `feat(infra): define demo users and roles as code`
 - [ ] **8. Sitzung serverseitig** — `F01-AC3`, `F01-AC21`
   - [ ] Vitest: Verschlüsselung Roundtrip, Manipulation erkannt, nur Hash gespeichert, Ablauf, Widerruf, paralleler Refresh nur einmal → rot → `session-store.ts`, `session.ts` → grün · Commit
 - [ ] **9. BFF-Login, CSRF** — `F01-AC1`, `F01-AC4`, `F01-AC5`, `F01-AC15`, `F01-AC19`

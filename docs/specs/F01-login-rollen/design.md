@@ -18,7 +18,7 @@ Browser ──(Cookie __Host-pp_sid = zufällige ID)──▶ Next.js BFF ──
 | Login-Zwischenzustand | `apps/web/src/lib/auth/login-state.ts` | `state`, `nonce`, `code_verifier`, Rolle in einem kurzlebigen, verschlüsselten Cookie `__Host-pp_oidc` (10 min, `HttpOnly`); wird beim Callback sofort gelöscht → Einmalverwendung (AC5). Enthält **keine** Tokens. |
 | Sitzungsspeicher | `apps/web/src/lib/auth/session-store.ts` | `postgres` (npm) als Rolle `bff_session` über den Pooler; Tokens AES-256-GCM mit `SESSION_ENC_KEY`; Tabelle speichert nur `sha256(sid)` |
 | Sitzung | `apps/web/src/lib/auth/session.ts` | `getSession()`: Cookie → Hash → Zeile (nicht widerrufen, nicht abgelaufen) → bei Ablauf des Access-Tokens Refresh mit Zeilensperre (`select … for update`), damit parallele Anfragen nur einmal erneuern |
-| Route-Handler | `apps/web/src/app/auth/{login,callback,logout}/route.ts` | Login (`?role=wb1|wb2|pdl`), Rücksprung, Logout (POST): Refresh- und Access-Token serverseitig widerrufen → Sitzungszeile löschen → Redirect zu `end_session?client_id=…&post_logout_redirect_uri=…` (**kein** `id_token_hint`, damit kein Token den Browser berührt; Unterstützung von `client_id` in Spike S2 prüfen) |
+| Route-Handler | `apps/web/src/app/auth/{login,callback,logout}/route.ts` | Login (`?role=wb1|wb2|pdl`), Rücksprung, Logout (POST): Refresh- und Access-Token serverseitig widerrufen → Sitzungszeile löschen → Redirect zu `end_session?client_id=…&post_logout_redirect_uri=…` (**kein** `id_token_hint`, damit kein Token den Browser berührt; laut Spike S2 unterstützt, Zitadel zeigt dabei eine eigene Logout-Seite mit Klick). Mit `next=/auth/login?role=…` (Rollenwechsel) **ohne** `end_session` direkt zum neuen Login; `next` nur aus fester Liste (`/auth/login?role=wb1|wb2|pdl`), sonst ignoriert (keine offene Weiterleitung) |
 | CSRF-Schutz | `apps/web/src/proxy.ts` | schreibende Methoden: `Origin` muss `APP_ORIGIN` sein, sonst 403 (AC15) |
 | API-Client | `apps/web/src/lib/api.ts` | serverseitig: `Authorization: Bearer <access>`, `X-Bff-Assertion`: JWS (HS256, `BFF_API_SECRET`) mit `{sid_hash, aud: "pflege-api", iat, exp: +60 s}` |
 | Rollenwechsel-UI | `apps/web/src/components/role-switcher.tsx` | drei Knöpfe + Zugangsdaten mit Kopieren; Wechsel = POST `/auth/logout?next=/auth/login?role=…` → **harter Seitenwechsel** (kein Client-Routing) |
@@ -27,15 +27,16 @@ Browser ──(Cookie __Host-pp_sid = zufällige ID)──▶ Next.js BFF ──
 | Claim-Mapping | `apps/api/app/auth/claims.py` | Rollen-Claim (konfigurierbar) → `Principal(sub, app_role, ward_ids, actor_type, display_name)` |
 | DB-Zugriff | `apps/api/app/db.py` | `psycopg` (async) Pool als `api_gateway`, `prepare_threshold=None` (Transaktions-Pooler); `as_principal(principal)`: Transaktion, `set local role authenticated`, `set_config('request.jwt.claims', json, true)`; `set local` endet mit der Transaktion, auch bei Rollback |
 | IdP-Setup | `infra/demo-users.json`, `infra/zitadel/setup.py` | Projekt, App, Rollen, Demo-Nutzer als Code; idempotent |
-| Passwort-Wächter | `.github/workflows/demo-passwords.yml` | nur falls Spike S4 negativ: alle 15 min Demo-Passwörter per Management-API setzen |
+| Passwort-Wächter | `.github/workflows/demo-passwords.yml` | nötig (Spike S4: Demo-Nutzer können ihr Passwort ändern): alle 15 min Demo-Passwörter per Management-API setzen |
 
 ## OIDC-Vertrag (Zitadel)
 
 | Punkt | Festlegung |
 |---|---|
-| App-Typ | Web-Anwendung, Authorization Code, Client-Authentifizierung **Basic** (`OIDC_CLIENT_SECRET` nur in Vercel/`.env`), zusätzlich PKCE S256 – Rückfall laut Spike S2: PKCE-Client ohne Secret |
+| App-Typ | Web-Anwendung, Authorization Code, Client-Authentifizierung **Basic** (`OIDC_CLIENT_SECRET` nur in Vercel/`.env`), zusätzlich PKCE S256 – laut Spike S2 bestätigt; `devMode` an (wegen `http://localhost`) |
 | Scopes | `openid profile offline_access urn:zitadel:iam:org:project:id:<PROJECT_ID>:aud urn:zitadel:iam:org:projects:roles` |
 | Access-Token-Typ | **JWT** (Projekt-/App-Einstellung, nicht opak) |
+| Token-Laufzeit | Access- und ID-Token **1 h** (Instanz-Einstellung; Konsole nur ganze Stunden, Spike S2), Refresh-Token 1 Tag; die Sitzung endet unabhängig davon nach 8 h (AC21) |
 | Rollen-Claim | `urn:zitadel:iam:org:project:roles` → Objekt `{ "nurse_wb1": { "<orgId>": "<domain>" } }`; ausgewertet werden nur die Schlüssel |
 | `aud` | enthält die Projekt-ID (`OIDC_AUDIENCE`) |
 | Redirect-URIs | `https://pflege-posteingang-demo.vercel.app/auth/callback`, `http://localhost:3000/auth/callback` |

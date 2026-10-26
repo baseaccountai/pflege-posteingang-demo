@@ -31,6 +31,7 @@ Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `SUPABASE_DB_ADMIN_URL` | Reset-Workflow | ja (nur GitHub) | – | **ja** | Reset und Seed (F10) |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (Ref: nein) | `supabase db push` |
 | `ZITADEL_ADMIN_PAT` | Setup-Skript, Passwort-Workflow | für Setup | – | **ja** | Management-API |
+| `ZITADEL_PROJECT_ID` | Setup-Skript, Passwort-Workflow | für Setup | – | nein | Zitadel-Projekt (= `OIDC_AUDIENCE`), schreibt das Setup-Skript |
 | `KOYEB_API_TOKEN`, `KOYEB_SERVICE` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (Service: nein) | API-Deployment |
 | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (IDs: nein) | Web-Deployment |
 | `NEXT_PUBLIC_REPO_URL` | Web | ja | – | nein | Repo-Links der Landkarte (F09) |
