@@ -96,6 +96,24 @@ test("role switch WB1 -> WB2 leaves no WB1 data anywhere (AC13)", async ({ page,
   expect(await replay.text()).not.toContain(WB1_RESIDENT.name);
 });
 
+test("a role switch in one tab clears WB1 data from the other tabs (AC13)", async ({ page }) => {
+  await loginAs(page, "wb1", uniqueUser(), ["nurse_wb1"]);
+  const otherTab = await page.context().newPage();
+  await otherTab.goto("/bewohner");
+  await expect(otherTab.getByRole("link", { name: WB1_RESIDENT.name })).toBeVisible();
+
+  await page.goto("/");
+  const authorize = page.waitForRequest((r) => r.url().startsWith(`${MOCK_OIDC_ISSUER}/authorize`));
+  await page
+    .getByRole("group", { name: "Pflegekraft WB2" })
+    .getByRole("button", { name: "Als Pflegekraft WB2 anmelden" })
+    .click();
+  await authorize; // the switching tab itself reaches the IdP
+
+  await otherTab.waitForURL("/");
+  await expect(otherTab.locator("body")).not.toContainText(WB1_RESIDENT.name);
+});
+
 test("foreign, unknown and malformed resident ids give the same no-access page (AC12)", async ({
   page,
 }) => {

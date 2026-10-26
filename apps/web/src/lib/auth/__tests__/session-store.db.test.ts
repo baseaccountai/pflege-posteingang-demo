@@ -97,6 +97,34 @@ describe("delete", () => {
   });
 });
 
+describe("remove", () => {
+  it("deletes the row and returns its tokens (for revocation)", async () => {
+    const sid = await newSession();
+    expect(await store.remove(sid)).toEqual(TOKENS);
+    expect(await admin`select 1 from bff.sessions`).toHaveLength(0);
+    expect(await store.remove(sid)).toBeNull();
+  });
+
+  it("waits for a running refresh and returns the new tokens, not the old ones", async () => {
+    const sid = await newSession(TOKENS, new Date(Date.now() + 10_000));
+    let release!: () => void;
+    let refreshStarted!: () => void;
+    const started = new Promise<void>((resolve) => (refreshStarted = resolve));
+    const refresh = vi.fn(async () => {
+      refreshStarted(); // the refresh holds the row lock from here on
+      await new Promise<void>((resolve) => (release = resolve));
+      return { tokens: { access: "access-2", refresh: "refresh-2" }, accessExpiresAt: inOneHour() };
+    });
+    const refreshing = store.refreshIfDue(sid, refresh);
+    await started;
+    const removing = store.remove(sid);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    release();
+    await refreshing;
+    expect(await removing).toEqual({ access: "access-2", refresh: "refresh-2", id: "id-1" });
+  });
+});
+
 describe("refreshIfDue", () => {
   const dueSoon = () => new Date(Date.now() + 10_000); // inside the 60 s margin
   const refreshed = { tokens: { access: "access-2" }, accessExpiresAt: inOneHour() };

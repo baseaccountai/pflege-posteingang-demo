@@ -3,7 +3,7 @@
 import { createHash, createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiUnauthorized, apiGet, bffAssertion } from "../api";
+import { ApiUnauthorized, SessionEnded, apiGet, apiGetForSession, bffAssertion } from "../api";
 
 const SECRET = "s".repeat(32);
 const SID = "A".repeat(43);
@@ -70,5 +70,25 @@ describe("apiGet", () => {
 
   it("throws on other errors instead of showing partial data", async () => {
     await expect(apiGet("/me", caller, { env, fetch: fakeFetch(500) })).rejects.toThrow(/500/);
+  });
+});
+
+describe("apiGetForSession", () => {
+  const env = { API_BASE_URL: "http://api.test", BFF_API_SECRET: SECRET };
+  const caller = { sid: SID, accessToken: "access-123" };
+  const fetch = () => vi.fn().mockResolvedValue(new Response(JSON.stringify([{ id: "wb1" }])));
+
+  it("releases the data while the session still exists", async () => {
+    const isActive = vi.fn().mockResolvedValue(true);
+    const result = await apiGetForSession("/residents", caller, isActive, { env, fetch: fetch() });
+    expect(result.data).toEqual([{ id: "wb1" }]);
+    expect(isActive).toHaveBeenCalledWith(SID);
+  });
+
+  it("withholds a late answer if the session ended meanwhile (role switch, AC13)", async () => {
+    const isActive = vi.fn().mockResolvedValue(false);
+    await expect(
+      apiGetForSession("/residents", caller, isActive, { env, fetch: fetch() }),
+    ).rejects.toBeInstanceOf(SessionEnded);
   });
 });

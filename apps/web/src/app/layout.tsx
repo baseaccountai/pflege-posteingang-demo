@@ -6,6 +6,7 @@ import { Suspense } from "react";
 
 import { DemoBanner } from "@/components/demo-banner";
 import { SiteFooter } from "@/components/site-footer";
+import { SessionSync } from "@/components/session-sync";
 import { SiteHeader } from "@/components/site-header";
 import { currentSession } from "@/lib/auth/current";
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <DemoBanner />
+        <SessionSync />
         <Suspense fallback={<SiteHeader />}>
           <SessionHeader />
         </Suspense>

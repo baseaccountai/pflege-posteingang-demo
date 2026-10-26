@@ -4,6 +4,7 @@
 // then the IdP asks for the new credentials (F01-AC13). No client-side routing.
 import { useState } from "react";
 
+import { announceSessionEnd } from "@/components/session-sync";
 import { DEMO_ROLES, type RoleKey } from "@/lib/auth/roles";
 
 function CopyField({ label, value }: { label: string; value: string }) {
@@ -43,7 +44,11 @@ export function RoleSwitcher() {
             <h3 className="font-semibold">{role.label}</h3>
             <CopyField label="Benutzername" value={role.username} />
             <CopyField label="Passwort" value={role.password} />
-            <form method="post" action={`/auth/logout?next=${encodeURIComponent(next)}`}>
+            <form
+              method="post"
+              action={`/auth/logout?next=${encodeURIComponent(next)}`}
+              onSubmit={announceSessionEnd}
+            >
               <button
                 type="submit"
                 className="w-full rounded-md bg-primary px-3 py-1.5 text-primary-foreground hover:bg-primary/80"

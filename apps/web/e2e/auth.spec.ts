@@ -1,5 +1,5 @@
 // F01-AC1, AC3, AC4, AC5, AC13 (logout), AC15, AC19: BFF login against the test OIDC server.
-import { expect, test, type Response } from "@playwright/test";
+import { expect, test, type Request } from "@playwright/test";
 
 import {
   expectErrorPage,
@@ -67,10 +67,22 @@ test("account without a known role gets the error page, no session", async ({ pa
 
 test("no token reaches the browser, also not on logout (AC4, AC13)", async ({ page }) => {
   const user = uniqueUser();
-  const appResponses: Response[] = [];
-  page.on("response", (r) => {
-    if (r.url().startsWith(APP_ORIGIN)) appResponses.push(r);
-  });
+  // Every app response the browser received completely (aborted prefetches never reach
+  // the page, and waiting for their body would hang). Bodies are read as they arrive.
+  const responseParts: Promise<string>[] = [];
+  const collect = (request: Request) => {
+    if (!request.url().startsWith(APP_ORIGIN)) return;
+    responseParts.push(
+      (async () => {
+        const r = await request.response();
+        if (!r) return "";
+        const headers = JSON.stringify(await r.allHeaders());
+        const body = r.status() >= 300 && r.status() < 400 ? "" : await r.text().catch(() => "");
+        return `${r.url()} ${headers} ${body}`;
+      })(),
+    );
+  };
+  page.on("requestfinished", collect);
   // Every request URL, including each hop of a redirect chain (e.g. the IdP logout).
   const requestUrls: string[] = [];
   page.on("request", (r) => requestUrls.push(r.url()));
@@ -93,14 +105,10 @@ test("no token reaches the browser, also not on logout (AC4, AC13)", async ({ pa
   await idpLogout;
   await page.waitForLoadState();
 
-  const responseParts = await Promise.all(
-    appResponses.map(async (r) => {
-      const headers = JSON.stringify(await r.allHeaders());
-      const body = r.status() >= 300 && r.status() < 400 ? "" : await r.text().catch(() => "");
-      return `${r.url()} ${headers} ${body}`;
-    }),
-  );
-  const everything = [...browserSide, ...responseParts, ...requestUrls].join("\n");
+  page.off("requestfinished", collect); // later prefetches would outlive the page
+  const received = await Promise.all(responseParts);
+  expect(received.length).toBeGreaterThan(3); // login, callback, start page, logout at least
+  const everything = [...browserSide, ...received, ...requestUrls].join("\n");
   for (const secret of secrets) expect(everything).not.toContain(secret);
   // The logout goes to the IdP with client_id only (no id_token_hint).
   expect(requestUrls.some((u) => u.includes("id_token_hint"))).toBe(false);

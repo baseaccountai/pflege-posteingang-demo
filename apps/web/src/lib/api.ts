@@ -49,3 +49,21 @@ export async function apiGet<T>(path: string, caller: Caller, deps: Deps = {}): 
   if (!response.ok) throw new Error(`API answered ${response.status} for ${path}`);
   return { status: 200, data: (await response.json()) as T };
 }
+
+/** The session ended while the API call was running (logout or role switch elsewhere). */
+export class SessionEnded extends Error {}
+
+/**
+ * Like apiGet, but the answer is only released if the session still exists afterwards:
+ * a slow WB1 answer that arrives after a switch to WB2 is dropped (F01-AC13).
+ */
+export async function apiGetForSession<T>(
+  path: string,
+  caller: Caller,
+  isActive: (sid: string) => Promise<boolean>,
+  deps: Deps = {},
+): Promise<ApiResult<T>> {
+  const result = await apiGet<T>(path, caller, deps);
+  if (!(await isActive(caller.sid))) throw new SessionEnded("session ended during the call");
+  return result;
+}

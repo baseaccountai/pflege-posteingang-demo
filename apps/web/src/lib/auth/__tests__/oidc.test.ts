@@ -1,9 +1,9 @@
 // @vitest-environment node
 // F01-AC1 (login parameters), F01-AC13 (logout URL without tokens, fixed list for `next`).
 import { Configuration } from "openid-client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { endSessionUrl, safeNext, startLogin, type OidcSettings } from "../oidc";
+import { endSessionUrl, logoutTarget, safeNext, startLogin, type OidcSettings } from "../oidc";
 
 const SETTINGS: OidcSettings = {
   issuer: "https://idp.example",
@@ -77,5 +77,30 @@ describe("safeNext", () => {
     "/auth/login?role=wb1&next=x",
   ])("ignores %s", (next) => {
     expect(safeNext(next)).toBeNull();
+  });
+});
+
+describe("logoutTarget", () => {
+  const origin = "https://app.example";
+  const idpLogout = () => Promise.resolve(new URL("https://idp.example/end_session?client_id=c"));
+
+  it("role switch goes straight to the next login, without asking the IdP", async () => {
+    const endSession = vi.fn(idpLogout);
+    const target = await logoutTarget("/auth/login?role=wb2", origin, endSession);
+    expect(target.toString()).toBe("https://app.example/auth/login?role=wb2");
+    expect(endSession).not.toHaveBeenCalled();
+  });
+
+  it("logout goes to the IdP logout page", async () => {
+    expect((await logoutTarget(null, origin, idpLogout)).host).toBe("idp.example");
+  });
+
+  it("falls back to the start page if the IdP cannot be reached", async () => {
+    const down = () => Promise.reject(new Error("discovery failed"));
+    expect((await logoutTarget(null, origin, down)).toString()).toBe("https://app.example/");
+  });
+
+  it("ignores a next value outside the allow-list", async () => {
+    expect((await logoutTarget("https://evil.example", origin, idpLogout)).host).toBe("idp.example");
   });
 });

@@ -143,6 +143,28 @@ def test_setup_fails_if_a_demo_user_has_an_admin_membership(config):
         setup(api, config)
 
 
+ADMIN_PDL = {"pflege-wb1": "u1", "pflege-wb2": "u2", "pdl": "u3"}
+
+
+def password_writes(api: FakeZitadel) -> list[str]:
+    return [p for p in api.paths("POST") if p.endswith("/password")]
+
+
+def test_setup_checks_existing_accounts_before_publishing_any_password(config):
+    # An existing admin account must never receive the public demo password.
+    api = FakeZitadel(existing_users=ADMIN_PDL, memberships={"u3": ["ORG_OWNER"]})
+    with pytest.raises(ConfigError, match="pdl"):
+        setup(api, config)
+    assert password_writes(api) == []
+
+
+def test_password_reset_refuses_admin_accounts_without_writing(config):
+    api = FakeZitadel(existing_users=ADMIN_PDL, memberships={"u3": ["ORG_OWNER"]})
+    with pytest.raises(ConfigError, match="pdl"):
+        reset_passwords(api, config)
+    assert password_writes(api) == []
+
+
 @pytest.mark.parametrize(
     "change",
     [

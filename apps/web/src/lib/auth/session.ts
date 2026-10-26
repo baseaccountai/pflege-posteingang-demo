@@ -48,16 +48,21 @@ export function sessionStore(): SessionStore {
 }
 
 /**
- * Ends the session behind the cookie value: tokens are revoked at the IdP (best effort),
- * the row is deleted. Used by logout, role switch and a new login (F01-AC1, F01-AC13).
+ * Ends the session behind the cookie value: first the row is deleted (so the session is
+ * gone even if the IdP is unreachable), then the tokens it held are revoked at the IdP
+ * (best effort). Used by logout, role switch and a new login (F01-AC1, F01-AC13).
  */
 export async function endSession(
   sid: string | undefined,
-  store: Pick<SessionStore, "find" | "delete">,
+  store: Pick<SessionStore, "remove">,
   revoke: (tokens: Session["tokens"]) => Promise<void>,
 ): Promise<void> {
   if (!sid || !SESSION_ID.test(sid)) return;
-  const session = await store.find(sid);
-  if (session) await revoke(session.tokens);
-  await store.delete(sid);
+  const tokens = await store.remove(sid);
+  if (!tokens) return;
+  try {
+    await revoke(tokens);
+  } catch (error) {
+    console.warn("token revocation failed:", error instanceof Error ? error.name : "unknown");
+  }
 }

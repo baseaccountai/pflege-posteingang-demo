@@ -57,35 +57,38 @@ describe("loadSession", () => {
 
 describe("endSession", () => {
   const sid = "A".repeat(43);
+  const TOKENS = { access: "a", refresh: "r", id: null };
 
-  function store(session: Session | null) {
-    return {
-      find: vi.fn().mockResolvedValue(session),
-      delete: vi.fn().mockResolvedValue(undefined),
-    };
+  function store(tokens: typeof TOKENS | null) {
+    return { remove: vi.fn().mockResolvedValue(tokens) };
   }
 
-  it("revokes the tokens at the IdP and deletes the row", async () => {
-    const s = store({ ...SESSION, tokens: { access: "a", refresh: "r", id: null } });
+  it("deletes the row and revokes exactly the tokens it held", async () => {
+    const s = store(TOKENS);
     const revoke = vi.fn().mockResolvedValue(undefined);
     await endSession(sid, s, revoke);
-    expect(revoke).toHaveBeenCalledWith({ access: "a", refresh: "r", id: null });
-    expect(s.delete).toHaveBeenCalledWith(sid);
+    expect(s.remove).toHaveBeenCalledWith(sid);
+    expect(revoke).toHaveBeenCalledWith(TOKENS);
   });
 
-  it("still deletes the row of an expired or revoked session", async () => {
-    const s = store(null);
+  it("does not revoke anything if there was no row", async () => {
     const revoke = vi.fn();
-    await endSession(sid, s, revoke);
+    await endSession(sid, store(null), revoke);
     expect(revoke).not.toHaveBeenCalled();
-    expect(s.delete).toHaveBeenCalledWith(sid);
+  });
+
+  it("still ends the session locally if the IdP is unreachable", async () => {
+    const s = store(TOKENS);
+    await expect(
+      endSession(sid, s, vi.fn().mockRejectedValue(new Error("discovery failed"))),
+    ).resolves.toBeUndefined();
+    expect(s.remove).toHaveBeenCalledWith(sid);
   });
 
   it("does nothing without a well-formed cookie", async () => {
-    const s = store(SESSION);
+    const s = store(TOKENS);
     await endSession(undefined, s, vi.fn());
     await endSession("bad", s, vi.fn());
-    expect(s.find).not.toHaveBeenCalled();
-    expect(s.delete).not.toHaveBeenCalled();
+    expect(s.remove).not.toHaveBeenCalled();
   });
 });

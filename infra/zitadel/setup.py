@@ -168,7 +168,18 @@ def assert_no_admin_membership(api: Api, username: str, user_id: str) -> None:
         raise ConfigError(f"{username} hat Admin-Rechte in der Organisation – bitte entfernen")
 
 
+def check_existing_accounts(api: Api, users: list[dict]) -> dict[str, str | None]:
+    """Runs before any password is set: an account with admin rights must never get the
+    public demo password (F01-AC17). Returns username -> id (None if not created yet)."""
+    ids = {user["username"]: find_user(api, user["username"]) for user in users}
+    for username, user_id in ids.items():
+        if user_id:
+            assert_no_admin_membership(api, username, user_id)
+    return ids
+
+
 def setup(api: Api, config: dict, rotate_secret: bool = False) -> dict:
+    check_existing_accounts(api, config["users"])
     project_id = ensure_project(api, config["project"])
     ensure_roles(api, project_id, config["roles"])
     client_id, client_secret = ensure_app(api, project_id, config["app"], rotate_secret)
@@ -183,8 +194,9 @@ def setup(api: Api, config: dict, rotate_secret: bool = False) -> dict:
 
 def reset_passwords(api: Api, config: dict) -> None:
     """Only sets the published passwords again (F01-AC18); creates and grants nothing."""
+    ids = check_existing_accounts(api, config["users"])
     for user in config["users"]:
-        user_id = find_user(api, user["username"])
+        user_id = ids[user["username"]]
         if not user_id:
             raise ConfigError(f"Demo-Nutzer {user['username']} fehlt – erst 'setup' ausführen")
         api.call(

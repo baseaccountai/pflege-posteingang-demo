@@ -169,3 +169,22 @@ const ROLE_SWITCH = /^\/auth\/login\?role=(wb1|wb2|pdl)$/;
 export function safeNext(next: string | null): string | null {
   return next && ROLE_SWITCH.test(next) ? next : null;
 }
+
+/**
+ * Where the browser goes after logout: the next login (role switch), else the IdP logout
+ * page. If the IdP cannot be reached the session is already gone locally, so the start
+ * page is a safe fallback (logout must never fail because of the IdP).
+ */
+export async function logoutTarget(
+  next: string | null,
+  appOrigin: string,
+  idpLogout: () => Promise<URL>,
+): Promise<URL> {
+  const allowed = safeNext(next);
+  if (allowed) return new URL(allowed, appOrigin);
+  try {
+    return await idpLogout();
+  } catch {
+    return new URL("/", appOrigin);
+  }
+}

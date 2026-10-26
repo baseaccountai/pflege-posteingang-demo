@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { LogoutForm } from "@/components/session-sync";
+
 /**
  * Header with the signed-in role and a logout button (F01-AC20).
  * roleLabel: undefined while the session is still loading.
@@ -14,11 +16,7 @@ export function SiteHeader({ roleLabel }: { roleLabel?: string | null }) {
         <div className="flex items-center gap-3">
           <span>{roleLabel}</span>
           {/* Plain form POST: a hard page change, so no client cache keeps old data (AC13). */}
-          <form method="post" action="/auth/logout">
-            <button type="submit" className="rounded-md border px-2 py-1 hover:bg-muted">
-              Abmelden
-            </button>
-          </form>
+          <LogoutForm className="rounded-md border px-2 py-1 hover:bg-muted">Abmelden</LogoutForm>
         </div>
       ) : roleLabel === null ? (
         <span className="text-muted-foreground">Nicht angemeldet</span>

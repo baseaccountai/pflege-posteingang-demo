@@ -144,6 +144,24 @@ export class SessionStore {
     await this.sql`delete from bff.sessions where id_hash = ${hashSessionId(sid)}`;
   }
 
+  /**
+   * Logout and role switch: deletes the row and returns the tokens it held, for revocation.
+   * The delete waits for the row lock of a running refresh and then returns the tokens
+   * that refresh stored, so the newest tokens are revoked, never stale ones.
+   * Null if there was no row or its tokens cannot be decrypted.
+   */
+  async remove(sid: string): Promise<TokenSet | null> {
+    const idHash = hashSessionId(sid);
+    const [row] = await this.sql<Pick<Row, "tokens_enc">[]>`
+      delete from bff.sessions where id_hash = ${idHash} returning tokens_enc`;
+    if (!row) return null;
+    try {
+      return openTokens(Buffer.from(row.tokens_enc), this.key, idHash);
+    } catch {
+      return null;
+    }
+  }
+
   /** Null if the tokens cannot be decrypted (manipulated row, wrong key). */
   private toSession(row: Row): Session | null {
     let tokens: TokenSet;
