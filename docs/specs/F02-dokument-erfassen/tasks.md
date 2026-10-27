@@ -5,7 +5,7 @@
 - [x] **2. Dateiprüfung** — `F02-AC4`
   - [x] `tests/documents/test_validation.py`: JPEG/PNG/PDF ok; `.pdf`-Endung mit fremdem Inhalt abgelehnt; 4,1 MB abgelehnt; 6-seitiges PDF abgelehnt → rot → `validation.py` → grün · Commit
 - [x] **3. OCR-Schnittstelle, Fabrik, Attrappe** — `F02-AC11` · Tests → rot → grün · Commit
-- [ ] **4. Mistral-OCR-Adapter** — `F02-AC6`, `F02-AC8` · `respx`-Tests: Erfolg → Seiten; 5xx/Timeout → `OcrUnavailable` → rot → grün · Commit
+- [x] **4. Mistral-OCR-Adapter** — `F02-AC6`, `F02-AC8` · `respx`-Tests: Erfolg → Seiten; 5xx/Timeout → `OcrUnavailable` → rot → grün · Commit
 - [ ] **5. Lesbarkeit** — `F02-AC7` · Tests: leer, 50 Zeichen, Kochrezept, Rechnung → unlesbar mit Grund; Arztbrief-Auszug → lesbar → rot → grün · Commit
 - [ ] **6. Verarbeitungs-Pipeline (Zustandsautomat)** — `F02-AC6`, `F02-AC8`, `F02-AC9`
   - [ ] Tests mit Attrappen: Erfolgsfolge; OCR-Fehler → `failed/ocr_unavailable` → Neuversuch ab OCR; LLM-Fehler → Neuversuch nur Extraktion; Kontingent leer → `quota_exceeded`; Zeitstempel > 5 min → `timeout` → rot → `pipeline.py` → grün · Commit

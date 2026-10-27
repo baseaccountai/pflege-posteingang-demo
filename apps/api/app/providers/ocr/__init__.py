@@ -4,11 +4,14 @@ from app.config import Settings
 from app.providers.ocr.base import OcrProvider, OcrResult, OcrUnavailable, Page
 from app.providers.ocr.docling import DoclingOcr
 from app.providers.ocr.fake import FakeOcr
+from app.providers.ocr.mistral import MistralOcr
 
 __all__ = ["OcrProvider", "OcrResult", "OcrUnavailable", "Page", "create_ocr_provider"]
 
 
 def create_ocr_provider(settings: Settings) -> OcrProvider:
+    if settings.ocr_provider == "mistral":
+        return MistralOcr(settings.mistral_api_key, settings.mistral_ocr_model)
     if settings.ocr_provider == "docling":
         return DoclingOcr(settings.docling_base_url)
     if settings.ocr_provider == "fake":
