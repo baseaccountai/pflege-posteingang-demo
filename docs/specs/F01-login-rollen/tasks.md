@@ -2,11 +2,11 @@
 
 Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
 
-- [ ] **1. Spike S1 + S3: Datenbank im Namen des Nutzers** — `F01-AC9`, `F01-AC10`, `F01-AC11`
+- [x] **1. Spike S1 + S3: Datenbank im Namen des Nutzers** — `F01-AC9`, `F01-AC10`, `F01-AC11`
   - [x] Migration `f01_auth` (Schema `app`, `wards`, `residents`, Rollen, `bff.sessions`, `revoke … from anon`)
   - [x] `tests/rls/test_ward_isolation.py`: ohne Filter; WB1-Fehler→Rollback→WB2 auf derselben Verbindung; 20 parallele Anfragen gemischt; ohne Claims → 0 Zeilen und Schreibfehler → rot → `db.as_principal()` → grün
   - [x] Dieselben Tests gegen Cloud-Supabase über den Pooler (26.10.2026: 9 bestanden)
-  - [ ] BFF-Rolle von einer Vercel-Preview-Funktion (S3, verschoben in Aufgabe 8)
+  - [x] BFF-Rolle von einer Vercel-Funktion (S3; 27.10.2026 bestanden: Login pflege-wb1 auf Vercel → Zeile in `bff.sessions` (wb1, 8 h), `login_attempts` verbraucht, Abmelden → Zeile gelöscht)
   - [x] ADR 0007 „Datenbankzugriff im Namen des Nutzers“; **Halt, falls S1 scheitert** (Bewerber informieren)
   - [x] Commit: `feat(db): add ward isolation with RLS (spike F01)`
 - [x] **2. Spike S2 + S4: Zitadel** — Setup-Skript-Entwurf, Token holen, Claims/`aud`/Typ prüfen, Token-Widerruf und `end_session` mit `client_id` ohne `id_token_hint` prüfen, Passwortänderung als Demo-Nutzer versuchen; Ergebnis in ADR 0007 · Commit (26.10.2026: S2 bestanden, S4 negativ → Passwort-Wächter in Aufgabe 7)
@@ -22,10 +22,10 @@ Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
   - [x] `infra/demo-users.json`; Test: Setup-Skript erzeugt aus der Datei die erwarteten API-Aufrufe (Attrappe), keine Admin-Rollen → rot → `infra/zitadel/setup.py` → grün
   - [x] Bewerber führt das Skript aus (geführt); Workflow `demo-passwords.yml` (nötig laut S4); Spike-Nutzer `spike-wb1` löschen · Commit `feat(infra): define demo users and roles as code` (26.10.2026: Setup gelaufen, Workflow-Lauf 40355593552 grün, Echt-Token pflege-wb1 → nurse [wb1] von API akzeptiert)
 - [x] **8. Sitzung serverseitig** — `F01-AC3`, `F01-AC21`
-  - [x] Vitest: Verschlüsselung Roundtrip, Manipulation erkannt, nur Hash gespeichert, Ablauf, Widerruf, paralleler Refresh nur einmal → rot → `session-store.ts`, `session.ts` → grün · Commit (S3 – Verbindung aus Vercel – wird mit der ersten Route in Aufgabe 9 geprüft)
+  - [x] Vitest: Verschlüsselung Roundtrip, Manipulation erkannt, nur Hash gespeichert, Ablauf, Widerruf, paralleler Refresh nur einmal → rot → `session-store.ts`, `session.ts` → grün · Commit (S3 bestanden 27.10.2026)
 - [x] **9. BFF-Login, CSRF** — `F01-AC1`, `F01-AC4`, `F01-AC5`, `F01-AC15`, `F01-AC19`
   - [x] Playwright (Test-OIDC-Server): Login WB1 → Cookie-Attribute; kein Token-Muster in HTML, `document.cookie`, Storage, Antworten und Redirect-URLs (auch beim Logout); manipulierter `state` und zweiter Callback → Fehlerseite; POST ohne/mit fremdem `Origin` → 403 → rot
-  - [x] Route-Handler + `proxy.ts` → grün · Commit `feat(web): add server-side OIDC login with session store` (S3 aus Vercel: offen, braucht Deployment)
+  - [x] Route-Handler + `proxy.ts` → grün · Commit `feat(web): add server-side OIDC login with session store` (S3 aus Vercel: bestanden 27.10.2026)
 - [x] **10. Rollenwechsel & Kein Zugriff** — `F01-AC2`, `F01-AC12`, `F01-AC13`, `F01-AC14`, `F01-AC20`
   - [x] Vitest: Rollenknöpfe mit Zugangsdaten + Kopieren; Kopfzeile zeigt Rolle → rot → grün
   - [x] Playwright: WB1 anmelden, Bewohnerliste merken → Rolle WB2 → keine WB1-Namen; Zurück-Taste zeigt keine WB1-Daten; alte Sitzungs-ID wird von BFF abgelehnt; `Cache-Control: no-store`; WB1-Bewohner-URL als WB2 → Bildschirm 8 → rot → grün
