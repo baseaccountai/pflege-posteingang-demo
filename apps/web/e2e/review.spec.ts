@@ -64,6 +64,15 @@ test("wrong resident suggested: choose another, confirm, approve (AC5 to AC8)", 
   await page.getByLabel("Bewohner bestätigen").check();
   await page.getByRole("button", { name: "Freigeben" }).click();
   await page.waitForURL(`/bewohner/${other.id}`);
+  // F04: the approved entries appear in the record with their origin; the original opens.
+  const meds = page.getByRole("region", { name: "Medikation" });
+  await expect(meds.getByTestId(/^medication-/).filter({ hasText: "Torasemid" })).toContainText(
+    /Medikationsplan vom \d\d\.\d\d\.\d{4} · freigegeben von Pflegekraft WB1/,
+  );
+  const original = page.getByRole("region", { name: "Dokumente" }).getByRole("link").first();
+  const file = await page.request.get((await original.getAttribute("href"))!);
+  expect(file.status()).toBe(200);
+  expect(file.headers()["content-type"]).toBe("application/pdf");
 
   const events = await admin<{ name: string; kind: string }[]>`
     select m.name, e.kind from public.medication_events e

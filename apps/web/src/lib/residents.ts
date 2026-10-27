@@ -1,14 +1,78 @@
 // Residents in the name of the signed-in user. Which rows exist is decided by RLS in the
 // database (via the API), not here.
+import type { ProvenanceData } from "@/components/provenance";
+
 import { getAsCaller } from "./as-caller";
 
-export type Resident = { id: string; ward_id: string; display_name: string; room: string | null };
+export type Resident = {
+  id: string;
+  ward_id: string;
+  ward_name: string;
+  display_name: string;
+  room: string | null;
+};
 
-export async function listResidents(): Promise<Resident[]> {
-  return (await getAsCaller<Resident[]>("/residents")).data ?? [];
+/** F04-AC1, AC2: an entry of the resident list. */
+export type ResidentSummary = Resident & {
+  has_new: boolean;
+  open_follow_ups: number;
+  overdue_follow_ups: number;
+};
+
+export type Dosage = Record<"morgens" | "mittags" | "abends" | "nachts", string>;
+export type MedicationSide = { name: string; strength: string | null; dosage: Dosage };
+
+export type MedicationEvent = {
+  kind: "new" | "changed" | "discontinued";
+  before: MedicationSide | null;
+  after: MedicationSide | null;
+  created_at: string;
+  provenance: ProvenanceData;
+};
+
+export type RecordMedication = {
+  id: string;
+  name: string;
+  strength: string | null;
+  dosage: Dosage;
+  status: "active" | "discontinued";
+  marker?: "new" | "changed" | null;
+  previous?: MedicationSide | null;
+  discontinued_at?: string;
+  provenance: ProvenanceData | null;
+  events: MedicationEvent[];
+};
+
+export type RecordFollowUp = {
+  id: string;
+  title: string;
+  due_date: string | null;
+  status: "open" | "done";
+  overdue: boolean;
+  done_by_name: string | null;
+  done_at: string | null;
+  provenance: ProvenanceData;
+};
+
+export type ResidentRecord = {
+  resident: Resident;
+  medications: { active: RecordMedication[]; discontinued: RecordMedication[] };
+  diagnoses: { id: string; text: string; provenance: ProvenanceData }[];
+  follow_ups: RecordFollowUp[];
+  documents: {
+    id: string;
+    doc_type: string | null;
+    document_date: string | null;
+    approved_by_name: string | null;
+    approved_at: string | null;
+  }[];
+};
+
+export async function listResidents(): Promise<ResidentSummary[]> {
+  return (await getAsCaller<ResidentSummary[]>("/residents")).data ?? [];
 }
 
-/** null for foreign, unknown and malformed ids alike (F01-AC12). */
-export async function getResident(id: string): Promise<Resident | null> {
-  return (await getAsCaller<Resident>(`/residents/${encodeURIComponent(id)}`)).data;
+/** F04: the whole record; null for foreign, unknown and malformed ids alike (F04-AC9). */
+export async function getRecord(id: string): Promise<ResidentRecord | null> {
+  return (await getAsCaller<ResidentRecord>(`/residents/${encodeURIComponent(id)}/record`)).data;
 }
