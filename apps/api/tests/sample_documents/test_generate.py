@@ -7,6 +7,7 @@ import re
 import pytest
 from PIL import Image
 from pypdf import PdfReader
+
 from samples import generate
 
 NAME_PATTERN = re.compile(r"\b(?:Hr|Fr|Dr)\. (?:med\. )?([A-ZÄÖÜ][\w-]+)")

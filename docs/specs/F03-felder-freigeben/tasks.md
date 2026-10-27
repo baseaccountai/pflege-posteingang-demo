@@ -6,8 +6,8 @@
   - [x] Tabellentests `tests/extraction/test_medication_diff.py` (neu, geändert, unverändert, abgesetzt, Groß/Klein, Leerzeichen) → rot → `medication_diff.py` → grün · Commit
 - [x] **3. LLM-Schnittstelle + Fabrik** — `F03-AC13`
   - [x] Tests: Fabrik nach `LLM_PROVIDER`; Mistral-Adapter mit `respx` (Schema übergeben, Fehler → `LlmUnavailable`) → rot → grün · Commit
-- [ ] **4. Extraktion** — `F03-AC1`, `F03-AC2`, `F03-AC3`
-  - [ ] Tests mit Attrappe: gültig; ungültig → 1 Retry → leer + Hinweis; Werte ohne Fundstelle (jeder Feldtyp) markiert und nicht vorbelegt → rot → `service.py` → grün · Commit
+- [x] **4. Extraktion** — `F03-AC1`, `F03-AC2`, `F03-AC3`
+  - [x] Tests mit Attrappe: gültig; ungültig → 1 Retry → leer + Hinweis; Werte ohne Fundstelle (jeder Feldtyp) markiert und nicht vorbelegt → rot → `service.py` → grün · Commit
 - [ ] **5. Bewohner-Abgleich** — `F03-AC5`, `F03-AC6`
   - [ ] Tests: eindeutig, mehrdeutig, nur im fremden WB vorhanden (→ kein Vorschlag) → rot → grün · Commit
 - [ ] **6. Endpunkte Vorschlag/Freigabe/Verwerfen** — `F03-AC8`, `F03-AC8a`, `F03-AC9`, `F03-AC10`, `F03-AC11`

@@ -16,7 +16,10 @@ from app.config import Settings, get_settings
 from app.db import Database
 from app.documents.pipeline import Pipeline
 from app.documents.routes import router as documents_router
+from app.extraction.service import Extractor
+from app.providers.llm import LlmProvider, create_llm_provider
 from app.providers.ocr import OcrProvider, create_ocr_provider
+from app.quotas import consume
 
 NOT_FOUND = HTTPException(status_code=404, detail="Nicht gefunden")
 RESIDENT_COLUMNS = "id::text, ward_id, display_name, room"
@@ -26,14 +29,16 @@ def create_app(
     settings: Settings | None = None,
     verifier: TokenVerifier | None = None,
     ocr: OcrProvider | None = None,
+    llm: LlmProvider | None = None,
 ) -> FastAPI:
     """Application factory; reads settings from the environment unless given explicitly.
 
-    `verifier` replaces the JWKS-based token check in tests (test IdP), `ocr` the OCR
-    provider chosen by OCR_PROVIDER.
+    `verifier` replaces the JWKS-based token check in tests (test IdP), `ocr` and `llm` the
+    providers chosen by OCR_PROVIDER and LLM_PROVIDER.
     """
     settings = settings or Settings()
     ocr = ocr or create_ocr_provider(settings)
+    llm = llm or create_llm_provider(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -47,7 +52,14 @@ def create_app(
         app.state.pipeline = None
         if app.state.database:
             await app.state.database.open()
-            app.state.pipeline = Pipeline(app.state.database, ocr)
+            database = app.state.database
+
+            async def book_retry(principal: Principal) -> None:
+                # The extraction's second attempt costs one more LLM call (F10-AC10).
+                async with database.as_principal(principal) as conn:
+                    await consume(conn, "llm_call", 1)
+
+            app.state.pipeline = Pipeline(database, ocr, Extractor(llm, book_retry))
         try:
             yield
         finally:

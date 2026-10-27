@@ -12,8 +12,10 @@ from app.providers.ocr.base import OcrResult, OcrUnavailable, Page
 
 # Readable care document, long enough for the readability check (F02-AC7).
 DEFAULT_TEXT = [
-    "# Arztbrief\n\nPatient: Hr. Muster-Bauer\n\nDiagnose: Hypertonie\n\n"
-    "Medikation: Ramipril 5 mg, Dosierung 1-0-0-0\n\nBefund unauffällig, Entlassung nach Hause."
+    "# Arztbrief\n\nKlinikum Musterstadt, Innere Medizin, 20.10.2026\n"
+    "Patient: Hr. Muster-Bauer\n\n## Diagnosen\n- Hypertonie\n\n"
+    "| Medikament | Stärke | Dosierung |\n|---|---|---|\n| Ramipril | 5 mg | 1-0-0-0 |\n\n"
+    "Befund unauffällig, Entlassung nach Hause."
 ]
 
 

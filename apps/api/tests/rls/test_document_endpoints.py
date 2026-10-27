@@ -12,6 +12,7 @@ from pypdf import PdfWriter
 
 from app.config import Settings
 from app.main import create_app
+from app.providers.llm.fake import FakeLlm
 from app.providers.ocr.fake import FakeOcr
 from tests.rls.conftest import ADMIN_DSN, GATEWAY_DSN
 from tests.support.oidc import (
@@ -51,7 +52,8 @@ def api(seeded: None, ocr: FakeOcr) -> Iterator[TestClient]:
         oidc_roles_claim=ROLES_CLAIM,
         bff_api_secret=BFF_SECRET,
     )
-    with TestClient(create_app(settings, verifier=test_verifier(), ocr=ocr)) as client:
+    app = create_app(settings, verifier=test_verifier(), ocr=ocr, llm=FakeLlm())
+    with TestClient(app) as client:
         yield client
     for kind, max_count in limits:
         admin("update public.quota_limits set max_count = %s where kind = %s", [max_count, kind])
@@ -226,3 +228,11 @@ def test_uploads_need_the_bff_assertion(api):
         files={"file": ("foto.jpg", JPEG, "image/jpeg")},
     )
     assert response.status_code == 401
+
+
+def test_the_suggestion_is_stored_with_the_model(api):
+    doc_id = upload(api).json()["id"]
+    doc = api.get(f"/documents/{doc_id}", headers=as_role("nurse_wb1")).json()
+    assert doc["suggestion_model"] == "fake-llm (Testattrappe)"
+    assert doc["suggestion"]["doc_type"]["value"] == "arztbrief"
+    assert doc["suggestion"]["medications"][0]["evidence_found"] is True

@@ -41,6 +41,7 @@ export const API_ENV = {
   // OCR stand-in that "reads" the files in samples/ (F02, no Mistral key in tests).
   OCR_PROVIDER: "fake",
   FAKE_OCR_SAMPLES: SAMPLES_DIR,
+  LLM_PROVIDER: "fake", // rule-based reading of the sample documents
   DATABASE_URL: GATEWAY_DSN,
   OIDC_ISSUER: MOCK_OIDC_ISSUER,
   OIDC_AUDIENCE: "default",
