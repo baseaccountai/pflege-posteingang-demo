@@ -29,6 +29,7 @@ export type ReviewProps = {
 
 const EMPTY_DOSE = { morgens: "0", mittags: "0", abends: "0", nachts: "0" };
 const input = "w-full rounded-md border px-2 py-1";
+const DIFF_FAILED = "Medikationsabgleich nicht möglich – bitte später erneut versuchen.";
 
 async function postJson(url: string, body?: unknown) {
   const response = await fetch(url, {
@@ -55,6 +56,13 @@ export function ReviewForm(props: ReviewProps) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const missing = missingValues(suggestion);
+  const lockReason = !residentId
+    ? "Zum Freigeben bitte einen Bewohner auswählen."
+    : !confirmed
+      ? "Zum Freigeben bitte den Bewohner bestätigen."
+      : !diffHash
+        ? "Medikationsabgleich wird geladen …"
+        : null;
 
   // F03-AC6a: a new resident or other medications -> new comparison (debounced).
   const firstRender = useRef(true);
@@ -77,6 +85,10 @@ export function ReviewForm(props: ReviewProps) {
       if (response.ok) {
         setChanges(data.medication_changes);
         setDiffHash(data.diff_hash);
+        setProblem(null);
+      } else {
+        // Without a comparison approval stays locked; say so instead of a silent grey button.
+        setProblem(DIFF_FAILED);
       }
     }, 400);
     return () => clearTimeout(timer);
@@ -279,6 +291,7 @@ export function ReviewForm(props: ReviewProps) {
               {problem}
             </p>
           )}
+          {!problem && !busy && lockReason && <p className="text-sm text-muted-foreground">{lockReason}</p>}
           <div className="flex gap-2">
             <button
               type="button"

@@ -76,6 +76,25 @@ describe("ReviewForm", () => {
     expect(approve).toBeEnabled();
   });
 
+  it("says what is still missing while approval is locked (AC5)", () => {
+    render(<ReviewForm {...props()} />);
+    expect(screen.getByText("Zum Freigeben bitte den Bewohner bestätigen.")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Bewohner bestätigen"));
+    expect(screen.queryByText(/Zum Freigeben bitte/)).toBeNull();
+  });
+
+  it("reports a failed comparison instead of a silently locked button (AC6a)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json({ message: "kaputt" }, 502)));
+    render(<ReviewForm {...props()} />);
+    fireEvent.change(screen.getByLabelText("Bewohner"), { target: { value: "r2" } });
+    fireEvent.click(screen.getByLabelText("Bewohner bestätigen"));
+    await act(() => vi.advanceTimersByTimeAsync(600));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Medikationsabgleich nicht möglich – bitte später erneut versuchen.",
+    );
+    expect(screen.getByRole("button", { name: "Freigeben" })).toBeDisabled();
+  });
+
   it("preselects nobody when no resident fits (AC6)", () => {
     render(<ReviewForm {...props({ candidate: null, changes: [], diffHash: null })} />);
     expect(screen.getByLabelText("Bewohner")).toHaveValue("");
