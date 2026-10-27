@@ -4,10 +4,10 @@ Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 
 | Variable | Dienst | Pflicht | Standard | Geheim | Zweck |
 |---|---|---|---|---|---|
-| `LLM_PROVIDER` | API | ja | `mistral` | nein | `mistral` \| `ollama` |
+| `LLM_PROVIDER` | API | ja | `mistral` | nein | `mistral` \| `ollama` \| `fake` (nur Tests/E2E: regelbasierte Attrappe) |
 | `OCR_PROVIDER` | API | ja | `mistral` | nein | `mistral` \| `docling` \| `fake` (nur Tests/E2E: feste Texte statt OCR) |
 | `MISTRAL_API_KEY` | API, Seed-Skript | bei `mistral` | – | **ja** | Mistral-Zugang |
-| `MISTRAL_CHAT_MODEL` | API | bei `mistral` | aus ADR 0003 | nein | Feldvorschläge, Antworten |
+| `MISTRAL_CHAT_MODEL` | API | bei `mistral` | `mistral-small-latest` | nein | Feldvorschläge, Antworten |
 | `MISTRAL_OCR_MODEL` | API | bei `mistral` | aus ADR 0003 | nein | OCR |
 | `MISTRAL_EMBED_MODEL` | API | bei `mistral` | `mistral-embed` | nein | Embeddings (1024) |
 | `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBED_MODEL` | API | bei `ollama` (Phase 8) | – | nein | lokales LLM |
