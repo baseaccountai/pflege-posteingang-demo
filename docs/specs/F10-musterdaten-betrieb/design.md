@@ -18,9 +18,9 @@ Ein Medikationsplan in `samples/` ist bewusst **neuer** als der Seed-Stand (ein 
 | Schritt | Umsetzung |
 |---|---|
 | Zeitplan | `.github/workflows/nightly-reset.yml` mit zwei Cron-Einträgen `0 1 * * *` und `0 2 * * *` (UTC); der Job läuft nur weiter, wenn es in `Europe/Berlin` 03 Uhr ist → ganzjährig 03:00 |
-| Koordination | Jede schreibende API-Transaktion nimmt zu Beginn `pg_advisory_xact_lock_shared(<RESET_LOCK>)` und prüft `system_state.reset_generation`; Hintergrundaufgaben merken sich die Generation beim Start und schreiben nur, wenn sie noch gleich ist (sonst verwerfen sie ihr Ergebnis still). Der Reset nimmt `pg_advisory_xact_lock(<RESET_LOCK>)` exklusiv: er wartet auf laufende Schreibtransaktionen und blockiert neue bis zum Commit. |
-| 1. Wartung an | `system_state.maintenance = true` – nur für die Meldung an Besucher (AC7), nicht für die Korrektheit |
-| 2. Datenbank | **eine** Transaktion mit exklusiver Sperre: `reset_generation` erhöhen, Besuchertabellen leeren (Dateien liegen in `document_files`, also mit drin), `bff.sessions` leeren, Seeds einspielen, `chunks.jsonl` laden; `usage_counters` bleibt unberührt (AC6) |
+| Koordination | Der Reset ist **eine** Transaktion, die zuerst die Besuchertabellen per `TRUNCATE` leert. `TRUNCATE` nimmt exklusive Tabellensperren: er wartet auf laufende Transaktionen der API und blockiert neue bis zum Commit – niemand sieht einen halben Reset. Hintergrundverarbeitung, die vorher begann, findet ihr Dokument danach nicht mehr (die `update`s treffen 0 Zeilen) und schreibt nichts. *(Umsetzung 28.10.2026: ersetzt den ursprünglich geplanten Advisory-Lock mit `reset_generation`, der dasselbe nur mit mehr Code geleistet hätte; Tests in `apps/api/tests/rls/test_reset.py`.)* |
+| 1. Wartung an | `system_state.maintenance = true` – nur für die Meldung an Besucher (AC7), nicht für die Korrektheit; die API prüft das Flag per `app.in_maintenance()` vor jeder schreibenden Anfrage (Middleware) und antwortet mit 503 `{error_code: "maintenance"}` |
+| 2. Datenbank | **eine** Transaktion (`lock_timeout` 30 s): Besuchertabellen leeren (Dateien liegen in `document_files`, also mit drin), `bff.sessions` leeren, Seeds einspielen, `chunks.jsonl` laden (ab Aufgabe 3); `usage_counters` bleibt unberührt (AC6). Skript `apps/api/scripts/reset_demo.py` |
 | 3. Wartung aus | auch im Fehlerfall (`finally`) |
 | Wiederholbarkeit | jeder Lauf erzeugt denselben Endstand (AC8) |
 | Rechte | **einziger** Ort mit DB-Admin-Zugang (`SUPABASE_DB_ADMIN_URL` nur als GitHub-Secret) |

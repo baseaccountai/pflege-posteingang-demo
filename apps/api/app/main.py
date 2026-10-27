@@ -4,7 +4,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import current_principal
 from app.auth.principal import Principal
@@ -18,6 +19,9 @@ from app.providers.llm import LlmProvider, create_llm_provider
 from app.providers.ocr import OcrProvider, create_ocr_provider
 from app.quotas import consume
 from app.residents.routes import router as residents_router
+
+WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+MAINTENANCE_MESSAGE = "Demo wird gerade zurückgesetzt – bitte in einer Minute erneut versuchen"
 
 
 def create_app(
@@ -62,6 +66,19 @@ def create_app(
                 await app.state.database.close()
 
     app = FastAPI(title="Pflege-Posteingang API", version="0.1.0", lifespan=lifespan)
+
+    @app.middleware("http")
+    async def refuse_writes_during_reset(request: Request, call_next):
+        # F10-AC7: while the nightly reset runs, writes get a clear 503 instead of waiting
+        # for the reset's locks; reading keeps working (it waits at most a few seconds).
+        database = getattr(request.app.state, "database", None)  # None without lifespan
+        if request.method in WRITE_METHODS and database and await database.in_maintenance():
+            return JSONResponse(
+                status_code=503,
+                content={"error_code": "maintenance", "message": MAINTENANCE_MESSAGE},
+            )
+        return await call_next(request)
+
     app.include_router(documents_router)
     app.include_router(residents_router)
     # The BFF assertion check reads its secret through this dependency.

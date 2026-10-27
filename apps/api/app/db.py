@@ -42,6 +42,15 @@ class Database:
         async with self._pool.connection() as conn:
             yield conn
 
+    async def in_maintenance(self) -> bool:
+        """True while the nightly reset runs (F10-AC7); read through app.in_maintenance()."""
+        async with self._pool.connection() as conn:
+            async with conn.transaction():
+                await conn.execute("set local role authenticated")
+                cur = await conn.execute("select app.in_maintenance()")
+                (flag,) = await cur.fetchone()
+                return bool(flag)
+
     @asynccontextmanager
     async def as_principal(self, principal: Principal) -> AsyncIterator[AsyncConnection]:
         """One transaction in which RLS applies with the principal's claims."""

@@ -40,7 +40,7 @@ Hilfsfunktionen (Schema `app`, `stable`, `security invoker`): `app.ward_ids() �
 | `chunks` | `id`, `document_id`, `ward_id`, `resident_id`, `doc_type`, `document_date`, `page`, `heading`, `content`, `embedding vector(1024)`, `embedding_model` | F05 |
 | `usage_counters` | `period text` (Datum oder `lifetime`), `kind`, `subject`, `count`; `primary key (period, kind, subject)` | F10 |
 | `quota_limits` | `kind`, `scope` (`global` je Tag \| `session` je Sitzung), `max_count` | F10 |
-| `system_state` | `key`, `value` (`maintenance`, `reset_generation`) | F10 |
+| `system_state` | genau eine Zeile: `maintenance bool`, `updated_at` – nur der Reset (Admin) schreibt; API liest über `app.in_maintenance()` (security definer); für `authenticated` keine Tabellenrechte | F10 |
 
 Aufzählungen:
 - `doc_type`: `arztbrief` · `medikationsplan` · `ueberleitungsbogen` · `sonstiges`

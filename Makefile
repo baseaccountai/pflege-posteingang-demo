@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset e2e lint up down samples
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples
 
 COMPOSE := docker compose -f infra/docker-compose.yml
 SUPABASE := pnpm dlx supabase@2.122.0
@@ -30,6 +30,10 @@ db-stop:
 # Re-create the local database from supabase/migrations
 db-reset:
 	$(SUPABASE) db reset
+
+# Nightly reset of the demo data against the local Supabase (F10; same code as the Action)
+reset:
+	cd apps/api && uv run python -m scripts.reset_demo --local
 
 # Needs the local Supabase stack (make db-start), Docker (test OIDC server) and uv (API)
 e2e:
