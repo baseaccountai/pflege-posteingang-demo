@@ -24,11 +24,12 @@ Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `BFF_DATABASE_URL` | Web | ja | – | **ja** | Rolle `bff_session` über Pooler |
 | `BFF_API_SECRET` | Web, API | ja | – | **ja** | Signatur des BFF-Nachweises |
 | `API_BASE_URL` | Web | ja | `http://localhost:8000` | nein | API-Adresse |
+| `API_BASE_URL` (Repository-Variable) | Keep-alive-Workflow | ja (nur GitHub, `vars`) | – | nein | öffentliche API-Adresse für `GET /health/ready` (F10-AC9) |
 | `DATABASE_URL` | API | ja | – | **ja** | Rolle `api_gateway` über Pooler (Transaktionsmodus) |
 | `SUPABASE_URL` | Skripte | nein | – | nein | Projekt-URL |
 | `SUPABASE_PUBLISHABLE_KEY` | – | nein | – | nein (aber nicht veröffentlichen) | derzeit ungenutzt (kein Browserzugriff auf Supabase) |
 | `SUPABASE_SECRET_KEY` | – | nein | – | **ja** | derzeit ungenutzt; nie im Anfragepfad |
-| `SUPABASE_DB_ADMIN_URL` | Reset-Workflow | ja (nur GitHub) | – | **ja** | Reset und Seed (F10) |
+| `SUPABASE_DB_ADMIN_URL` | Reset-Workflow, Rollen-Skript | ja (GitHub-Secret; lokal in `.env`) | – | **ja** | Reset und Seed (F10, `nightly-reset.yml`); Session-Pooler, Port 5432 |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (Ref: nein) | `supabase db push` |
 | `ZITADEL_ADMIN_PAT` | Setup-Skript, Passwort-Workflow | für Setup | – | **ja** | Management-API |
 | `ZITADEL_PROJECT_ID` | Setup-Skript, Passwort-Workflow | für Setup | – | nein | Zitadel-Projekt (= `OIDC_AUDIENCE`), schreibt das Setup-Skript |

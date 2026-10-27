@@ -5,6 +5,7 @@ sessions) and loads the seed again (supabase/seed/*.sql). Runs as the GitHub Act
 `nightly-reset` - the only place with the database admin URL - or locally:
 
     make reset                                   (local Supabase)
+    uv run python -m scripts.reset_demo --check-hour     (prints due=true|false)
     cd apps/api && uv run python -m scripts.reset_demo   (reads SUPABASE_DB_ADMIN_URL)
 
 How it stays safe:
@@ -22,7 +23,9 @@ No LLM or OCR calls are made (the seed brings everything with it).
 
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import psycopg
 
@@ -62,7 +65,17 @@ def reset(admin_dsn: str, seed_files: list[Path]) -> None:
             set_maintenance(conn, False)
 
 
+def reset_due(now: datetime) -> bool:
+    """True at 03:xx German time (F10-AC5). GitHub's cron knows only UTC, so the workflow
+    starts at 01:00 and 02:00 UTC; summer or winter time, exactly one of them is 03:xx."""
+    return now.astimezone(ZoneInfo("Europe/Berlin")).hour == 3
+
+
 def main() -> None:
+    if "--check-hour" in sys.argv:
+        # Used by the scheduled workflow: prints due=true|false for $GITHUB_OUTPUT.
+        print(f"due={str(reset_due(datetime.now(UTC))).lower()}")
+        return
     dsn = os.environ.get("SUPABASE_DB_ADMIN_URL") or (
         LOCAL_ADMIN_DSN if "--local" in sys.argv else None
     )

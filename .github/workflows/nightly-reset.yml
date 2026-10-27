@@ -1,0 +1,42 @@
+# F10-AC5 to AC8: resets the public demo every night at 03:00 German time.
+# GitHub's cron knows only UTC: the job starts at 01:00 and 02:00 UTC and a check lets
+# only the run through that is 03:xx in Berlin (summer and winter time).
+# The only place with the database admin URL (secret SUPABASE_DB_ADMIN_URL).
+# A failed reset rolls back, ends maintenance and fails this job (GitHub notifies).
+name: Nightly reset
+
+on:
+  schedule:
+    - cron: "0 1 * * *"
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-reset
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Is it 03:00 in Berlin?
+        id: hour
+        if: github.event_name == 'schedule'
+        run: uv run python -m scripts.reset_demo --check-hour >> "$GITHUB_OUTPUT"
+      - name: Reset demo data
+        if: github.event_name != 'schedule' || steps.hour.outputs.due == 'true'
+        env:
+          SUPABASE_DB_ADMIN_URL: ${{ secrets.SUPABASE_DB_ADMIN_URL }}
+        run: uv run python -m scripts.reset_demo

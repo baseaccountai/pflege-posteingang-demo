@@ -1,5 +1,6 @@
 """FastAPI application: the security layer between the web app and LLM/OCR/database."""
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -92,6 +93,22 @@ def create_app(
             "llm_provider": settings.llm_provider,
             "ocr_provider": settings.ocr_provider,
         }
+
+    @app.get("/health/ready")
+    async def ready(request: Request) -> JSONResponse:
+        # Keep-alive (F10-AC9): asks the database, so Supabase sees activity and does not
+        # pause the free project; 503 tells the workflow that the database is not reachable.
+        database = getattr(request.app.state, "database", None)
+        try:
+
+            async def ping() -> None:
+                async with database.connection() as conn:
+                    await conn.execute("select 1")
+
+            await asyncio.wait_for(ping(), timeout=5)
+        except Exception:
+            return JSONResponse(status_code=503, content={"db": "unavailable"})
+        return JSONResponse(content={"db": "ok"})
 
     @app.get("/me")
     def me(principal: Annotated[Principal, Depends(current_principal)]) -> dict:
