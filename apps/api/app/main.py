@@ -14,17 +14,26 @@ from app.auth.principal import Principal
 from app.auth.tokens import TokenVerifier
 from app.config import Settings, get_settings
 from app.db import Database
+from app.documents.pipeline import Pipeline
+from app.documents.routes import router as documents_router
+from app.providers.ocr import OcrProvider, create_ocr_provider
 
 NOT_FOUND = HTTPException(status_code=404, detail="Nicht gefunden")
 RESIDENT_COLUMNS = "id::text, ward_id, display_name, room"
 
 
-def create_app(settings: Settings | None = None, verifier: TokenVerifier | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    verifier: TokenVerifier | None = None,
+    ocr: OcrProvider | None = None,
+) -> FastAPI:
     """Application factory; reads settings from the environment unless given explicitly.
 
-    `verifier` replaces the JWKS-based token check in tests (test IdP).
+    `verifier` replaces the JWKS-based token check in tests (test IdP), `ocr` the OCR
+    provider chosen by OCR_PROVIDER.
     """
     settings = settings or Settings()
+    ocr = ocr or create_ocr_provider(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -35,8 +44,10 @@ def create_app(settings: Settings | None = None, verifier: TokenVerifier | None 
                 settings.oidc_issuer, settings.oidc_audience
             )
         app.state.database = Database(settings.database_url) if settings.database_url else None
+        app.state.pipeline = None
         if app.state.database:
             await app.state.database.open()
+            app.state.pipeline = Pipeline(app.state.database, ocr)
         try:
             yield
         finally:
@@ -44,6 +55,7 @@ def create_app(settings: Settings | None = None, verifier: TokenVerifier | None 
                 await app.state.database.close()
 
     app = FastAPI(title="Pflege-Posteingang API", version="0.1.0", lifespan=lifespan)
+    app.include_router(documents_router)
     # The BFF assertion check reads its secret through this dependency.
     app.dependency_overrides[get_settings] = lambda: settings
 

@@ -9,8 +9,8 @@
 - [x] **5. Lesbarkeit** — `F02-AC7` · Tests: leer, 50 Zeichen, Kochrezept, Rechnung → unlesbar mit Grund; Arztbrief-Auszug → lesbar → rot → grün · Commit
 - [x] **6. Verarbeitungs-Pipeline (Zustandsautomat)** — `F02-AC6`, `F02-AC8`, `F02-AC9`
   - [x] Tests mit Attrappen: Erfolgsfolge; OCR-Fehler → `failed/ocr_unavailable` → Neuversuch ab OCR; LLM-Fehler → Neuversuch nur Extraktion; Kontingent leer → `quota_exceeded`; Zeitstempel > 5 min → `timeout` → rot → `pipeline.py` → grün · Commit
-- [ ] **7. Upload- und Abruf-Endpunkte** — `F02-AC5`, `F02-AC10`, `F02-AC12`, `F02-AC13`
-  - [ ] Integrationstests: 202; Kontingent leer → 429 ohne OCR-Aufruf; 6. Upload derselben Sitzung → 429, andere Sitzung ok; PDL mit `ward_id`; Pflegekraft mit fremder `ward_id` → 403; Datei-Auslieferung mit Typ-Headern → rot → grün · Commit `feat(api): add document upload with background OCR`
+- [x] **7. Upload- und Abruf-Endpunkte** — `F02-AC5`, `F02-AC10`, `F02-AC12`, `F02-AC13`
+  - [x] Integrationstests: 202; Kontingent leer → 429 ohne OCR-Aufruf; 6. Upload derselben Sitzung → 429, andere Sitzung ok; PDL mit `ward_id`; Pflegekraft mit fremder `ward_id` → 403; Datei-Auslieferung mit Typ-Headern → rot → grün · Commit `feat(api): add document upload with background OCR` (Wartungs-503 folgt mit F10 Aufgabe 6)
 - [ ] **8. Bildverkleinerung** — `F02-AC3` · Vitest → rot → `downscale.ts` → grün · Commit
 - [ ] **9. Posteingang-UI** — `F02-AC1`, `F02-AC2`, `F02-AC13`
   - [ ] Vitest (Hinweistext exakt, `accept`/`capture`, Meldung je `error_code`) + Playwright (Musterdokument → „bereit zur Prüfung“; vier `samples/bad/`-Fälle → passende Meldung) → rot → grün · Commit `feat(web): add inbox with camera upload`

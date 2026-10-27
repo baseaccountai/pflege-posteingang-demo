@@ -28,7 +28,7 @@ Vercel begrenzt Anfragen auf 4,5 MB; deshalb gilt 4 MB als Obergrenze nach der V
 | `failed` | `processing` \| `extracting` | Neuversuch: weiter beim fehlgeschlagenen Schritt (OCR-Ergebnis bleibt erhalten); bucht Kontingent erneut |
 | `ready_for_review` | `approved` \| `rejected` | F03 (Endzustände, danach unveränderlich) |
 
-`status_changed_at` und `attempts` werden bei jedem Wechsel gesetzt. **Hängen-Erkennung (AC9):** `GET /documents` markiert vorher Dokumente in `uploaded` (älter als 2 min – Absturz zwischen Annahme und Start der Hintergrundaufgabe) und in `processing`/`extracting` (älter als 5 min) als `failed`/`timeout`; derselbe Abgleich läuft beim Start der API. Ein Neuversuch eines aus `uploaded` gefallenen Dokuments beginnt bei der OCR.
+`status_changed_at` und `attempts` werden bei jedem Wechsel gesetzt. **Hängen-Erkennung (AC9):** `GET /documents` markiert vorher Dokumente in `uploaded` (älter als 2 min – Absturz zwischen Annahme und Start der Hintergrundaufgabe) und in `processing`/`extracting` (älter als 5 min) als `failed`/`timeout`; (der Abgleich beim Start der API entfällt: ohne Nutzer gibt es keinen Principal, und `api_gateway` hat keine eigenen Rechte; AC9 verlangt „spätestens beim nächsten Abruf“). Ein Neuversuch eines aus `uploaded` gefallenen Dokuments beginnt bei der OCR.
 
 ## Komponenten
 
