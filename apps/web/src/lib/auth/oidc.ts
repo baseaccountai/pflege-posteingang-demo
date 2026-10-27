@@ -86,7 +86,10 @@ export async function startLogin(
   return { url, state };
 }
 
-export class NoKnownRole extends Error {}
+export class NoKnownRole extends Error {
+  // Explicit name: the callback logs only error names, and minified builds lose class names.
+  override name = "NoKnownRole";
+}
 
 /**
  * Redeems the code (checks state, nonce, PKCE, ID token) and returns the session to store.

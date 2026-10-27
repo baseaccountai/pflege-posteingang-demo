@@ -3,7 +3,14 @@
 import { Configuration } from "openid-client";
 import { describe, expect, it, vi } from "vitest";
 
-import { endSessionUrl, logoutTarget, safeNext, startLogin, type OidcSettings } from "../oidc";
+import {
+  NoKnownRole,
+  endSessionUrl,
+  logoutTarget,
+  safeNext,
+  startLogin,
+  type OidcSettings,
+} from "../oidc";
 
 const SETTINGS: OidcSettings = {
   issuer: "https://idp.example",
@@ -102,5 +109,11 @@ describe("logoutTarget", () => {
 
   it("ignores a next value outside the allow-list", async () => {
     expect((await logoutTarget("https://evil.example", origin, idpLogout)).host).toBe("idp.example");
+  });
+});
+
+describe("NoKnownRole", () => {
+  it("has its own name, so the log tells it apart from other errors", () => {
+    expect(new NoKnownRole().name).toBe("NoKnownRole");
   });
 });
