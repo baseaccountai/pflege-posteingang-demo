@@ -141,6 +141,29 @@ test("ended session leads to the start page with a hint (AC21)", async ({ page }
   await expect(page.locator("body")).not.toContainText(WB1_RESIDENT.name);
 });
 
+test("session past its 8 h end leads to the start page with a hint (AC21)", async ({ page }) => {
+  const user = uniqueUser();
+  await loginAs(page, "wb1", user, ["nurse_wb1"]);
+  await admin`update bff.sessions set expires_at = now() - interval '1 second' where sub = ${user}`;
+  // The browser still holds the cookie: it lives longer than the session.
+  expect((await sessionCookie(page))!.expires * 1000).toBeGreaterThan(Date.now() + 8 * 3600_000);
+  await page.goto("/bewohner");
+  await page.waitForURL("/?sitzung=abgelaufen");
+  await expect(page.getByText("Sitzung abgelaufen – bitte Rolle wählen")).toBeVisible();
+});
+
+test("a plain link to the login does not end an active session (no logout CSRF)", async ({
+  page,
+}) => {
+  const user = uniqueUser();
+  await loginAs(page, "wb1", user, ["nurse_wb1"]);
+  // What a foreign page can do: a top-level GET, with the Lax cookie attached.
+  await page.goto("/auth/login?role=wb2");
+  await page.waitForURL("/");
+  expect(await sessionRows(user)).toHaveLength(1);
+  await expect(page.getByRole("banner")).toContainText("Pflegekraft WB1");
+});
+
 test("residents page without a session goes to the start page", async ({ page }) => {
   await page.goto("/bewohner");
   await page.waitForURL("/");

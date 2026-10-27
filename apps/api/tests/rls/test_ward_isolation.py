@@ -6,6 +6,7 @@ import psycopg
 import pytest
 
 from app.auth.principal import Principal
+from tests.rls.conftest import ADMIN_DSN
 
 pytestmark = [pytest.mark.db, pytest.mark.anyio]
 
@@ -85,9 +86,12 @@ async def test_gateway_role_itself_has_no_table_access(db):
             await conn.execute("select * from public.residents")
 
 
-async def test_anon_has_no_access(db):
-    with pytest.raises(psycopg.errors.InsufficientPrivilege):
-        async with db.connection() as conn:
-            async with conn.transaction():
-                await conn.execute("set local role anon")
-                await conn.execute("select * from public.residents")
+@pytest.mark.parametrize("table", ["public.residents", "public.wards", "bff.sessions"])
+def test_anon_has_no_table_access(seeded, table):
+    # api_gateway may not switch to anon at all, so that would prove nothing. The admin
+    # connection switches, the test checks it really is anon, and only then reads the table.
+    with psycopg.connect(ADMIN_DSN) as conn:
+        conn.execute("set local role anon")
+        assert conn.execute("select current_user").fetchone() == ("anon",)
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            conn.execute(f"select * from {table}")

@@ -14,7 +14,10 @@ export function sessionCookieOptions() {
     secure: true,
     sameSite: "lax" as const,
     path: "/",
-    maxAge: 8 * 3600, // same absolute end as the session row
+    // Longer than the 8 h session on purpose: after the session's end the browser still
+    // sends the (now worthless) id, so the user gets "Sitzung abgelaufen" (F01-AC21).
+    // The row's expires_at is absolute and never extended, so the old id cannot come back.
+    maxAge: 7 * 24 * 3600,
   };
 }
 
@@ -32,6 +35,15 @@ export async function loadSession(
 ): Promise<Session | null> {
   if (!sid || !SESSION_ID.test(sid)) return null;
   return store.refreshIfDue(sid, refresh);
+}
+
+/** True if the cookie belongs to a session that is neither expired nor revoked. */
+export async function hasActiveSession(
+  sid: string | undefined,
+  store: Pick<SessionStore, "find"> = sessionStore(),
+): Promise<boolean> {
+  if (!sid || !SESSION_ID.test(sid)) return false;
+  return (await store.find(sid)) !== null;
 }
 
 let sql: postgres.Sql | undefined;

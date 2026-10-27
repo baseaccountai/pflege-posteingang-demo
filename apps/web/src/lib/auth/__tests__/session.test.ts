@@ -16,13 +16,16 @@ function fakeStore(result: Session | null) {
 describe("session cookie", () => {
   it("is a __Host- cookie: HttpOnly, Secure, SameSite=Lax, Path=/", () => {
     expect(SESSION_COOKIE).toBe("__Host-pp_sid");
-    expect(sessionCookieOptions()).toEqual({
+    expect(sessionCookieOptions()).toMatchObject({
       httpOnly: true,
       secure: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 8 * 3600,
     });
+  });
+
+  it("outlives the 8 h session, so an expired session still shows the hint (AC21)", () => {
+    expect(sessionCookieOptions().maxAge).toBe(7 * 24 * 3600);
   });
 });
 
