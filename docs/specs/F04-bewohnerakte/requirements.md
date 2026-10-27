@@ -1,6 +1,6 @@
 # F04 – Bewohnerakte mit Herkunft: Anforderungen
 
-Status: freigegeben 25.10.2026 · Stufe: 1 · Bildschirme: 6 (Bewohnerliste), 7 (Bewohnerakte) · Datenmodell: [../datenmodell.md](../datenmodell.md)
+Status: freigegeben 25.10.2026 · umgesetzt 27.10.2026 · Stufe: 1 · Bildschirme: 6 (Bewohnerliste), 7 (Bewohnerakte) · Datenmodell: [../datenmodell.md](../datenmodell.md)
 
 ## Einführung
 
