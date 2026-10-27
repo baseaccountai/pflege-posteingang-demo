@@ -199,3 +199,30 @@ async def get_record(resident_id: str, conn: Conn) -> dict:
         "follow_ups": follow_ups,
         "documents": documents,
     }
+
+
+@router.post("/follow-ups/{follow_up_id}/done")
+async def mark_follow_up_done(follow_up_id: str, conn: Conn) -> dict:
+    """F04-AC8: an open follow-up becomes done, with the caller and the time.
+
+    Who did it is taken from the claims inside the database (RLS checks it as well).
+    Only open rows are updated: of two parallel requests, the second waits for the
+    first's row lock, then finds the row done and gets 409.
+    """
+    follow_up_id = checked_id(follow_up_id)
+    cursor = conn.cursor(row_factory=dict_row)
+    await cursor.execute(
+        "update public.follow_ups set status = 'done', done_by = app.uid(),"
+        " done_by_name = app.display_name(), done_at = now()"
+        " where id = %s and status = 'open'"
+        " returning id::text, status, done_by_name, done_at",
+        [follow_up_id],
+    )
+    row = await cursor.fetchone()
+    if row is not None:
+        return row
+    # Nothing updated: either invisible to the caller (foreign/unknown) or already done.
+    await cursor.execute("select 1 from public.follow_ups where id = %s", [follow_up_id])
+    if await cursor.fetchone() is None:
+        raise NOT_FOUND
+    raise HTTPException(status_code=409, detail="Wiedervorlage ist bereits erledigt.")

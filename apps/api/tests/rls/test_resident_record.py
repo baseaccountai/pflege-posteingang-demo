@@ -373,3 +373,54 @@ def test_open_follow_ups_come_first_by_due_date(api):
     ]
     open_due = [e["due_date"] for e in entries[:3]]
     assert open_due[0] < open_due[1] and open_due[2] is None
+
+
+# --- F04-AC8: follow-up done ----------------------------------------------------------
+
+
+def done(api: TestClient, follow_up_id: str, role: str = "nurse_wb1"):
+    return api.post(f"/follow-ups/{follow_up_id}/done", headers=as_role(role))
+
+
+def test_marking_done_records_who_and_when(api):
+    entry = follow_up(-1)
+    response = done(api, entry)
+    assert response.status_code == 200
+    assert response.json()["status"] == "done"
+    [(status, done_by, done_by_name, has_time)] = admin(
+        "select status, done_by, done_by_name, done_at is not null from public.follow_ups"
+        " where id = %s",
+        [entry],
+    )
+    assert (status, done_by, done_by_name, has_time) == (
+        "done",
+        "u-nurse_wb1",
+        "Pflegekraft WB1",
+        True,
+    )
+
+
+def test_done_follow_up_no_longer_counts(api):
+    done(api, follow_up(-1))
+    entry = residents_by_id(api, "nurse_wb1")[WB1_RESIDENT]
+    assert (entry["open_follow_ups"], entry["overdue_follow_ups"]) == (0, 0)
+
+
+def test_marking_done_twice_is_409(api):
+    entry = follow_up(1)
+    assert done(api, entry).status_code == 200
+    second = done(api, entry, role="pdl")
+    assert second.status_code == 409
+    # The first one stays recorded.
+    assert admin("select done_by from public.follow_ups where id = %s", [entry]) == [
+        ("u-nurse_wb1",)
+    ]
+
+
+def test_foreign_unknown_and_malformed_follow_up_are_404(api):
+    foreign = follow_up(1, resident=WB2_RESIDENT, ward="wb2")
+    for follow_up_id in (foreign, str(uuid.uuid4()), "not-a-uuid"):
+        response = done(api, follow_up_id)
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Nicht gefunden"}
+    assert admin("select status from public.follow_ups where id = %s", [foreign]) == [("open",)]

@@ -233,3 +233,38 @@ async def test_a_document_in_review_can_still_be_finished(db, seeded):
         "update public.documents set status = 'approved', resident_id = %s where id = %s",
         [WB2_RESIDENT, doc],
     )
+
+
+async def test_done_by_must_be_the_caller(db, record):
+    # F04-AC8: "erledigt von" comes from the claims, like "freigegeben von" (F03).
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        await run(
+            NURSE_WB2,
+            db,
+            "update public.follow_ups set status = 'done', done_by = 'someone-else',"
+            " done_by_name = 'Pflegekraft WB2', done_at = now() where id = %s",
+            [record["wb2"]["follow_up"]],
+        )
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        await run(
+            NURSE_WB2,
+            db,
+            "update public.follow_ups set status = 'done', done_by = 'u-wb2',"
+            " done_by_name = 'PDL', done_at = now() where id = %s",
+            [record["wb2"]["follow_up"]],
+        )
+
+
+async def test_a_done_follow_up_cannot_be_reopened_or_rewritten(db, record):
+    follow_up = record["wb2"]["follow_up"]
+    admin(
+        "update public.follow_ups set status = 'done', done_by = 'u-x', done_by_name = 'X',"
+        " done_at = now() where id = %s",
+        [follow_up],
+    )
+    await run(
+        NURSE_WB2, db, "update public.follow_ups set status = 'open' where id = %s", [follow_up]
+    )
+    assert admin("select status, done_by from public.follow_ups where id = %s", [follow_up]) == [
+        ("done", "u-x")
+    ]

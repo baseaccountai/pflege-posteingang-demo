@@ -36,7 +36,7 @@ Hilfsfunktionen (Schema `app`, `stable`, `security invoker`): `app.ward_ids() â†
 | `medications` | `id`, `ward_id`, `resident_id`, `name`, `strength`, `dosage jsonb` (morgens/mittags/abends/nachts), `status` (`active` \| `discontinued`) | F03 |
 | `medication_events` | `id`, `ward_id`, `medication_id`, `kind` (`new` \| `changed` \| `discontinued`), `document_id`, `before jsonb`, `after jsonb`, `actor_type`, `created_by`, `confirmed_by`, `confirmed_by_name`, `created_at` | F03 |
 | `diagnoses` | `id`, `ward_id`, `resident_id`, `text`, `source_document_id`, `actor_type`, `created_by`, `confirmed_by`, `confirmed_by_name`, `created_at` | F03 |
-| `follow_ups` (Wiedervorlagen) | wie `diagnoses` + `title`, `due_date`, `status` (`open` \| `done`), `done_by`, `done_by_name`, `done_at` | F03 |
+| `follow_ups` (Wiedervorlagen) | wie `diagnoses` + `title`, `due_date`, `status` (`open` \| `done`), `done_by`, `done_by_name`, `done_at` | F03 (Erledigt-Regel F04: nur offene, `done_by` aus Claims) |
 | `chunks` | `id`, `document_id`, `ward_id`, `resident_id`, `doc_type`, `document_date`, `page`, `heading`, `content`, `embedding vector(1024)`, `embedding_model` | F05 |
 | `usage_counters` | `period text` (Datum oder `lifetime`), `kind`, `subject`, `count`; `primary key (period, kind, subject)` | F10 |
 | `quota_limits` | `kind`, `scope` (`global` je Tag \| `session` je Sitzung), `max_count` | F10 |
