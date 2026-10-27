@@ -1,7 +1,7 @@
 # F03 – Felder vorschlagen & freigeben: Aufgaben
 
-- [ ] **1. Migration Akte** — `F03-AC8`
-  - [ ] RLS-Tests: WB2 kann nicht in WB1 schreiben; kein Verweis auf WB1-Bewohner/-Dokument; `delete` verboten; fachliche Spalten freigegebener Dokumente unveränderlich, `indexing_status` änderbar; `resident_id` einmalig `null` → Bewohner erlaubt, danach nicht mehr änderbar → rot → Migration → grün · Commit `feat(db): add medication, diagnosis and follow-up tables`
+- [x] **1. Migration Akte** — `F03-AC8`
+  - [x] RLS-Tests: WB2 kann nicht in WB1 schreiben; kein Verweis auf WB1-Bewohner/-Dokument; `delete` verboten; fachliche Spalten freigegebener Dokumente unveränderlich, `indexing_status` änderbar; `resident_id` einmalig `null` → Bewohner erlaubt, danach nicht mehr änderbar → rot → Migration → grün · Commit `feat(db): add medication, diagnosis and follow-up tables`
 - [ ] **2. Medikationsabgleich** — `F03-AC7`
   - [ ] Tabellentests `tests/extraction/test_medication_diff.py` (neu, geändert, unverändert, abgesetzt, Groß/Klein, Leerzeichen) → rot → `medication_diff.py` → grün · Commit
 - [ ] **3. LLM-Schnittstelle + Fabrik** — `F03-AC13`
