@@ -1,15 +1,12 @@
 """FastAPI application: the security layer between the web app and LLM/OCR/database."""
 
-import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException
-from psycopg import AsyncConnection
-from psycopg.rows import dict_row
+from fastapi import Depends, FastAPI
 
-from app.auth.dependencies import current_principal, principal_db
+from app.auth.dependencies import current_principal
 from app.auth.principal import Principal
 from app.auth.tokens import TokenVerifier
 from app.config import Settings, get_settings
@@ -20,9 +17,7 @@ from app.extraction.service import Extractor
 from app.providers.llm import LlmProvider, create_llm_provider
 from app.providers.ocr import OcrProvider, create_ocr_provider
 from app.quotas import consume
-
-NOT_FOUND = HTTPException(status_code=404, detail="Nicht gefunden")
-RESIDENT_COLUMNS = "id::text, ward_id, display_name, room"
+from app.residents.routes import router as residents_router
 
 
 def create_app(
@@ -68,6 +63,7 @@ def create_app(
 
     app = FastAPI(title="Pflege-Posteingang API", version="0.1.0", lifespan=lifespan)
     app.include_router(documents_router)
+    app.include_router(residents_router)
     # The BFF assertion check reads its secret through this dependency.
     app.dependency_overrides[get_settings] = lambda: settings
 
@@ -88,33 +84,6 @@ def create_app(
             "ward_ids": list(principal.ward_ids),
             "display_name": principal.display_name,
         }
-
-    @app.get("/residents")
-    async def residents(conn: Annotated[AsyncConnection, Depends(principal_db)]) -> list[dict]:
-        # No ward filter here on purpose: RLS decides which rows exist for this caller.
-        cursor = conn.cursor(row_factory=dict_row)
-        await cursor.execute(
-            f"select {RESIDENT_COLUMNS} from public.residents order by display_name"
-        )
-        return await cursor.fetchall()
-
-    @app.get("/residents/{resident_id}")
-    async def resident(
-        resident_id: str, conn: Annotated[AsyncConnection, Depends(principal_db)]
-    ) -> dict:
-        # Malformed, unknown and foreign IDs all get the same 404 (F01-AC12).
-        try:
-            uuid.UUID(resident_id)
-        except ValueError as error:
-            raise NOT_FOUND from error
-        cursor = conn.cursor(row_factory=dict_row)
-        await cursor.execute(
-            f"select {RESIDENT_COLUMNS} from public.residents where id = %s", [resident_id]
-        )
-        row = await cursor.fetchone()
-        if row is None:
-            raise NOT_FOUND
-        return row
 
     return app
 
