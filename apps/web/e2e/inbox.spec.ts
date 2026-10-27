@@ -1,27 +1,11 @@
 // F02-AC1 to AC7, AC12, AC13: inbox with upload, live status and messages (fake OCR).
-import path from "node:path";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { admin, loginAs, uniqueUser } from "./support/auth";
-import { SAMPLES_DIR } from "./support/env";
+import { row, sample, upload } from "./support/inbox";
 import { jpegSize } from "./support/jpeg";
 
-const sample = (name: string) => path.join(SAMPLES_DIR, name);
 const UNREADABLE = "Dokument nicht lesbar – bitte neu fotografieren (gerade, hell, ganze Seite)";
-
-/** Chooses a file in one of the two inputs and returns the new document's id. */
-async function upload(page: Page, input: "Foto aufnehmen" | "Datei hochladen", file: string) {
-  const answer = page.waitForResponse(
-    (r) => r.url().endsWith("/api/documents") && r.request().method() === "POST",
-  );
-  await expect(page.getByLabel(input)).toBeEnabled(); // React has taken over the page
-  await page.getByLabel(input).setInputFiles(file);
-  const response = await answer;
-  expect(response.status()).toBe(202);
-  return (await response.json()).id as string;
-}
-
-const row = (page: Page, id: string) => page.getByTestId(`document-${id}`);
 
 test.beforeEach(async ({ page }) => {
   await loginAs(page, "wb1", uniqueUser(), ["nurse_wb1"]);

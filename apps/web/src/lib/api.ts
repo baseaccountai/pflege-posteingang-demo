@@ -36,7 +36,7 @@ type Deps = { env?: NodeJS.ProcessEnv | Record<string, string | undefined>; fetc
 function callApi(
   path: string,
   caller: Caller,
-  init: { method: string; body?: BodyInit },
+  init: { method: string; body?: BodyInit; headers?: Record<string, string> },
   deps: Deps,
 ): Promise<Response> {
   const env = deps.env ?? process.env;
@@ -45,7 +45,8 @@ function callApi(
   return (deps.fetch ?? fetch)(new URL(path, base).toString(), {
     ...init,
     cache: "no-store",
-    headers: { authorization: `Bearer ${caller.accessToken}`, "x-bff-assertion": assertion },
+    // Auth headers last: a caller-supplied header can never replace them.
+    headers: { ...init.headers, authorization: `Bearer ${caller.accessToken}`, "x-bff-assertion": assertion },
   });
 }
 
@@ -86,11 +87,27 @@ export async function apiGetForSession<T>(
 export async function apiSend(
   path: string,
   caller: Caller,
-  init: { method: "POST"; body?: BodyInit },
+  init: { method: "POST"; body?: BodyInit; headers?: Record<string, string> },
   deps: Deps = {},
 ): Promise<{ status: number; data: unknown }> {
   const response = await callApi(path, caller, init, deps);
   if (response.status === 401) throw new ApiUnauthorized("API rejected token or assertion");
   if (response.status >= 500) throw new Error(`API answered ${response.status} for ${path}`);
   return { status: response.status, data: await response.json().catch(() => null) };
+}
+
+/** The original file of a document (F03-AC4), or null if unknown or foreign (404). */
+export async function apiFile(
+  path: string,
+  caller: Caller,
+  deps: Deps = {},
+): Promise<{ body: ArrayBuffer; contentType: string } | null> {
+  const response = await callApi(path, caller, { method: "GET" }, deps);
+  if (response.status === 404) return null;
+  if (response.status === 401) throw new ApiUnauthorized("API rejected token or assertion");
+  if (!response.ok) throw new Error(`API answered ${response.status} for ${path}`);
+  return {
+    body: await response.arrayBuffer(),
+    contentType: response.headers.get("content-type") ?? "application/octet-stream",
+  };
 }

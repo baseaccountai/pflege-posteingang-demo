@@ -12,5 +12,5 @@
   - [x] Tests: eindeutig, mehrdeutig, nur im fremden WB vorhanden (→ kein Vorschlag) → rot → grün · Commit
 - [x] **6. Endpunkte Vorschlag/Freigabe/Verwerfen** — `F03-AC8`, `F03-AC8a`, `F03-AC9`, `F03-AC10`, `F03-AC11`
   - [x] Integrationstests: parallele Doppel-Freigabe; Freigabe gegen Verwerfen; Freigabe im falschen Status; zweiter Plan desselben Bewohners → 409 mit neuem Abgleich; fehlende Bestätigung → 422; Ereignisse geschrieben → rot → grün · Commit `feat(api): add suggestion review and approval`
-- [ ] **7. Prüfansicht** — `F03-AC4`, `F03-AC5`, `F03-AC6a`, `F03-AC12`
-  - [ ] Vitest + Playwright (desktop + mobile): falscher Bewohner vorgeschlagen → anderen wählen → Bestätigung zurückgesetzt, Abgleich neu → bestätigen → freigeben → rot → grün · Commit `feat(web): add review and approval screen`
+- [x] **7. Prüfansicht** — `F03-AC4`, `F03-AC5`, `F03-AC6a`, `F03-AC12`
+  - [x] Vitest + Playwright (desktop + mobile): falscher Bewohner vorgeschlagen → anderen wählen → Bestätigung zurückgesetzt, Abgleich neu → bestätigen → freigeben → rot → grün · Commit `feat(web): add review and approval screen`

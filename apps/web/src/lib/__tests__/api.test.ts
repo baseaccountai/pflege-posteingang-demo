@@ -7,6 +7,7 @@ import {
   ApiUnauthorized,
   SessionEnded,
   apiGet,
+  apiFile,
   apiGetForSession,
   apiSend,
   bffAssertion,
@@ -119,6 +120,19 @@ describe("apiSend", () => {
     expect(decode(init.headers["x-bff-assertion"]).valid).toBe(true);
   });
 
+  it("keeps the content type of a JSON body, but the auth headers cannot be overridden", async () => {
+    const fetch = answer(200, {});
+    await apiSend(
+      "/documents/d1/approve",
+      caller,
+      { method: "POST", body: "{}", headers: { "content-type": "application/json", authorization: "Bearer evil" } },
+      { env, fetch },
+    );
+    const { headers } = fetch.mock.calls[0][1];
+    expect(headers["content-type"]).toBe("application/json");
+    expect(headers.authorization).toBe("Bearer access-123");
+  });
+
   it.each([403, 409, 413, 415, 422, 429])("passes %i with its error body through", async (status) => {
     const body = { error_code: "x", message: "Grund" };
     expect(await apiSend("/documents", caller, { method: "POST" }, { env, fetch: answer(status, body) })).toEqual({
@@ -132,5 +146,23 @@ describe("apiSend", () => {
       ApiUnauthorized,
     );
     await expect(apiSend("/x", caller, { method: "POST" }, { env, fetch: answer(500, {}) })).rejects.toThrow(/500/);
+  });
+});
+
+describe("apiFile", () => {
+  const env = { API_BASE_URL: "http://api.test", BFF_API_SECRET: SECRET };
+  const caller = { sid: SID, accessToken: "access-123" };
+
+  it("returns bytes and type of the original, or null when not found", async () => {
+    const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(pdf, { status: 200, headers: { "content-type": "application/pdf" } }))
+      .mockResolvedValueOnce(new Response("{}", { status: 404 }));
+    const file = await apiFile("/documents/d1/file", caller, { env, fetch });
+    expect(file?.contentType).toBe("application/pdf");
+    expect(new Uint8Array(file!.body)).toEqual(pdf);
+    expect(fetch.mock.calls[0][1].headers.authorization).toBe("Bearer access-123");
+    expect(await apiFile("/documents/x/file", caller, { env, fetch })).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 // F01-AC2 (credentials with copy buttons), F01-AC13 (switch = POST to logout, then login).
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { RoleSwitcher } from "@/components/role-switcher";
@@ -25,8 +25,9 @@ describe("RoleSwitcher", () => {
     expect(writeText).toHaveBeenLastCalledWith("pflege-wb2");
     fireEvent.click(within(card).getByRole("button", { name: "Passwort kopieren" }));
     expect(writeText).toHaveBeenLastCalledWith("Pflege-WB2-Demo!");
-    expect(await within(card).findByRole("button", { name: "Passwort kopieren" })).toHaveTextContent(
-      "Kopiert",
+    // Waits for the text, not only for the button (the state update comes after the copy).
+    await waitFor(() =>
+      expect(within(card).getByRole("button", { name: "Passwort kopieren" })).toHaveTextContent("Kopiert"),
     );
   });
 
