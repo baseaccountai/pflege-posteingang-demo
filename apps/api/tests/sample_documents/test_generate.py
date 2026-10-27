@@ -2,6 +2,7 @@
 watermark and contain only invented names from the script's fixed list."""
 
 import hashlib
+import io
 import re
 
 import pytest
@@ -99,3 +100,35 @@ def test_the_image_font_has_german_umlauts(char):
     font = generate.image_font(44)
     missing = font.getmask("一").getbbox()
     assert font.getmask(char).getbbox() != missing
+
+
+# --- Seed documents (F10-AC1): older approved documents behind the seeded record ----------
+def test_seed_documents_cover_every_resident_and_only_allowed_names():
+    residents = {doc["resident"] for doc in generate.SEED_DOCUMENTS}
+    assert residents == {name for names in generate.RESIDENTS.values() for name in names}
+    allowed = set(generate.ALLOWED_NAMES)
+    for doc in generate.SEED_DOCUMENTS:
+        for name in NAME_PATTERN.findall("\n".join(doc["lines"])):
+            assert name in allowed, f"{doc['id']}: {name}"
+
+
+def test_seed_sql_is_reproducible_and_carries_watermarked_pdfs():
+    sql = generate.seed_sql()
+    assert sql == generate.seed_sql()
+    for doc in generate.SEED_DOCUMENTS:
+        assert doc["id"] in sql
+    pdf = generate.pdf_bytes(generate.SEED_DOCUMENTS[0]["lines"])
+    assert pdf.startswith(b"%PDF")
+    assert "MUSTER" in PdfReader(io.BytesIO(pdf)).pages[0].extract_text()
+
+
+def test_the_seed_record_of_muster_bauer_is_older_than_the_plan():
+    doc = next(d for d in generate.SEED_DOCUMENTS if d["resident"] == "Hr. Muster-Bauer")
+    text = "\n".join(doc["lines"])
+    for med in generate.RECORD_MEDICATIONS:
+        assert f"| {med['name']} | {med['strength']} | {med['dosage']} |" in text
+
+
+def test_committed_seed_sql_is_up_to_date():
+    committed = generate.SEED_SQL_PATH.read_text(encoding="utf-8")
+    assert committed == generate.seed_sql(), "run `make samples`"

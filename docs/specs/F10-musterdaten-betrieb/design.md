@@ -5,7 +5,7 @@
 | Datei | Inhalt |
 |---|---|
 | `supabase/seed/01_wards_residents.sql` | WB1: Hr. Muster-Bauer, Fr. Beispiel, Hr. Probe · WB2: Fr. Testfeld, Hr. Exempel, Fr. Vorlage (alle erfunden) |
-| `supabase/seed/02_documents.sql` | Musterdokumente (Status `approved`) inkl. `document_files` (Inhalt aus `samples/`) und `ocr_pages` |
+| `supabase/seed/02_documents.sql` | ältere Musterdokumente (Status `approved`) inkl. `document_files` (PDF mit Wasserzeichen) und `ocr_pages`; **erzeugt** von `samples/generate.py` (`make samples`), damit Datei und Text zusammenpassen; nicht die Upload-Muster aus `samples/`, denn die sind neuer als die Akte |
 | `supabase/seed/03_record.sql` | Medikationen mit `medication_events`, Diagnosen, Wiedervorlagen mit Herkunft; ein Eintrag `actor_type='agent'` für F04-AC6 |
 | `supabase/seed/chunks.jsonl` | vorberechnete Chunks + Embeddings (einmalig mit echtem Mistral, Skript `apps/api/scripts/build_seed_chunks.py`) |
 | `apps/web/src/content/sample-record.json` | statische Musterakte für `/muster`, erzeugt aus dem Seed (`make sample-record`); Test prüft Übereinstimmung |
