@@ -1,11 +1,13 @@
 """F04: resident list with counters, the record with provenance and "follow-up done" -
 through the whole API stack against the local database (RLS as the caller)."""
 
+import uuid
 from collections.abc import Iterator
 
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from psycopg.types.json import Jsonb
 
 from app.config import Settings
 from app.main import create_app
@@ -173,3 +175,201 @@ def test_counters_of_other_ward_do_not_leak(api):
         1,
         1,
     )
+
+
+# --- F04-AC3 to AC6, AC9, AC10: the record ------------------------------------------------
+
+DOSE = {"morgens": "1", "mittags": "0", "abends": "0", "nachts": "0"}
+
+
+def medication(name: str = "Ramipril", strength: str = "5 mg", status: str = "active") -> str:
+    return admin(
+        "insert into public.medications (ward_id, resident_id, name, strength, dosage, status,"
+        " created_by) values ('wb1', %s, %s, %s, %s, %s, 'seed') returning id::text",
+        [WB1_RESIDENT, name, strength, Jsonb(DOSE), status],
+    )[0][0]
+
+
+def event(
+    medication_id: str,
+    kind: str,
+    days_ago: int,
+    document: str | None = None,
+    before: dict | None = None,
+    after: dict | None = None,
+    actor_type: str = "human",
+    confirmed_by_name: str = "Pflegekraft WB1",
+) -> None:
+    admin(
+        "insert into public.medication_events (ward_id, medication_id, kind, document_id,"
+        " before, after, actor_type, created_by, confirmed_by, confirmed_by_name, created_at)"
+        " values ('wb1', %s, %s, %s, %s, %s, %s, 'u', 'u', %s,"
+        " now() - make_interval(days => %s))",
+        [
+            medication_id,
+            kind,
+            document,
+            Jsonb(before) if before else None,
+            Jsonb(after) if after else None,
+            actor_type,
+            confirmed_by_name,
+            days_ago,
+        ],
+    )
+
+
+def side(strength: str) -> dict:
+    return {"name": "Ramipril", "strength": strength, "dosage": DOSE}
+
+
+def record(api: TestClient, role: str = "nurse_wb1", resident: str = WB1_RESIDENT):
+    return api.get(f"/residents/{resident}/record", headers=as_role(role))
+
+
+def test_record_has_all_sections(api):
+    response = record(api)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["resident"]["id"] == WB1_RESIDENT
+    assert body["resident"]["ward_name"] == "WB 1"
+    assert body["medications"] == {"active": [], "discontinued": []}
+    assert body["diagnoses"] == []
+    assert body["follow_ups"] == []
+    assert body["documents"] == []
+
+
+def test_medication_shows_dosage_and_origin_of_latest_change(api):
+    first = approved_document(days_ago=20, document_date="2026-10-01")
+    second = approved_document(days_ago=2, document_date="2026-10-24", doc_type="arztbrief")
+    med = medication(strength="10 mg")
+    event(med, "new", 20, first, after=side("5 mg"))
+    event(med, "changed", 2, second, before=side("5 mg"), after=side("10 mg"))
+
+    [entry] = record(api).json()["medications"]["active"]
+    assert entry["name"] == "Ramipril"
+    assert entry["strength"] == "10 mg"
+    assert entry["dosage"] == DOSE
+    provenance = entry["provenance"]
+    assert provenance["document_id"] == second
+    assert provenance["doc_type"] == "arztbrief"
+    assert provenance["document_date"] == "2026-10-24"
+    assert provenance["confirmed_by_name"] == "Pflegekraft WB1"
+    assert provenance["actor_type"] == "human"
+    assert provenance["confirmed_at"]
+
+
+def test_full_event_sequence_new_changed_discontinued(api):
+    plan = approved_document(days_ago=3)
+    med = medication(status="discontinued")
+    event(med, "new", 40, before=None, after=side("5 mg"))
+    event(med, "changed", 20, before=side("5 mg"), after=side("10 mg"))
+    event(med, "discontinued", 3, plan, before=side("10 mg"))
+
+    body = record(api).json()
+    assert body["medications"]["active"] == []
+    [stopped] = body["medications"]["discontinued"]
+    assert [e["kind"] for e in stopped["events"]] == ["new", "changed", "discontinued"]
+    assert stopped["events"][1]["before"]["strength"] == "5 mg"
+    assert stopped["events"][1]["after"]["strength"] == "10 mg"
+    assert stopped["discontinued_at"]
+    assert stopped["provenance"]["document_id"] == plan
+
+
+def test_new_and_changed_within_seven_days_are_marked(api):
+    fresh = medication("Metformin", "500 mg")
+    event(fresh, "new", 6, after=side("500 mg"))
+    changed = medication("Ramipril", "10 mg")
+    event(changed, "new", 30, after=side("5 mg"))
+    event(changed, "changed", 1, before=side("5 mg"), after=side("10 mg"))
+    old = medication("Torasemid", "10 mg")
+    event(old, "new", 8, after=side("10 mg"))
+
+    active = {m["name"]: m for m in record(api).json()["medications"]["active"]}
+    assert active["Metformin"]["marker"] == "new"
+    assert active["Ramipril"]["marker"] == "changed"
+    assert active["Ramipril"]["previous"]["strength"] == "5 mg"
+    assert active["Torasemid"]["marker"] is None
+
+
+def test_discontinued_only_shown_for_thirty_days(api):
+    recent = medication("Metamizol", status="discontinued")
+    event(recent, "discontinued", 29)
+    old = medication("Ibuprofen", status="discontinued")
+    event(old, "discontinued", 31)
+    names = [m["name"] for m in record(api).json()["medications"]["discontinued"]]
+    assert names == ["Metamizol"]
+
+
+def test_diagnoses_and_follow_ups_carry_their_origin(api):
+    doc = approved_document(doc_type="arztbrief", document_date="2026-10-12")
+    admin(
+        "insert into public.diagnoses (ward_id, resident_id, text, source_document_id,"
+        " actor_type, created_by, confirmed_by, confirmed_by_name)"
+        " values ('wb1', %s, 'Herzinsuffizienz', %s, 'human', 'u', 'u', 'Pflegekraft WB1')",
+        [WB1_RESIDENT, doc],
+    )
+    follow_up(-1, document=doc)
+    body = record(api).json()
+    [diagnosis] = body["diagnoses"]
+    assert diagnosis["text"] == "Herzinsuffizienz"
+    assert diagnosis["provenance"]["document_id"] == doc
+    assert diagnosis["provenance"]["doc_type"] == "arztbrief"
+    assert diagnosis["provenance"]["confirmed_by_name"] == "Pflegekraft WB1"
+    [entry] = body["follow_ups"]
+    assert entry["title"] == "Kontrolle"
+    assert entry["status"] == "open"
+    assert entry["overdue"] is True
+    assert entry["provenance"]["document_date"] == "2026-10-12"
+
+
+def test_agent_entries_say_so(api):
+    # F04-AC6: written by the agent (seed), confirmed by a human role.
+    med = medication()
+    event(med, "new", 1, actor_type="agent", confirmed_by_name="Pflegekraft WB1")
+    follow_up(2, actor_type="agent")
+    body = record(api).json()
+    assert body["medications"]["active"][0]["provenance"]["actor_type"] == "agent"
+    assert body["follow_ups"][0]["provenance"]["actor_type"] == "agent"
+
+
+def test_documents_lists_only_approved_ones_of_this_resident(api):
+    doc = approved_document(doc_type="arztbrief", document_date="2026-10-12")
+    approved_document(resident=WB2_RESIDENT, ward="wb2")
+    admin(
+        "insert into public.documents (ward_id, resident_id, uploaded_by, upload_session,"
+        " status) values ('wb1', %s, 'u', 's', 'rejected')",
+        [WB1_RESIDENT],
+    )
+    [entry] = record(api).json()["documents"]
+    assert entry["id"] == doc
+    assert entry["doc_type"] == "arztbrief"
+    assert entry["document_date"] == "2026-10-12"
+    assert entry["approved_by_name"] == "Pflegekraft WB1"
+
+
+def test_foreign_unknown_and_malformed_record_look_identical(api):
+    for resident in (WB1_RESIDENT, str(uuid.uuid4()), "not-a-uuid"):
+        response = record(api, role="nurse_wb2", resident=resident)
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Nicht gefunden"}
+
+
+def test_pdl_opens_record_of_both_wards(api):
+    assert record(api, role="pdl", resident=WB1_RESIDENT).status_code == 200
+    assert record(api, role="pdl", resident=WB2_RESIDENT).status_code == 200
+
+
+def test_open_follow_ups_come_first_by_due_date(api):
+    follow_up(-9, status="done")
+    follow_up(None)
+    follow_up(5)
+    follow_up(1)
+    entries = record(api).json()["follow_ups"]
+    assert [(e["status"], e["overdue"]) for e in entries] == [
+        ("open", False),
+        ("open", False),
+        ("open", False),
+        ("done", False),
+    ]
+    open_due = [e["due_date"] for e in entries[:3]]
+    assert open_due[0] < open_due[1] and open_due[2] is None
