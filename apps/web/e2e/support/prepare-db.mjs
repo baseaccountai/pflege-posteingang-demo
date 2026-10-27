@@ -13,6 +13,8 @@ try {
   await admin`
     insert into public.wards (id, name) values ('wb1', 'WB 1'), ('wb2', 'WB 2')
     on conflict (id) do nothing`;
+  // Test database only: quota counters start at zero, so repeated runs never hit a limit.
+  await admin`truncate public.usage_counters`;
   for (const resident of prep.residents) {
     await admin`
       insert into public.residents (id, ward_id, display_name)

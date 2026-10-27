@@ -1,3 +1,5 @@
+import path from "node:path";
+
 // Fixed values for the end-to-end tests: test OIDC server (mock-oauth2-server) and the
 // local Supabase database. Local-only secrets, never used outside tests.
 export const APP_PORT = 3100;
@@ -32,8 +34,13 @@ export const DB_PREP = {
 };
 
 /** Environment of the FastAPI app: same test IdP, its access tokens carry aud "default". */
+export const SAMPLES_DIR = path.resolve(__dirname, "../../../../samples");
+
 export const API_ENV = {
   E2E_DB_PREP: JSON.stringify(DB_PREP),
+  // OCR stand-in that "reads" the files in samples/ (F02, no Mistral key in tests).
+  OCR_PROVIDER: "fake",
+  FAKE_OCR_SAMPLES: SAMPLES_DIR,
   DATABASE_URL: GATEWAY_DSN,
   OIDC_ISSUER: MOCK_OIDC_ISSUER,
   OIDC_AUDIENCE: "default",

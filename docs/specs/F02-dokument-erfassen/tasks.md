@@ -12,5 +12,5 @@
 - [x] **7. Upload- und Abruf-Endpunkte** — `F02-AC5`, `F02-AC10`, `F02-AC12`, `F02-AC13`
   - [x] Integrationstests: 202; Kontingent leer → 429 ohne OCR-Aufruf; 6. Upload derselben Sitzung → 429, andere Sitzung ok; PDL mit `ward_id`; Pflegekraft mit fremder `ward_id` → 403; Datei-Auslieferung mit Typ-Headern → rot → grün · Commit `feat(api): add document upload with background OCR` (Wartungs-503 folgt mit F10 Aufgabe 6)
 - [x] **8. Bildverkleinerung** — `F02-AC3` · Vitest → rot → `downscale.ts` → grün · Commit
-- [ ] **9. Posteingang-UI** — `F02-AC1`, `F02-AC2`, `F02-AC13`
-  - [ ] Vitest (Hinweistext exakt, `accept`/`capture`, Meldung je `error_code`) + Playwright (Musterdokument → „bereit zur Prüfung“; vier `samples/bad/`-Fälle → passende Meldung) → rot → grün · Commit `feat(web): add inbox with camera upload`
+- [x] **9. Posteingang-UI** — `F02-AC1`, `F02-AC2`, `F02-AC13`
+  - [x] Vitest (Hinweistext exakt, `accept`/`capture`, Meldung je `error_code`) + Playwright (Musterdokument → „bereit zur Prüfung“; vier `samples/bad/`-Fälle → passende Meldung) → rot → grün · Commit `feat(web): add inbox with camera upload`

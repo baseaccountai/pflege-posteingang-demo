@@ -1,5 +1,7 @@
 """OCR providers; `create_ocr_provider` picks one from OCR_PROVIDER (F02-AC11)."""
 
+from pathlib import Path
+
 from app.config import Settings
 from app.providers.ocr.base import OcrProvider, OcrResult, OcrUnavailable, Page
 from app.providers.ocr.docling import DoclingOcr
@@ -15,5 +17,7 @@ def create_ocr_provider(settings: Settings) -> OcrProvider:
     if settings.ocr_provider == "docling":
         return DoclingOcr(settings.docling_base_url)
     if settings.ocr_provider == "fake":
+        if settings.fake_ocr_samples:
+            return FakeOcr.from_samples(Path(settings.fake_ocr_samples))
         return FakeOcr()
     raise ValueError(f"OCR provider {settings.ocr_provider!r} is not available")

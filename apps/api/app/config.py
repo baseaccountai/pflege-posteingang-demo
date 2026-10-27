@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     # "fake": canned OCR text for tests and the e2e run without a Mistral key.
     ocr_provider: Literal["mistral", "docling", "fake"] = "mistral"
     docling_base_url: str = "http://localhost:5001"
+    # Only with OCR_PROVIDER=fake: folder samples/ whose files the fake "reads" (e2e).
+    fake_ocr_samples: str = ""
     # Secret; empty means OCR/LLM calls fail with "unavailable" (never a silent fallback).
     mistral_api_key: str = ""
     mistral_ocr_model: str = "mistral-ocr-latest"

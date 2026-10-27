@@ -1,8 +1,11 @@
 """F02-AC11: the OCR provider is chosen by configuration only."""
 
 import hashlib
+import io
+from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from app.config import Settings
 from app.providers.ocr import Page, create_ocr_provider
@@ -51,3 +54,49 @@ async def test_fake_answers_unknown_files_with_its_default_text():
 async def test_fake_can_simulate_an_outage():
     with pytest.raises(OcrUnavailable):
         await FakeOcr(unavailable=True).extract(b"x", "image/png")
+
+
+SAMPLES = Path(__file__).resolve().parents[4] / "samples"
+
+
+def browser_reencoded(path: Path) -> bytes:
+    """What the browser uploads: scaled to at most 2000 px and saved again as JPEG 0.85."""
+    with Image.open(path) as image:
+        image.thumbnail((2000, 2000))
+        buffer = io.BytesIO()
+        image.convert("RGB").save(buffer, "JPEG", quality=85)
+        return buffer.getvalue()
+
+
+async def test_fake_from_samples_reads_pdfs_by_content():
+    fake = FakeOcr.from_samples(SAMPLES)
+    result = await fake.extract((SAMPLES / "bad/kochrezept.pdf").read_bytes(), "application/pdf")
+    assert result.text == (SAMPLES / "ocr/bad__kochrezept.pdf.md").read_text()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "bad/leere_seite.jpg",
+        "bad/unscharf.jpg",
+        "bad/schief.jpg",
+        "arztbrief_muster-bauer_foto.jpg",
+    ],
+)
+async def test_fake_from_samples_recognises_photos_after_browser_downscaling(name):
+    fake = FakeOcr.from_samples(SAMPLES)
+    result = await fake.extract(browser_reencoded(SAMPLES / name), "image/jpeg")
+    expected = (SAMPLES / "ocr" / f"{name.replace('/', '__')}.md").read_text()
+    assert result.text == expected
+
+
+async def test_fake_from_samples_answers_other_images_with_the_default():
+    buffer = io.BytesIO()
+    Image.new("RGB", (300, 300), (0, 120, 0)).save(buffer, "JPEG")
+    result = await FakeOcr.from_samples(SAMPLES).extract(buffer.getvalue(), "image/jpeg")
+    assert "Arztbrief" in result.text
+
+
+def test_fake_provider_loads_the_samples_when_configured():
+    provider = create_ocr_provider(Settings(ocr_provider="fake", fake_ocr_samples=str(SAMPLES)))
+    assert isinstance(provider, FakeOcr) and provider.by_image

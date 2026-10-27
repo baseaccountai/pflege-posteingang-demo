@@ -3,7 +3,14 @@
 import { createHash, createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiUnauthorized, SessionEnded, apiGet, apiGetForSession, bffAssertion } from "../api";
+import {
+  ApiUnauthorized,
+  SessionEnded,
+  apiGet,
+  apiGetForSession,
+  apiSend,
+  bffAssertion,
+} from "../api";
 
 const SECRET = "s".repeat(32);
 const SID = "A".repeat(43);
@@ -90,5 +97,40 @@ describe("apiGetForSession", () => {
     await expect(
       apiGetForSession("/residents", caller, isActive, { env, fetch: fetch() }),
     ).rejects.toBeInstanceOf(SessionEnded);
+  });
+});
+
+describe("apiSend", () => {
+  const env = { API_BASE_URL: "http://api.test", BFF_API_SECRET: SECRET };
+  const caller = { sid: SID, accessToken: "access-123" };
+  const answer = (status: number, body: unknown) =>
+    vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status }));
+
+  it("forwards method and body with token and BFF assertion, never cached", async () => {
+    const fetch = answer(202, { id: "d1", status: "uploaded" });
+    const body = new FormData();
+    body.set("ward_id", "wb2");
+    const result = await apiSend("/documents", caller, { method: "POST", body }, { env, fetch });
+    expect(result).toEqual({ status: 202, data: { id: "d1", status: "uploaded" } });
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe("http://api.test/documents");
+    expect(init).toMatchObject({ method: "POST", body, cache: "no-store" });
+    expect(init.headers.authorization).toBe("Bearer access-123");
+    expect(decode(init.headers["x-bff-assertion"]).valid).toBe(true);
+  });
+
+  it.each([403, 409, 413, 415, 422, 429])("passes %i with its error body through", async (status) => {
+    const body = { error_code: "x", message: "Grund" };
+    expect(await apiSend("/documents", caller, { method: "POST" }, { env, fetch: answer(status, body) })).toEqual({
+      status,
+      data: body,
+    });
+  });
+
+  it("throws ApiUnauthorized on 401 and an error on 5xx", async () => {
+    await expect(apiSend("/x", caller, { method: "POST" }, { env, fetch: answer(401, {}) })).rejects.toBeInstanceOf(
+      ApiUnauthorized,
+    );
+    await expect(apiSend("/x", caller, { method: "POST" }, { env, fetch: answer(500, {}) })).rejects.toThrow(/500/);
   });
 });
