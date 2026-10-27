@@ -36,5 +36,15 @@ Vercel Hobby (Stand 27.10.2026): 2 GB Arbeitsspeicher, bis 300 s je Anfrage, Pak
 − Kaltstart nach Pausen; der Hinweis „Demo startet …“ und der Keep-alive-Ping bleiben.
 − Docker-Kenntnisse zeigt nur noch der lokale Betrieb, nicht das öffentliche Hosting.
 
-## Spike S5 (offen)
-Aktuelle API als Vercel-Projekt in `fra1`: `/health`; Login und Bewohnerliste über den BFF (RLS über Pooler, `set local role` je Transaktion); Upload eines Musterdokuments bis `ready_for_review` (läuft `BackgroundTasks` zu Ende?); Kaltstartzeit. Ergebnis wird hier nachgetragen.
+## Spike S5 (27.10.2026: bestanden, Kaltstart offen)
+Aktuelle API als Vercel-Projekt in `fra1`, aufgerufen über den BFF des Web-Projekts.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `/health` | `{"status":"ok","llm_provider":"mistral","ocr_provider":"mistral"}` |
+| Login WB1 über den BFF | klappt (ein einmaliger 500 auf `/auth/login` beim ersten Versuch verschwand ohne Codeänderung; Ursache nicht ermittelt) |
+| Bewohnerliste (RLS über Pooler, `set local role` je Transaktion) | Herr Muster-Bauer wird angezeigt |
+| Upload eines Musterdokuments mit echtem Mistral | erreicht „bereit zur Prüfung“, Vorschläge erscheinen: `BackgroundTasks` laufen nach dem 202 zu Ende |
+| Kaltstartzeit | noch zu messen |
+
+Folge: F02 Aufgabe 10 (Verarbeitung per eigener Anfrage) entfällt vorerst. Sie wird wieder aktuell, falls im Betrieb Uploads in `processing` hängen bleiben (die Hängen-Erkennung aus F02 meldet das).
