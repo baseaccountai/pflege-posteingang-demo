@@ -6,7 +6,7 @@ import { LOGIN_COOKIE, loginCookieOptions, sealLoginState } from "@/lib/auth/log
 import { oidcConfig, oidcSettings, revokeTokens, startLogin } from "@/lib/auth/oidc";
 import { clearCookie, redirectNoStore } from "@/lib/auth/responses";
 import { isRoleKey } from "@/lib/auth/roles";
-import { SESSION_COOKIE, endSession, sessionStore } from "@/lib/auth/session";
+import { SESSION_COOKIE, endSession, loginAttempts, sessionStore } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   await connection(); // per request, never prerendered at build time
@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   );
 
   const { url, state } = await startLogin(config, settings, role);
+  await loginAttempts().begin(state.state); // one-time, checked by the callback (AC5)
   const response = redirectNoStore(url, 302);
   const key = parseEncKey(process.env.SESSION_ENC_KEY);
   response.cookies.set(LOGIN_COOKIE, sealLoginState(state, key), loginCookieOptions());

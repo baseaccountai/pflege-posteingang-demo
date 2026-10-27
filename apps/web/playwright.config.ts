@@ -15,7 +15,6 @@ import {
 // the API.
 export default defineConfig({
   testDir: "./e2e",
-  globalSetup: "./e2e/support/global-setup.ts",
   globalTeardown: "./e2e/support/global-teardown.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -45,7 +44,10 @@ export default defineConfig({
     },
     {
       // FastAPI with the same test IdP (needs uv); started after the IdP for JWKS discovery.
-      command: `uv run --directory ../api uvicorn app.main:app --port ${API_PORT}`,
+      // The database is prepared first: the API opens its connection pool at startup.
+      command:
+        "node e2e/support/prepare-db.mjs && " +
+        `uv run --directory ../api uvicorn app.main:app --port ${API_PORT}`,
       env: API_ENV,
       url: `http://127.0.0.1:${API_PORT}/health`,
       reuseExistingServer: false,

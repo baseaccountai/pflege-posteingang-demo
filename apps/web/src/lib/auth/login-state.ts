@@ -1,6 +1,7 @@
 // Login intermediate state (F01-AC5): state, nonce, PKCE verifier and the chosen role,
-// encrypted in a short-lived cookie. The callback deletes it at once, so a second
-// callback with the same code finds no state and fails. Contains no tokens.
+// encrypted in a short-lived cookie. The callback deletes it at once; the server-side
+// attempt in login-attempts.ts makes it one-time even if the cookie was stolen.
+// Contains no tokens.
 import { openJson, sealJson } from "./crypto";
 import { isRoleKey, type RoleKey } from "./roles";
 

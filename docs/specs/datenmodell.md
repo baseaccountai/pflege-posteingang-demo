@@ -54,6 +54,7 @@ Herkunft eines Medikaments = letztes `medication_events`-Ereignis; „neu/geänd
 | Tabelle | Spalten | Zugriff |
 |---|---|---|
 | `bff.sessions` | `id_hash` (SHA-256 der Sitzungs-ID), `sub`, `app_role`, `display_name`, `tokens_enc bytea` (AES-256-GCM mit `SESSION_ENC_KEY`: Access-, Refresh-, ID-Token), `access_expires_at`, `created_at`, `expires_at` (max. 8 h), `revoked_at` | nur Rolle `bff_session` |
+| `bff.login_attempts` | `state_hash` (SHA-256 des OIDC-`state`), `expires_at` (10 min) – Einmal-Login-Vorgang: der Rücksprung löscht die Zeile, bevor er den Code einlöst (F01-AC5) | nur Rolle `bff_session` |
 
 Schema `bff` ist nicht in den von Supabase veröffentlichten Schemata.
 
@@ -63,6 +64,6 @@ Schema `bff` ist nicht in den von Supabase veröffentlichten Schemata.
 |---|---|---|
 | `api_gateway` | Login-Rolle des Backends | nur `set role authenticated`; kein `bypassrls`, keine eigenen Tabellenrechte |
 | `authenticated` | Nutzer/Agent „im Namen von“ | Tabellenrechte wie oben + RLS |
-| `bff_session` | Login-Rolle des Next.js-BFF | nur `select/insert/update/delete` auf `bff.sessions` (Logout löscht die Zeile) |
+| `bff_session` | Login-Rolle des Next.js-BFF | nur `select/insert/update/delete` auf `bff.sessions` (Logout löscht die Zeile) und `select/insert/delete` auf `bff.login_attempts` |
 | `quota_owner` | Eigentümer von `app.consume_quota` | nur `usage_counters`, `quota_limits` |
 | `service_role` / DB-Admin | nur Reset und Migrationen (F10, F11) | umgeht RLS – nie im Anfragepfad |

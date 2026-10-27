@@ -17,12 +17,23 @@ export const GATEWAY_DSN = `postgresql://api_gateway:${GATEWAY_PASSWORD}@127.0.0
 export const BFF_API_SECRET = "e2e-bff-api-secret-at-least-32-bytes";
 export const API_PORT = 18000;
 
-// Sample residents (invented), one per ward; seeded by global-setup.ts.
+// Sample residents (invented), one per ward; seeded by prepare-db.mjs.
 export const WB1_RESIDENT = { id: "11111111-1111-1111-1111-111111111111", name: "Hr. Muster-Bauer" };
 export const WB2_RESIDENT = { id: "22222222-2222-2222-2222-222222222222", name: "Fr. Testfeld" };
 
+/** Input of prepare-db.mjs (runs before the API starts). */
+export const DB_PREP = {
+  adminDsn: ADMIN_DSN,
+  passwords: { bff_session: BFF_PASSWORD, api_gateway: GATEWAY_PASSWORD },
+  residents: [
+    { ...WB1_RESIDENT, ward: "wb1" },
+    { ...WB2_RESIDENT, ward: "wb2" },
+  ],
+};
+
 /** Environment of the FastAPI app: same test IdP, its access tokens carry aud "default". */
 export const API_ENV = {
+  E2E_DB_PREP: JSON.stringify(DB_PREP),
   DATABASE_URL: GATEWAY_DSN,
   OIDC_ISSUER: MOCK_OIDC_ISSUER,
   OIDC_AUDIENCE: "default",

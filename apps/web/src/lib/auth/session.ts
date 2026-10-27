@@ -2,6 +2,7 @@
 // The cookie holds only the random session id; everything else stays on the server.
 import postgres from "postgres";
 
+import { LoginAttempts } from "./login-attempts";
 import { SessionStore, parseEncKey, type Refreshed, type Session } from "./session-store";
 
 /** __Host- prefix: the browser only accepts it with Secure, Path=/ and without Domain. */
@@ -33,18 +34,29 @@ export async function loadSession(
   return store.refreshIfDue(sid, refresh);
 }
 
+let sql: postgres.Sql | undefined;
 let store: SessionStore | undefined;
+let attempts: LoginAttempts | undefined;
 
-/** One store per server process; BFF_DATABASE_URL is the bff_session role via the pooler. */
-export function sessionStore(): SessionStore {
-  if (!store) {
+/** One pool per server process; BFF_DATABASE_URL is the bff_session role via the pooler. */
+function bffDatabase(): postgres.Sql {
+  if (!sql) {
     const url = process.env.BFF_DATABASE_URL;
     if (!url) throw new Error("BFF_DATABASE_URL is not set");
     // prepare: false, because the Supabase transaction pooler does not keep prepared statements.
-    const sql = postgres(url, { max: 5, prepare: false });
-    store = new SessionStore(sql, parseEncKey(process.env.SESSION_ENC_KEY));
+    sql = postgres(url, { max: 5, prepare: false });
   }
+  return sql;
+}
+
+export function sessionStore(): SessionStore {
+  store ??= new SessionStore(bffDatabase(), parseEncKey(process.env.SESSION_ENC_KEY));
   return store;
+}
+
+export function loginAttempts(): LoginAttempts {
+  attempts ??= new LoginAttempts(bffDatabase());
+  return attempts;
 }
 
 /**

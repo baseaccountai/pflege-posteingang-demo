@@ -172,6 +172,35 @@ test("second use of the same callback creates no session (AC5)", async ({ page }
   expect((await sessionCookie(page))?.value).toBe(first?.value);
 });
 
+test("replaying the callback together with the captured login cookie fails (AC5)", async ({
+  page,
+}) => {
+  const user = uniqueUser();
+  let callbackUrl: string | undefined;
+  await page.route(`${MOCK_OIDC_ISSUER}/authorize**`, async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const response = await route.fetch({ maxRedirects: 0 });
+    callbackUrl = response.headers()["location"];
+    await route.fulfill({ status: 200, contentType: "text/plain", body: "angehalten" });
+  });
+  await page.goto("/auth/login?role=wb1");
+  await signInAtMockIdp(page, user, ["nurse_wb1"]);
+  await expect.poll(() => callbackUrl).toBeTruthy();
+  // What an attacker would have to steal: the callback URL and the HttpOnly login cookie.
+  const loginCookie = (await page.context().cookies()).find((c) => c.name === "__Host-pp_oidc")!;
+  expect(loginCookie).toBeTruthy();
+
+  await page.goto(callbackUrl!);
+  await page.waitForURL("/");
+  expect(await sessionRows(user)).toHaveLength(1);
+
+  await page.context().addCookies([loginCookie]);
+  await page.goto(callbackUrl!);
+  await expectErrorPage(page);
+  // The test IdP accepts the code twice; only the server-side one-time state stops it.
+  expect(await sessionRows(user)).toHaveLength(1);
+});
+
 test("callback without a login in progress shows the error page (AC5)", async ({ page }) => {
   await page.goto("/auth/callback?code=abc&state=xyz");
   await expectErrorPage(page);
