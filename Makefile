@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset e2e lint up down
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset e2e lint up down samples
 
 COMPOSE := docker compose -f infra/docker-compose.yml
 SUPABASE := pnpm dlx supabase@2.122.0
@@ -34,6 +34,10 @@ db-reset:
 # Needs the local Supabase stack (make db-start), Docker (test OIDC server) and uv (API)
 e2e:
 	cd apps/web && pnpm e2e
+
+# Regenerates the sample documents in samples/ (reproducible, commit the result)
+samples:
+	cd apps/api && PYTHONPATH=../.. uv run python -m samples.generate ../../samples
 
 lint:
 	cd apps/api && uv run ruff check . && uv run ruff format --check .
