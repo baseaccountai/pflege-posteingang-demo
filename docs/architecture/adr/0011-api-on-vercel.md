@@ -36,7 +36,7 @@ Vercel Hobby (Stand 27.10.2026): 2 GB Arbeitsspeicher, bis 300 s je Anfrage, Pak
 − Kaltstart nach Pausen; der Hinweis „Demo startet …“ und der Keep-alive-Ping bleiben.
 − Docker-Kenntnisse zeigt nur noch der lokale Betrieb, nicht das öffentliche Hosting.
 
-## Spike S5 (27.10.2026: bestanden, Kaltstart offen)
+## Spike S5 (27.10.2026: bestanden)
 Aktuelle API als Vercel-Projekt in `fra1`, aufgerufen über den BFF des Web-Projekts.
 
 | Prüfung | Ergebnis |
@@ -45,6 +45,6 @@ Aktuelle API als Vercel-Projekt in `fra1`, aufgerufen über den BFF des Web-Proj
 | Login WB1 über den BFF | klappt (ein einmaliger 500 auf `/auth/login` beim ersten Versuch verschwand ohne Codeänderung; Ursache nicht ermittelt) |
 | Bewohnerliste (RLS über Pooler, `set local role` je Transaktion) | Herr Muster-Bauer wird angezeigt |
 | Upload eines Musterdokuments mit echtem Mistral | erreicht „bereit zur Prüfung“, Vorschläge erscheinen: `BackgroundTasks` laufen nach dem 202 zu Ende |
-| Kaltstartzeit | noch zu messen |
+| Kaltstartzeit | `time curl …/health` nach einer Pause: 0,42 s gesamt. Ob die Funktion dabei wirklich kalt war, ist nicht sicher; ein Kaltstart mit Datenbankverbindung (Pool-Aufbau im Lifespan) kann länger dauern. Der Hinweis „Demo startet …“ (F10 Aufgabe 9) bleibt deshalb. |
 
 Folge: F02 Aufgabe 10 (Verarbeitung per eigener Anfrage) entfällt vorerst. Sie wird wieder aktuell, falls im Betrieb Uploads in `processing` hängen bleiben (die Hängen-Erkennung aus F02 meldet das).
