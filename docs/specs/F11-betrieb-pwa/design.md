@@ -32,8 +32,8 @@
 | Workflow | Auslöser | Jobs |
 |---|---|---|
 | `ci.yml` (vorhanden, erweitert) | push, PR | `api` (ruff, pytest unit), `db` (supabase start, Migrationen, DB- und Integrationstests), `web` (lint, vitest, playwright mit `oidc-mock`), `secrets` (gitleaks) |
-| `deploy.yml` | `workflow_run` von CI, `conclusion == success`, Branch `main`; `concurrency: deploy` (keine Parallelität, nicht abbrechen) | checkout **`github.event.workflow_run.head_sha`** → `migrate` (`supabase db push`) → `api` (Image bauen, nach GHCR mit Tag = SHA, Koyeb-Service auf dieses Image aktualisieren, auf `healthy` warten) → `web` (`vercel pull` / `vercel build --prod` / `vercel deploy --prebuilt --prod`); `needs` verkettet, Abbruch beim ersten Fehler |
-| Vercel-Git-Integration | nur Vorschau | `apps/web/vercel.json`: `git.deploymentEnabled.main = false` |
+| `deploy.yml` | `workflow_run` von CI, `conclusion == success`, Branch `main`; `concurrency: deploy` (keine Parallelität, nicht abbrechen) | checkout **`github.event.workflow_run.head_sha`** → `migrate` (`supabase db push`) → `api` (Vercel-Projekt der API: `vercel pull` / `vercel build --prod` / `vercel deploy --prebuilt --prod`, danach `/health` abwarten; Deployment trägt die SHA als Metadatum, [ADR 0011](../../architecture/adr/0011-api-on-vercel.md)) → `web` (`vercel pull` / `vercel build --prod` / `vercel deploy --prebuilt --prod`); `needs` verkettet, Abbruch beim ersten Fehler |
+| Vercel-Git-Integration | nur Vorschau | `apps/web/vercel.json` und `apps/api/vercel.json`: `git.deploymentEnabled.main = false` |
 
 Die Prüfung „kaputte Migration stoppt das API-Deployment“ wird einmalig auf einem Wegwerf-Branch mit `workflow_dispatch` vorgeführt.
 
@@ -49,5 +49,5 @@ Zentrale Übersicht aller Variablen mit Dienst, Pflicht, Standardwert und Geheim
 | End-to-End | Playwright (Produktionsbuild) | AC2 (nach Login, Upload, Akte und Frage: alle Schlüssel im Cache Storage passen zur Allowlist), AC3 (offline → Offline-Seite), AC4 (mobile unten, desktop Seitenleiste), AC11 (Header vorhanden; `securitypolicyviolation`-Ereignisse = 0 auf allen Seitentypen) |
 | Integration API | pytest | AC12 (CORS-Preflight fremder Origin abgelehnt; gültiges Token ohne BFF-Nachweis → 401) |
 | CI | GitHub Actions | AC6, AC8 (Wegwerf-Branch), AC10 (gitleaks erkennt Test-Schlüssel im Wegwerf-Branch) |
-| Abnahme Deployment | GitHub Actions + Ausgaben | AC7: Migration, Koyeb-Image-Tag und Vercel-Deployment nennen dieselbe SHA (Workflow-Zusammenfassung prüft das automatisch); zwei schnell aufeinanderfolgende Pushes → zweiter Deploy wartet; AC9: Push auf `main` erzeugt in Vercel **kein** Git-Produktionsdeployment, nur das des Workflows; Region `fra1` im `x-vercel-id` einer Funktionsantwort |
-| Manuell (Abnahme) | Handy (Android/iOS) | AC1 Installation, Koyeb `/health/ready` |
+| Abnahme Deployment | GitHub Actions + Ausgaben | AC7: Migration, API- und Web-Deployment nennen dieselbe SHA (Workflow-Zusammenfassung prüft das automatisch); zwei schnell aufeinanderfolgende Pushes → zweiter Deploy wartet; AC9: Push auf `main` erzeugt in Vercel **kein** Git-Produktionsdeployment, nur das des Workflows; Region `fra1` im `x-vercel-id` einer Funktionsantwort |
+| Manuell (Abnahme) | Handy (Android/iOS) | AC1 Installation, API `/health/ready` auf Vercel |

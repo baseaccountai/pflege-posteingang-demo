@@ -6,7 +6,7 @@
 
 **Architecture:** Monorepo mit Next.js-Web-App als Backend-for-Frontend (OIDC-Login serverseitig, Tokens nie im Browser) und FastAPI-Backend als Sicherheitsschicht vor Mistral/Ollama und Supabase (Postgres, pgvector, Storage, RLS). Anbieter (OCR, LLM, Embeddings, IdP) sind per Konfiguration austauschbar.
 
-**Tech Stack:** Next.js (App Router), TypeScript, Tailwind, shadcn/ui, PWA (Serwist), Vitest, Playwright · Python ≥ 3.12, FastAPI, uv, pytest · Supabase · Zitadel (öffentlich) / Keycloak (lokal) · Mistral (OCR, Small, Ministral, embed) / Docling + Ollama (lokal) · Docker Compose · GitHub Actions · Vercel + Koyeb (Frankfurt).
+**Tech Stack:** Next.js (App Router), TypeScript, Tailwind, shadcn/ui, PWA (Serwist), Vitest, Playwright · Python ≥ 3.12, FastAPI, uv, pytest · Supabase · Zitadel (öffentlich) / Keycloak (lokal) · Mistral (OCR, Small, Ministral, embed) / Docling + Ollama (lokal) · Docker Compose · GitHub Actions · Vercel + Koyeb (Frankfurt) — *27.10.2026: API ebenfalls auf Vercel, ADR 0011*.
 
 **Spec:** `docs/superpowers/specs/2026-10-23-pflege-posteingang-demo-design.md` — immer mitlesen.
 
@@ -30,7 +30,7 @@
 
 - **Rollenwechsel mitten in einer Sitzung** (WB1 → WB2): danach darf keine zwischengespeicherte Seite, Antwort oder Vektor-Suche noch WB1-Daten zeigen → Test in F01/F08 (Playwright: Rolle wechseln, Bewohnerliste + Chat-Verlauf prüfen).
 - **Schlechte Scans** (schief, unscharf, leere Seite, Nicht-Pflegedokument): Erwartung freundliche Meldung statt leerer/halluzinierter Felder → Test in F02/F03 mit Musterbildern `samples/bad/`.
-- **Supabase/Koyeb aus dem Schlaf oder Mistral-Limit erreicht**: Erwartung sichtbarer Hinweis „Demo startet / Tageskontingent erreicht“, Musterdaten weiter ansehbar → Test in F10 (API-Attrappe liefert 503/429).
+- **Supabase pausiert, API-Kaltstart auf Vercel (ADR 0011) oder Mistral-Limit erreicht**: Erwartung sichtbarer Hinweis „Demo startet / Tageskontingent erreicht“, Musterdaten weiter ansehbar → Test in F10 (API-Attrappe liefert 503/429).
 - **Frage zu einem Bewohner, den es nicht gibt oder der im fremden Wohnbereich liegt**: Antwort darf nicht verraten, ob er existiert („Keine Treffer in deinem Wohnbereich“) → Test in F05/F08.
 - **Dokument wird einem falschen Bewohner zugeordnet**: Freigabe-Schritt muss den Bewohner explizit bestätigen lassen und änderbar machen → Test in F03.
 

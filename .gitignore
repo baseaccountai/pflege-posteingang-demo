@@ -26,3 +26,6 @@ __pycache__/
 # OS / editors
 .DS_Store
 .~lock.*#
+
+# Vercel CLI link of the API project (ADR 0011)
+.vercel

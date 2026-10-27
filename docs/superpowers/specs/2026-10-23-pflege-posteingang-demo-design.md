@@ -64,7 +64,7 @@ Die Demo ist der **digitale Posteingang einer Pflegeeinrichtung**:
 | Thema | Vorgabe |
 |---|---|
 | Zeit | 24.10.–11.11.2026, ca. **4 h/Tag**, ≈ 68 h Projektzeit **[Annahme Claude: „4 Stunden“ = pro Tag]** |
-| Kosten | **Budget ca. 10–15 € bis zur Bewerbung [Entscheidung]**: Mistral nach Verbrauch (kein Training auf Eingaben — beim Anlegen prüfen), Backend-Server mit genug RAM für Presidio + LLM Guard (z. B. kleine bezahlte Koyeb-Instanz in Frankfurt; Alternative Hetzner). Tagesobergrenze für Mistral-Kosten im Backend. |
+| Kosten | **Budget ca. 10–15 € bis zur Bewerbung [Entscheidung]**: Mistral nach Verbrauch (kein Training auf Eingaben — beim Anlegen prüfen), Backend-Server mit genug RAM für Presidio + LLM Guard (*27.10.2026: Vercel Hobby, 0 €, ADR 0011; Koyeb ohne günstigen Tarif; Rückfall Hetzner*). Tagesobergrenze für Mistral-Kosten im Backend. |
 | Streichreihenfolge bei Zeitnot | **Sicherheitsfunktionen haben Vorrang [Entscheidung]**: zuerst wird der vollständige lokale Betrieb (Ollama, Docling, Keycloak, Supabase self-hosted) reduziert; Web + API per Docker laufen immer. |
 | Herkunft der Tools | europäisch bevorzugt; US-Anbieter mit EU-Rechenzentrum akzeptiert **[Entscheidung]** |
 | Daten | **ausschließlich erfundene, sichtbar markierte Musterdaten [Entscheidung]** |
@@ -79,7 +79,7 @@ Die Demo ist der **digitale Posteingang einer Pflegeeinrichtung**:
 | Rolle | Öffentlich | Lokal |
 |---|---|---|
 | Web-App | **Next.js** (App Router) + **Tailwind** + **shadcn/ui**, PWA, auf **Vercel** | Docker |
-| Backend | **Python / FastAPI** auf **Koyeb** (Frankfurt, kleine bezahlte Instanz mit ≥ 2 GB RAM) | Docker |
+| Backend | **Python / FastAPI** auf **Vercel** (eigenes Projekt, `fra1`) — *geändert 27.10.2026, vorher Koyeb; Begründung: [ADR 0011](../../architecture/adr/0011-api-on-vercel.md)* | Docker (lokal) |
 | Daten, Vektoren, Dateien, Rechte | **Supabase** (Region Frankfurt): Postgres, pgvector, Storage, Row Level Security | Supabase self-hosted (Docker) |
 | Login (OIDC) | **Zitadel Cloud** | **Keycloak** (Docker, vorkonfigurierter Realm) |
 | OCR | **Mistral OCR** | **Docling** |
@@ -323,7 +323,7 @@ Ablage: `docs/projektbeschreibung.md` als **einzige Quelle**; README verlinkt da
 
 | Risiko | Gegenmaßnahme |
 |---|---|
-| Supabase pausiert nach 1 Woche ohne Aktivität; Koyeb Free schläft nach 1 h | Keep-alive-Ping per GitHub Action; Hinweis „Demo startet …“ in der App |
+| Supabase pausiert nach 1 Woche ohne Aktivität; API auf Vercel hat Kaltstarts (ADR 0011) | Keep-alive-Ping per GitHub Action; Hinweis „Demo startet …“ in der App |
 | Backend-Hosting (bezahlte Kleininstanz) nicht verfügbar | Alternative Hetzner oder Render (Frankfurt) |
 | Token Exchange (RFC 8693) im IdP nicht/teilweise verfügbar | Rückfall siehe 5.3; früh in Phase 2 klären |
 | Zitadel-Token und Supabase-RLS zusammenbringen (Supabase erwartet eigene JWTs) | früh als technischer Spike in F01 klären (z. B. Backend stellt nach Prüfung des OIDC-Tokens ein Supabase-kompatibles JWT mit Rolle/Wohnbereich aus, oder Supabase Third-Party-Auth, falls Zitadel unterstützt) |

@@ -14,3 +14,4 @@
 - [x] **8. Bildverkleinerung** — `F02-AC3` · Vitest → rot → `downscale.ts` → grün · Commit
 - [x] **9. Posteingang-UI** — `F02-AC1`, `F02-AC2`, `F02-AC13`
   - [x] Vitest (Hinweistext exakt, `accept`/`capture`, Meldung je `error_code`) + Playwright (Musterdokument → „bereit zur Prüfung“; vier `samples/bad/`-Fälle → passende Meldung) → rot → grün · Commit `feat(web): add inbox with camera upload`
+- [ ] **10. Verarbeitung per Anfrage anstoßen (nur falls Spike S5 zeigt, dass `BackgroundTasks` auf Vercel abbrechen; [ADR 0011](../../architecture/adr/0011-api-on-vercel.md))** — `F02-AC6`, `F02-AC9` · Integrationstests (`/process` führt bis `ready_for_review`, zweiter Aufruf 409, fremd 404, Hängen-Erkennung unverändert) + Playwright (Upload → bereit zur Prüfung) → rot → grün · Commit `feat: process uploads in their own request`

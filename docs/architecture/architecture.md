@@ -54,7 +54,7 @@ Nutzer: Pflegekraft Wohnbereich 1, Pflegekraft Wohnbereich 2, Pflegedienstleitun
 
 | Umgebung | Web | API | Daten | IdP | KI |
 |---|---|---|---|---|---|
-| Öffentlich | Vercel | Koyeb Frankfurt (≥ 2 GB RAM) | Supabase Irland (`eu-west-1`) | Zitadel Cloud | Mistral |
+| Öffentlich | Vercel | Vercel `fra1`, eigenes Projekt (ADR 0011) | Supabase Irland (`eu-west-1`) | Zitadel Cloud | Mistral |
 | Lokal | Docker | Docker | Supabase self-hosted | Keycloak (Docker) | Ollama + Docling (Docker) |
 
 Gleiche Architektur in beiden Umgebungen, nur andere Anbieter. CI/CD: GitHub Actions (Tests, Deployment, Keep-alive, nächtlicher Reset).
@@ -85,6 +85,7 @@ Gleiche Architektur in beiden Umgebungen, nur andere Anbieter. CI/CD: GitHub Act
 | 0008 | Eigener minimaler Service Worker (folgt mit F11) |
 | [0009](adr/0009-server-side-sessions.md) | Login-Sitzung serverseitig in Postgres |
 | [0010](adr/0010-files-in-postgres.md) | Originaldateien in Postgres statt Supabase Storage |
+| [0011](adr/0011-api-on-vercel.md) | API auf Vercel statt Koyeb (Koyeb-Übernahme durch Mistral, kein günstiger Tarif mehr) |
 
 ## 11. Risiken und technische Schulden
 

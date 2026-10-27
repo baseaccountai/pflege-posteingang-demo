@@ -32,8 +32,8 @@ Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (Ref: nein) | `supabase db push` |
 | `ZITADEL_ADMIN_PAT` | Setup-Skript, Passwort-Workflow | für Setup | – | **ja** | Management-API |
 | `ZITADEL_PROJECT_ID` | Setup-Skript, Passwort-Workflow | für Setup | – | nein | Zitadel-Projekt (= `OIDC_AUDIENCE`), schreibt das Setup-Skript |
-| `KOYEB_API_TOKEN`, `KOYEB_SERVICE` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (Service: nein) | API-Deployment |
 | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (IDs: nein) | Web-Deployment |
+| `VERCEL_API_PROJECT_ID` | Deploy-Workflow | ja (nur GitHub) | – | nein | API-Deployment (zweites Vercel-Projekt, ADR 0011; ersetzt `KOYEB_*`) |
 | `NEXT_PUBLIC_REPO_URL` | Web | ja | – | nein | Repo-Links der Landkarte (F09) |
 
 Kontingente stehen **nicht** in Variablen, sondern in der Tabelle `quota_limits` (F10), damit Aufrufer sie nicht beeinflussen.

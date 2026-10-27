@@ -13,6 +13,8 @@ Browser: Foto → verkleinern (canvas, ≤ 2000 px, JPEG 0,85) ──multipart �
 Browser pollt GET /documents alle 3 s, solange Einträge in uploaded/processing/extracting sind
 ```
 
+**Hinweis 27.10.2026 ([ADR 0011](../../architecture/adr/0011-api-on-vercel.md)):** Öffentlich läuft die API auf Vercel. Ob `BackgroundTasks` nach dem 202 dort zu Ende laufen, prüft Spike S5. Falls nicht (Aufgabe 10): Der Upload antwortet unverändert mit 202, danach ruft der Browser `POST /documents/{id}/process` auf; diese Anfrage führt OCR und Extraktion **innerhalb** der Anfrage aus (≤ 300 s), während der Posteingang weiter pollt. Zustandsautomat, Kontingente und Hängen-Erkennung bleiben gleich.
+
 Vercel begrenzt Anfragen auf 4,5 MB; deshalb gilt 4 MB als Obergrenze nach der Verkleinerung (Reserve für Multipart).
 
 ## Zustandsautomat `documents.status`

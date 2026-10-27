@@ -14,6 +14,10 @@ dependencies = [
     "python-multipart>=0.0.32",
 ]
 
+# Public hosting on Vercel (ADR 0011): the function loads this ASGI app.
+[tool.vercel]
+entrypoint = "app.main:app"
+
 [dependency-groups]
 dev = [
     "httpx2>=2.16.0",

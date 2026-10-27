@@ -25,4 +25,4 @@ Benötigt werden relationale Daten (Bewohner, Dokumente, Felder, Wiedervorlagen,
 Originaldateien liegen nicht in Supabase Storage, sondern in Postgres (siehe [ADR 0010](0010-files-in-postgres.md)).
 
 ## Nachtrag 26.10.2026: Region Irland
-Das Projekt wurde versehentlich in `eu-west-1` (Irland) statt `eu-central-1` (Frankfurt) angelegt. Der Bewerber hat entschieden, es dort zu belassen: weiterhin EU-Region und DSGVO-konform. Folge: ca. 20–25 ms zusätzliche Latenz je Datenbankabfrage von Vercel (`fra1`) und Koyeb (Frankfurt). Falls das spürbar wird, kann die Vercel-Funktionsregion auf `dub1` (Dublin) gelegt werden.
+Das Projekt wurde versehentlich in `eu-west-1` (Irland) statt `eu-central-1` (Frankfurt) angelegt. Der Bewerber hat entschieden, es dort zu belassen: weiterhin EU-Region und DSGVO-konform. Folge: ca. 20–25 ms zusätzliche Latenz je Datenbankabfrage von Vercel (`fra1`, Web und – seit ADR 0011 – API). Falls das spürbar wird, kann die Vercel-Funktionsregion auf `dub1` (Dublin) gelegt werden.
