@@ -1,7 +1,7 @@
 # F02 – Dokument erfassen: Aufgaben
 
-- [ ] **1. Migration `documents` + `document_files`** — `F02-AC5`, `F02-AC12`, `F02-AC13`
-  - [ ] RLS-Tests: WB2 sieht kein WB1-Dokument/keine WB1-Datei, kann keins in WB1 anlegen, kann `ward_id` nicht ändern, kann keinen WB1-Bewohner referenzieren → rot → Migration → grün · Commit `feat(db): add documents and file storage tables`
+- [x] **1. Migration `documents` + `document_files`** — `F02-AC5`, `F02-AC12`, `F02-AC13`
+  - [x] RLS-Tests: WB2 sieht kein WB1-Dokument/keine WB1-Datei, kann keins in WB1 anlegen, kann `ward_id` nicht ändern, kann keinen WB1-Bewohner referenzieren → rot → Migration → grün · Commit `feat(db): add documents and file storage tables`
 - [ ] **2. Dateiprüfung** — `F02-AC4`
   - [ ] `tests/documents/test_validation.py`: JPEG/PNG/PDF ok; `.pdf`-Endung mit fremdem Inhalt abgelehnt; 4,1 MB abgelehnt; 6-seitiges PDF abgelehnt → rot → `validation.py` → grün · Commit
 - [ ] **3. OCR-Schnittstelle, Fabrik, Attrappe** — `F02-AC11` · Tests → rot → grün · Commit

@@ -86,7 +86,16 @@ async def test_gateway_role_itself_has_no_table_access(db):
             await conn.execute("select * from public.residents")
 
 
-@pytest.mark.parametrize("table", ["public.residents", "public.wards", "bff.sessions"])
+@pytest.mark.parametrize(
+    "table",
+    [
+        "public.residents",
+        "public.wards",
+        "public.documents",
+        "public.document_files",
+        "bff.sessions",
+    ],
+)
 def test_anon_has_no_table_access(seeded, table):
     # api_gateway may not switch to anon at all, so that would prove nothing. The admin
     # connection switches, the test checks it really is anon, and only then reads the table.
