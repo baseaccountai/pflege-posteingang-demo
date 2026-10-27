@@ -7,8 +7,8 @@
 - [x] **3. OCR-Schnittstelle, Fabrik, Attrappe** — `F02-AC11` · Tests → rot → grün · Commit
 - [x] **4. Mistral-OCR-Adapter** — `F02-AC6`, `F02-AC8` · `respx`-Tests: Erfolg → Seiten; 5xx/Timeout → `OcrUnavailable` → rot → grün · Commit
 - [x] **5. Lesbarkeit** — `F02-AC7` · Tests: leer, 50 Zeichen, Kochrezept, Rechnung → unlesbar mit Grund; Arztbrief-Auszug → lesbar → rot → grün · Commit
-- [ ] **6. Verarbeitungs-Pipeline (Zustandsautomat)** — `F02-AC6`, `F02-AC8`, `F02-AC9`
-  - [ ] Tests mit Attrappen: Erfolgsfolge; OCR-Fehler → `failed/ocr_unavailable` → Neuversuch ab OCR; LLM-Fehler → Neuversuch nur Extraktion; Kontingent leer → `quota_exceeded`; Zeitstempel > 5 min → `timeout` → rot → `pipeline.py` → grün · Commit
+- [x] **6. Verarbeitungs-Pipeline (Zustandsautomat)** — `F02-AC6`, `F02-AC8`, `F02-AC9`
+  - [x] Tests mit Attrappen: Erfolgsfolge; OCR-Fehler → `failed/ocr_unavailable` → Neuversuch ab OCR; LLM-Fehler → Neuversuch nur Extraktion; Kontingent leer → `quota_exceeded`; Zeitstempel > 5 min → `timeout` → rot → `pipeline.py` → grün · Commit
 - [ ] **7. Upload- und Abruf-Endpunkte** — `F02-AC5`, `F02-AC10`, `F02-AC12`, `F02-AC13`
   - [ ] Integrationstests: 202; Kontingent leer → 429 ohne OCR-Aufruf; 6. Upload derselben Sitzung → 429, andere Sitzung ok; PDL mit `ward_id`; Pflegekraft mit fremder `ward_id` → 403; Datei-Auslieferung mit Typ-Headern → rot → grün · Commit `feat(api): add document upload with background OCR`
 - [ ] **8. Bildverkleinerung** — `F02-AC3` · Vitest → rot → `downscale.ts` → grün · Commit
