@@ -1,7 +1,7 @@
 """Runtime configuration, read from environment variables.
 
 Providers are switched by configuration only (never by code changes):
-  LLM_PROVIDER=mistral|ollama, OCR_PROVIDER=mistral|docling
+  LLM_PROVIDER=mistral|ollama, OCR_PROVIDER=mistral|docling (fake: tests only)
 """
 
 from typing import Literal
@@ -11,7 +11,9 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     llm_provider: Literal["mistral", "ollama"] = "mistral"
-    ocr_provider: Literal["mistral", "docling"] = "mistral"
+    # "fake": canned OCR text for tests and the e2e run without a Mistral key.
+    ocr_provider: Literal["mistral", "docling", "fake"] = "mistral"
+    docling_base_url: str = "http://localhost:5001"
     # Shared with the Next.js BFF only; empty means "not configured" and every request fails.
     bff_api_secret: str = ""
     # Login role api_gateway via the transaction pooler; empty: business routes answer 503.

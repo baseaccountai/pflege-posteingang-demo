@@ -5,7 +5,7 @@ Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | Variable | Dienst | Pflicht | Standard | Geheim | Zweck |
 |---|---|---|---|---|---|
 | `LLM_PROVIDER` | API | ja | `mistral` | nein | `mistral` \| `ollama` |
-| `OCR_PROVIDER` | API | ja | `mistral` | nein | `mistral` \| `docling` |
+| `OCR_PROVIDER` | API | ja | `mistral` | nein | `mistral` \| `docling` \| `fake` (nur Tests/E2E: feste Texte statt OCR) |
 | `MISTRAL_API_KEY` | API, Seed-Skript | bei `mistral` | – | **ja** | Mistral-Zugang |
 | `MISTRAL_CHAT_MODEL` | API | bei `mistral` | aus ADR 0003 | nein | Feldvorschläge, Antworten |
 | `MISTRAL_OCR_MODEL` | API | bei `mistral` | aus ADR 0003 | nein | OCR |
