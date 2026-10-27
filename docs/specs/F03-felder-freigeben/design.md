@@ -11,7 +11,7 @@
 | Extraktion | `extraction/service.py` | Prompt (Dokument als **Daten** in Begrenzern, Anweisung „nur belegte Werte, jeweils mit wörtlicher Fundstelle“), Eingabe auf 20 000 Zeichen gekürzt, `max_tokens` 1500, Validierung, 1 Wiederholung (zählt gegen das Kontingent), Fundstellenprüfung für **jeden** Wert (AC3) |
 | Bewohner-Abgleich | `extraction/resident_match.py` | normalisierter Namensvergleich (Nachname + Vorname/Initial, Umlaute), nur über `residents` unter RLS; eindeutig → Vorschlag, sonst keiner |
 | Medikationsabgleich | `extraction/medication_diff.py` | reine Funktion: `diff(current: list[Med], proposed: list[Med]) -> list[MedChange]`; Vergleich über normalisierten Wirkstoff-/Handelsnamen |
-| Freigabe | `documents/approval.py` | Transaktion unter `as_principal`: Dokument sperren und Status prüfen (AC9) → Bewohner sperren (`select … from residents … for update`) → Abgleich neu berechnen und mit dem vom Client gesendeten `diff_hash` vergleichen (AC8a) → schreiben inkl. `medication_events` |
+| Freigabe | `documents/approval.py` | Transaktion unter `as_principal`: Dokument sperren und Status prüfen (AC9) → Bewohner sperren (`pg_advisory_xact_lock` je Bewohner; `for update` bräuchte ein UPDATE-Recht auf `residents`, das `authenticated` bewusst nicht hat) → Abgleich neu berechnen und mit dem vom Client gesendeten `diff_hash` vergleichen (AC8a) → schreiben inkl. `medication_events` |
 | Prüfansicht | `apps/web/src/app/posteingang/[id]/page.tsx` | Original + Formular (react-hook-form + zod), Bewohner-Auswahl, Badges neu/geändert/unverändert/abgesetzt |
 
 ## Datenmodell

@@ -16,8 +16,21 @@ from app.auth.bff import bff_session
 from app.auth.dependencies import current_principal
 from app.auth.principal import Principal
 from app.db import Database
+from app.documents.approval import (
+    Approval,
+    ComparisonRequest,
+    Conflict,
+    Invalid,
+    NotFound,
+    approve,
+    changes_json,
+    comparison,
+    reject,
+    resident_ward,
+)
 from app.documents.pipeline import Pipeline, mark_stalled
 from app.documents.validation import MAX_BYTES, InvalidFile, count_pdf_pages, validate_upload
+from app.extraction.resident_match import suggest_resident
 from app.quotas import QuotaExceeded, consume
 
 router = APIRouter(prefix="/documents")
@@ -192,3 +205,94 @@ async def retry_document(
 
     background.add_task(pipeline(request).run, principal, document_id)
     return {"id": document_id, "status": "failed"}
+
+
+# --- review (F03) ---------------------------------------------------------------------------
+
+
+def prefilled_medications(suggestion: dict | None) -> list[dict]:
+    """Only medications with a found source are prefilled (F03-AC3)."""
+    return [m["value"] for m in (suggestion or {}).get("medications", []) if m.get("value")]
+
+
+@router.get("/{document_id}/suggestion")
+async def get_suggestion(request: Request, principal: Caller, document_id: str):
+    async with database(request).as_principal(principal) as conn:
+        cur = await conn.execute(
+            "select status::text, suggestion, suggestion_model, ward_id from public.documents"
+            " where id = %s",
+            [checked_id(document_id)],
+        )
+        row = await cur.fetchone()
+        if row is None:
+            raise NOT_FOUND
+        status, suggestion, model, ward = row
+        name = ((suggestion or {}).get("resident_name") or {}).get("value")
+        candidate = await suggest_resident(conn, name)
+        if candidate and await resident_ward(conn, candidate) != ward:
+            candidate = None  # a PDL may see both wards: only the document's ward counts
+        changes, diff_hash = [], None
+        if candidate:
+            doc_type = ((suggestion or {}).get("doc_type") or {}).get("value") or "sonstiges"
+            found, diff_hash = await comparison(
+                conn, candidate, doc_type, prefilled_medications(suggestion)
+            )
+            changes = changes_json(found)
+    return {
+        "status": status,
+        "suggestion": suggestion,
+        "model": model,
+        "resident_candidate": candidate,
+        "medication_changes": changes,
+        "diff_hash": diff_hash,
+    }
+
+
+@router.post("/{document_id}/medication-diff")
+async def medication_diff(
+    request: Request, principal: Caller, document_id: str, body: ComparisonRequest
+):
+    async with database(request).as_principal(principal) as conn:
+        cur = await conn.execute(
+            "select ward_id from public.documents where id = %s", [checked_id(document_id)]
+        )
+        row = await cur.fetchone()
+        if row is None:
+            raise NOT_FOUND
+        if await resident_ward(conn, body.resident_id) != row[0]:
+            return error(
+                422, "resident_unknown", "Bewohner nicht gefunden oder in anderem Wohnbereich."
+            )
+        changes, diff_hash = await comparison(
+            conn, body.resident_id, body.doc_type, body.medications
+        )
+    return {"medication_changes": changes_json(changes), "diff_hash": diff_hash}
+
+
+async def _decide(action) -> JSONResponse | dict:
+    try:
+        await action
+    except NotFound as missing:
+        raise NOT_FOUND from missing
+    except Invalid as invalid:
+        return error(422, invalid.error_code, invalid.message)
+    except Conflict as conflict:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "error_code": conflict.error_code,
+                "message": conflict.message,
+                **conflict.extra,
+            },
+        )
+    return {"ok": True}
+
+
+@router.post("/{document_id}/approve")
+async def approve_document(request: Request, principal: Caller, document_id: str, body: Approval):
+    return await _decide(approve(database(request), principal, checked_id(document_id), body))
+
+
+@router.post("/{document_id}/reject")
+async def reject_document(request: Request, principal: Caller, document_id: str):
+    return await _decide(reject(database(request), principal, checked_id(document_id)))
