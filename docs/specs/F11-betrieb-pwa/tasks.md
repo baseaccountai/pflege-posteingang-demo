@@ -1,6 +1,6 @@
 # F11 – Betrieb & PWA: Aufgaben
 
-- [ ] **1. Navigation** — `F11-AC4` · Vitest + Playwright (mobile unten, desktop Seite) → rot → `app-nav.tsx` → grün · Commit
+- [x] **1. Navigation** — `F11-AC4` · Vitest + Playwright (mobile unten, desktop Seite) → rot → `app-nav.tsx` → grün · Commit
 - [ ] **2. Manifest + Icons** — `F11-AC1` · Vitest → rot → grün · Commit `feat(web): add web app manifest`
 - [ ] **3. Service Worker + Offline-Seite (ADR 0008)** — `F11-AC2`, `F11-AC3` · Vitest (Allowlist) + Playwright (Cache-Inhalt nach typischem Ablauf, offline) → rot → `sw.js`, `offline.html`, `sw-manifest.mjs` → grün · Commit `feat(web): add allowlist-only service worker`
 - [ ] **4. Sicherheitsheader + CSP-Nonce + CORS** — `F11-AC11`, `F11-AC12` · Playwright (Header, 0 CSP-Verletzungen auf allen Seitentypen) + pytest → rot → `proxy.ts`, `next.config.ts`, API-Middleware → grün · Commit

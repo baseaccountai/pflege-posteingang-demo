@@ -21,17 +21,6 @@ export function SiteHeader({ roleLabel }: { roleLabel?: string | null }) {
       </div>
       {roleLabel ? (
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <nav className="flex gap-3">
-            <Link href="/posteingang" className="underline">
-              Posteingang
-            </Link>
-            <Link href="/bewohner" className="underline">
-              Bewohner
-            </Link>
-            <Link href="/fragen" className="underline">
-              Fragen
-            </Link>
-          </nav>
           <span>{roleLabel}</span>
           {/* Plain form POST: a hard page change, so no client cache keeps old data (AC13). */}
           <LogoutForm className="rounded-md border px-2 py-1 hover:bg-muted">Abmelden</LogoutForm>

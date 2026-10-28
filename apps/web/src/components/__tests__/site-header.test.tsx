@@ -15,11 +15,9 @@ describe("SiteHeader", () => {
     expect(new URL(form.action).search).toBe("");
   });
 
-  it("links inbox, residents and questions when signed in", () => {
+  it("leaves the areas to the main navigation (F11-AC4)", () => {
     render(<SiteHeader roleLabel="Pflegekraft WB1" />);
-    expect(screen.getByRole("link", { name: "Posteingang" })).toHaveAttribute("href", "/posteingang");
-    expect(screen.getByRole("link", { name: "Bewohner" })).toHaveAttribute("href", "/bewohner");
-    expect(screen.getByRole("link", { name: "Fragen" })).toHaveAttribute("href", "/fragen");
+    expect(screen.queryByRole("link", { name: "Posteingang" })).toBeNull();
   });
 
   // F09-AC2: the project description is one click away on every page, signed in or not.
