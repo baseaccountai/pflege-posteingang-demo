@@ -1,6 +1,6 @@
 // F10-AC4: banner and footer on every page type of the app, on desktop and phone, and no
 // sideways scrolling on the phone. The IdP's login pages are not ours and are left out.
-// Still to come with their features: /projekt (F09), Offline-Seite (F11).
+// Still to come with its feature: Offline-Seite (F11).
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -15,6 +15,8 @@ async function expectFrame(page: Page) {
   await expect(page.getByText(BANNER, { exact: true })).toBeVisible();
   await expect(page.getByTestId("disclaimer")).toHaveText(DISCLAIMER);
   await expect(page.getByTestId("disclaimer")).toBeVisible();
+  // F09-AC2: the header links the project description on every page.
+  await expect(page.getByRole("banner").getByRole("link", { name: "Über das Projekt" })).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow, "page wider than the screen").toBeLessThanOrEqual(0);
 }
@@ -24,6 +26,7 @@ test.describe("without login", () => {
     ["start page", "/", /Pflege-Posteingang/],
     ["sample record", "/muster", /Fr\. Beispiel/],
     ["login error", "/auth/error", /Anmeldung fehlgeschlagen/],
+    ["project page", "/projekt", /Über das Projekt/],
     ["unknown address (404)", "/gibt-es-nicht", /Seite nicht gefunden/],
   ];
   for (const [name, path, heading] of pages) {

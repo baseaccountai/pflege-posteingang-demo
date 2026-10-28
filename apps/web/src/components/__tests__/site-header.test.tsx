@@ -22,6 +22,12 @@ describe("SiteHeader", () => {
     expect(screen.getByRole("link", { name: "Fragen" })).toHaveAttribute("href", "/fragen");
   });
 
+  // F09-AC2: the project description is one click away on every page, signed in or not.
+  it.each([["Pflegekraft WB1"], [null]])("links 'Über das Projekt' (role %s)", (role) => {
+    render(<SiteHeader roleLabel={role} />);
+    expect(screen.getByRole("link", { name: "Über das Projekt" })).toHaveAttribute("href", "/projekt");
+  });
+
   it("shows no logout button without a session", () => {
     render(<SiteHeader roleLabel={null} />);
     expect(screen.getByRole("banner")).toHaveTextContent("Nicht angemeldet");

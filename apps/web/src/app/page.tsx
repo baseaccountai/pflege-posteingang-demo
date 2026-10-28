@@ -1,29 +1,34 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { ProjectCard } from "@/components/project-card";
+import { RequirementsMap } from "@/components/requirements-map";
 import { RoleSwitcher } from "@/components/role-switcher";
 
-// Screen 1 (the requirements map follows in F09).
+// Screen 1 (F09): what this is, where the job ad's requirements are met, then the roles.
+// Renders without API and database (F09-AC7): only static content and the role buttons.
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-10">
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-10">
       <h1 className="text-2xl font-semibold">Pflege-Posteingang</h1>
       <Suspense>
         <ExpiredHint searchParams={searchParams} />
       </Suspense>
-      <p className="text-muted-foreground">
-        Digitaler Posteingang einer Pflegeeinrichtung mit sicherer KI. Die Demo befindet sich im
-        Aufbau.
-      </p>
-      <h2 className="text-lg font-semibold">Rolle wählen</h2>
-      <p className="text-sm text-muted-foreground">
-        Die Anmeldung läuft über einen echten Identity Provider (OIDC). Die Zugangsdaten der
-        Demo-Konten sind öffentlich.
-      </p>
-      <RoleSwitcher />
-      <Link href="/bewohner" className="underline">
-        Zur Bewohnerliste
-      </Link>
+      <ProjectCard />
+      <RequirementsMap />
+      <section aria-labelledby="roles-heading" className="flex flex-col gap-3">
+        <h2 id="roles-heading" className="text-lg font-semibold">
+          Rolle wählen
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Alle Personen und Dokumente sind erfundene Musterdaten. Die Anmeldung läuft über einen
+          echten Identity Provider (OIDC); die Zugangsdaten der Demo-Konten sind öffentlich.
+        </p>
+        <RoleSwitcher />
+        <Link href="/muster" className="text-sm underline">
+          Ohne Anmeldung: Musterakte ansehen
+        </Link>
+      </section>
     </main>
   );
 }

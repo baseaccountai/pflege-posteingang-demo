@@ -68,8 +68,10 @@ test("after a role switch the conversation is gone and WB1 is not found", async 
   const resident = await residentWithLetter();
   await loginAs(page, "wb1", uniqueUser(), ["nurse_wb1"]);
   await page.goto(`/bewohner/${resident.id}`);
-  await page.getByRole("region", { name: "Dokumente" }).getByRole("button", { name: "Erneut versuchen" }).click();
-  await page.waitForURL(`/bewohner/${resident.id}`);
+  const documents = page.getByRole("region", { name: "Dokumente" });
+  await documents.getByRole("button", { name: "Erneut versuchen" }).click();
+  // The reload goes to the same URL, so wait for its content, not for the URL.
+  await expect(documents).not.toContainText("noch nicht durchsuchbar");
   await page.goto("/fragen");
   await page.getByLabel("Frage").fill(QUESTION);
   await page.getByRole("button", { name: "Fragen" }).click();
