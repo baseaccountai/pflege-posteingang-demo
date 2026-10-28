@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { ApiStatusBoundary } from "@/components/api-status";
 import { Inbox } from "@/components/inbox";
 import type { InboxDocument } from "@/components/inbox-list";
 import { getAsCaller } from "@/lib/as-caller";
@@ -19,7 +20,9 @@ export default function InboxPage() {
 
 async function InboxSection() {
   const { session } = await requireSession();
-  const documents = (await getAsCaller<InboxDocument[]>("/documents")).data ?? [];
+  const result = await getAsCaller<InboxDocument[]>("/documents");
+  if (result.status === 503) return <ApiStatusBoundary />;
+  const documents = result.data ?? [];
   // F02-AC12: only the PDL chooses the ward; nurses always upload into their own.
   const wards = session.appRole === "pdl" ? ["wb1", "wb2"] : undefined;
   return <Inbox initial={documents} wards={wards} />;

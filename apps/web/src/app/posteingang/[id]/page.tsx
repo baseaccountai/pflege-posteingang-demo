@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { ApiStatusBoundary } from "@/components/api-status";
 import { NoAccess } from "@/components/no-access";
 import { ReviewForm } from "@/components/review-form";
 import { getAsCaller } from "@/lib/as-caller";
@@ -33,7 +34,9 @@ export default function ReviewPage({ params }: PageProps<"/posteingang/[id]">) {
 
 async function Review({ params }: Pick<PageProps<"/posteingang/[id]">, "params">) {
   const { id } = await params;
-  const answer = (await getAsCaller<SuggestionAnswer>(`/documents/${encodeURIComponent(id)}/suggestion`)).data;
+  const result = await getAsCaller<SuggestionAnswer>(`/documents/${encodeURIComponent(id)}/suggestion`);
+  if (result.status === 503) return <ApiStatusBoundary />;
+  const answer = result.data;
   if (!answer) return <NoAccess />;
   if (answer.status !== "ready_for_review") {
     return (
@@ -43,7 +46,9 @@ async function Review({ params }: Pick<PageProps<"/posteingang/[id]">, "params">
       </section>
     );
   }
-  const residents = (await getAsCaller<Resident[]>("/residents")).data ?? [];
+  const residentsResult = await getAsCaller<Resident[]>("/residents");
+  if (residentsResult.status === 503) return <ApiStatusBoundary />;
+  const residents = residentsResult.data ?? [];
   return (
     <section className="flex flex-col gap-3">
       <h1 className="text-2xl font-semibold">Dokument prüfen</h1>

@@ -5,8 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   ApiUnauthorized,
+  ApiUnavailable,
+  READ_TIMEOUT_MS,
   SessionEnded,
   apiGet,
+  apiReady,
   apiFile,
   apiGetForSession,
   apiSend,
@@ -78,6 +81,31 @@ describe("apiGet", () => {
 
   it("throws on other errors instead of showing partial data", async () => {
     await expect(apiGet("/me", caller, { env, fetch: fakeFetch(500) })).rejects.toThrow(/500/);
+    await expect(apiGet("/me", caller, { env, fetch: fakeFetch(500) })).rejects.not.toBeInstanceOf(
+      ApiUnavailable,
+    );
+  });
+
+  // F10-AC13: a sleeping or starting API is not an error of the app.
+  it.each([502, 503, 504])("throws ApiUnavailable on %i", async (status) => {
+    await expect(apiGet("/me", caller, { env, fetch: fakeFetch(status) })).rejects.toBeInstanceOf(
+      ApiUnavailable,
+    );
+  });
+
+  it("throws ApiUnavailable when the API cannot be reached", async () => {
+    const fetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    await expect(apiGet("/me", caller, { env, fetch })).rejects.toBeInstanceOf(ApiUnavailable);
+  });
+
+  it("gives up waiting after the read timeout (5 s)", async () => {
+    expect(READ_TIMEOUT_MS).toBe(5000);
+    // Answers only when aborted - like an API that is still starting.
+    const fetch = vi.fn(
+      (_url: URL | RequestInfo, init?: RequestInit) =>
+        new Promise<Response>((_, reject) => init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason))),
+    );
+    await expect(apiGet("/me", caller, { env, fetch, timeoutMs: 20 })).rejects.toBeInstanceOf(ApiUnavailable);
   });
 });
 
@@ -141,6 +169,26 @@ describe("apiSend", () => {
     });
   });
 
+  // F10-AC7: the reset's message reaches the user.
+  it("passes the maintenance 503 with its message through", async () => {
+    const body = { error_code: "maintenance", message: "Demo wird gerade zurückgesetzt" };
+    expect(await apiSend("/x", caller, { method: "POST" }, { env, fetch: answer(503, body) })).toEqual({
+      status: 503,
+      data: body,
+    });
+  });
+
+  it.each([502, 503, 504])("throws ApiUnavailable on %i without maintenance", async (status) => {
+    await expect(apiSend("/x", caller, { method: "POST" }, { env, fetch: answer(status, {}) })).rejects.toBeInstanceOf(
+      ApiUnavailable,
+    );
+  });
+
+  it("throws ApiUnavailable when the API cannot be reached", async () => {
+    const fetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    await expect(apiSend("/x", caller, { method: "POST" }, { env, fetch })).rejects.toBeInstanceOf(ApiUnavailable);
+  });
+
   it("throws ApiUnauthorized on 401 and an error on 5xx", async () => {
     await expect(apiSend("/x", caller, { method: "POST" }, { env, fetch: answer(401, {}) })).rejects.toBeInstanceOf(
       ApiUnauthorized,
@@ -164,5 +212,23 @@ describe("apiFile", () => {
     expect(new Uint8Array(file!.body)).toEqual(pdf);
     expect(fetch.mock.calls[0][1].headers.authorization).toBe("Bearer access-123");
     expect(await apiFile("/documents/x/file", caller, { env, fetch })).toBeNull();
+  });
+});
+
+describe("apiReady", () => {
+  const env = { API_BASE_URL: "http://api.test" };
+
+  it("asks /health/ready of the API (no user data, no token)", async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response('{"db":"ok"}', { status: 200 }));
+    expect(await apiReady({ env, fetch })).toBe(true);
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe("http://api.test/health/ready");
+    expect(init.headers).toBeUndefined();
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("is false when the API or its database is not ready", async () => {
+    expect(await apiReady({ env, fetch: vi.fn().mockResolvedValue(new Response("{}", { status: 503 })) })).toBe(false);
+    expect(await apiReady({ env, fetch: vi.fn().mockRejectedValue(new TypeError("fetch failed")) })).toBe(false);
   });
 });

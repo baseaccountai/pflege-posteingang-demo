@@ -62,3 +62,13 @@ export const APP_ENV = {
   API_BASE_URL: `http://127.0.0.1:${API_PORT}`,
   BFF_API_SECRET,
 };
+
+/** Second app instance for the notice tests (F10): same build, API = e2e/support/api-stub.mjs. */
+export const STUB_API_PORT = 18001;
+export const STUB_APP_PORT = 3101;
+export const STUB_APP_ORIGIN = `http://localhost:${STUB_APP_PORT}`;
+export const STUB_APP_ENV = {
+  ...APP_ENV,
+  APP_ORIGIN: STUB_APP_ORIGIN,
+  API_BASE_URL: `http://127.0.0.1:${STUB_API_PORT}`,
+};

@@ -16,8 +16,16 @@ describe("DemoBanner", () => {
 describe("SiteFooter", () => {
   it("shows the exact independence disclaimer", () => {
     render(<SiteFooter />);
-    expect(screen.getByRole("contentinfo")).toHaveTextContent(
+    expect(screen.getByTestId("disclaimer")).toHaveTextContent(
       /^Unabhängige Bewerbungsdemo, inspiriert von KLARA — kein Produkt der Hochschule Anhalt$/,
+    );
+  });
+
+  // F10-AC15
+  it("says that the data is reset every night", () => {
+    render(<SiteFooter />);
+    expect(screen.getByRole("contentinfo")).toHaveTextContent(
+      "Alle Daten werden jede Nacht um 3 Uhr auf die Musterdaten zurückgesetzt.",
     );
   });
 });

@@ -2,7 +2,7 @@
 // database (via the API), not here.
 import type { ProvenanceData } from "@/components/provenance";
 
-import { getAsCaller } from "./as-caller";
+import { getAsCaller, type PageResult } from "./as-caller";
 
 export type Resident = {
   id: string;
@@ -68,11 +68,15 @@ export type ResidentRecord = {
   }[];
 };
 
-export async function listResidents(): Promise<ResidentSummary[]> {
-  return (await getAsCaller<ResidentSummary[]>("/residents")).data ?? [];
+/** F04-AC1: the residents of the own wards; status 503 while the API starts (F10-AC13). */
+export async function listResidents(): Promise<PageResult<ResidentSummary[]>> {
+  return getAsCaller<ResidentSummary[]>("/residents");
 }
 
-/** F04: the whole record; null for foreign, unknown and malformed ids alike (F04-AC9). */
-export async function getRecord(id: string): Promise<ResidentRecord | null> {
-  return (await getAsCaller<ResidentRecord>(`/residents/${encodeURIComponent(id)}/record`)).data;
+/**
+ * F04: the whole record; 404 for foreign, unknown and malformed ids alike (F04-AC9),
+ * 503 while the API starts (F10-AC13).
+ */
+export async function getRecord(id: string): Promise<PageResult<ResidentRecord>> {
+  return getAsCaller<ResidentRecord>(`/residents/${encodeURIComponent(id)}/record`);
 }

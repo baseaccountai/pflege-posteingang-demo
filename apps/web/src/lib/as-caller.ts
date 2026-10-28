@@ -4,20 +4,27 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 
-import { ApiUnauthorized, SessionEnded, apiGetForSession, type ApiResult, type Caller } from "./api";
+import { ApiUnauthorized, ApiUnavailable, SessionEnded, apiGetForSession, type ApiResult, type Caller } from "./api";
 import { EXPIRED_PATH, currentSession, requireSession } from "./auth/current";
 import { sessionStore } from "./auth/session";
 
 const isActive = async (sid: string) => (await sessionStore().find(sid)) !== null;
 
-/** Pages: GET in the caller's name; an ended session leads to the start page (F01-AC21). */
-export async function getAsCaller<T>(path: string): Promise<ApiResult<T>> {
+/** A page's answer: data, 404 (no access) or 503 (API starting, F10-AC13). */
+export type PageResult<T> = ApiResult<T> | { status: 503; data: null };
+
+/**
+ * Pages: GET in the caller's name; an ended session leads to the start page (F01-AC21),
+ * a sleeping API to status 503 - the page then shows the start-up notice.
+ */
+export async function getAsCaller<T>(path: string): Promise<PageResult<T>> {
   const { sid, session } = await requireSession();
   let result: ApiResult<T>;
   try {
     result = await apiGetForSession<T>(path, { sid, accessToken: session.tokens.access }, isActive);
   } catch (error) {
     if (error instanceof ApiUnauthorized || error instanceof SessionEnded) redirect(EXPIRED_PATH);
+    if (error instanceof ApiUnavailable) return { status: 503, data: null };
     throw error;
   }
   return result;
@@ -31,9 +38,13 @@ export function jsonNoStore(data: unknown, status = 200) {
 
 const SESSION_GONE = { error_code: "session_expired", message: "Sitzung abgelaufen – bitte Rolle wählen" };
 
+/** F10-AC13 for writes: shown where the click happened (upload, approve, …). */
+export const API_STARTING_MESSAGE = "Demo startet gerade … (bis zu 30 Sekunden) – bitte gleich erneut versuchen.";
+
 /**
  * BFF route handlers: runs `call` with the caller, maps an ended session or a rejected token
- * to 401 (the browser then goes to the start page) and never lets the answer be cached.
+ * to 401 (the browser then goes to the start page), a sleeping API to 503 with the start-up
+ * message, and never lets the answer be cached.
  */
 export async function bffRoute(
   call: (caller: Caller) => Promise<{ status: number; data: unknown }>,
@@ -46,6 +57,9 @@ export async function bffRoute(
   } catch (error) {
     if (error instanceof ApiUnauthorized || error instanceof SessionEnded) {
       return jsonNoStore(SESSION_GONE, 401);
+    }
+    if (error instanceof ApiUnavailable) {
+      return jsonNoStore({ error_code: "api_starting", message: API_STARTING_MESSAGE }, 503);
     }
     throw error;
   }

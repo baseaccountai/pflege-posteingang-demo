@@ -9,6 +9,9 @@ import {
   MOCK_OIDC_IMAGE,
   MOCK_OIDC_ISSUER,
   MOCK_OIDC_PORT,
+  STUB_API_PORT,
+  STUB_APP_ENV,
+  STUB_APP_PORT,
 } from "./e2e/support/env";
 
 // Needs the local Supabase stack (make db-start), Docker for the test OIDC server and uv for
@@ -58,6 +61,22 @@ export default defineConfig({
       command: `node_modules/.bin/next start --port ${APP_PORT}`,
       env: APP_ENV,
       url: `http://localhost:${APP_PORT}`,
+      reuseExistingServer: false,
+      timeout: 180_000,
+    },
+    {
+      // API stand-in for the notice tests (F10): sleeping, slow, limited, resetting.
+      command: `node e2e/support/api-stub.mjs ${STUB_API_PORT}`,
+      url: `http://127.0.0.1:${STUB_API_PORT}/health`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+    {
+      // Same build, but its API is the stand-in. Sessions come from the same database, and
+      // the session cookie of localhost is valid on every port.
+      command: `node_modules/.bin/next start --port ${STUB_APP_PORT}`,
+      env: STUB_APP_ENV,
+      url: `http://localhost:${STUB_APP_PORT}`,
       reuseExistingServer: false,
       timeout: 180_000,
     },

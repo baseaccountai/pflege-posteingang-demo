@@ -31,7 +31,8 @@ export function FollowUpList({
     // Full reload: counters and lists come fresh from the server (see lib/navigation.ts).
     if (response.ok) return goTo(`/bewohner/${residentId}`);
     const data = await response.json().catch(() => ({}));
-    setProblem(data.detail ?? "Erledigen nicht möglich.");
+    // FastAPI errors carry `detail`; reset (F10-AC7) and cold start (F10-AC13) `message`.
+    setProblem(data.detail ?? data.message ?? "Erledigen nicht möglich.");
     setBusy(null);
   }
 

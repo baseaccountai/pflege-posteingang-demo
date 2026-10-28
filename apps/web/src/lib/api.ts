@@ -9,6 +9,16 @@ const MIN_SECRET_BYTES = 32;
 /** The API rejected the token or the assertion: the session is no longer usable. */
 export class ApiUnauthorized extends Error {}
 
+/**
+ * The API does not answer (yet): cold start on Vercel, paused database, nightly reset.
+ * Not an error of the app - the pages show "Demo startet gerade …" instead (F10-AC13).
+ */
+export class ApiUnavailable extends Error {}
+
+/** Reads give up after this; a starting API then gets the start-up notice (F10-AC13). */
+export const READ_TIMEOUT_MS = 5000;
+const UNAVAILABLE = new Set([502, 503, 504]);
+
 const base64url = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
 
 /** HS256 JWS {sid_hash, aud, iat, exp}; checked by apps/api/app/auth/bff.py. */
@@ -30,34 +40,51 @@ export function bffAssertion(sid: string, secret: string, nowSeconds: number): s
 export type Caller = { sid: string; accessToken: string };
 export type ApiResult<T> = { status: 200; data: T } | { status: 404; data: null };
 
-type Deps = { env?: NodeJS.ProcessEnv | Record<string, string | undefined>; fetch?: typeof fetch };
+type Deps = {
+  env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
+  fetch?: typeof fetch;
+  /** Only for tests; reads otherwise use READ_TIMEOUT_MS. */
+  timeoutMs?: number;
+};
 
-/** One API call in the caller's name: access token + a fresh BFF assertion, never cached. */
-function callApi(
+const apiBase = (deps: Deps) => (deps.env ?? process.env).API_BASE_URL ?? "http://localhost:8000";
+
+/**
+ * One API call in the caller's name: access token + a fresh BFF assertion, never cached.
+ * No answer at all (network error, timeout) becomes ApiUnavailable.
+ */
+async function callApi(
   path: string,
   caller: Caller,
-  init: { method: string; body?: BodyInit; headers?: Record<string, string> },
+  init: { method: string; body?: BodyInit; headers?: Record<string, string>; signal?: AbortSignal },
   deps: Deps,
 ): Promise<Response> {
   const env = deps.env ?? process.env;
-  const base = env.API_BASE_URL ?? "http://localhost:8000";
   const assertion = bffAssertion(caller.sid, env.BFF_API_SECRET ?? "", Math.floor(Date.now() / 1000));
-  return (deps.fetch ?? fetch)(new URL(path, base).toString(), {
-    ...init,
-    cache: "no-store",
-    // Auth headers last: a caller-supplied header can never replace them.
-    headers: { ...init.headers, authorization: `Bearer ${caller.accessToken}`, "x-bff-assertion": assertion },
-  });
+  try {
+    return await (deps.fetch ?? fetch)(new URL(path, apiBase(deps)).toString(), {
+      ...init,
+      cache: "no-store",
+      // Auth headers last: a caller-supplied header can never replace them.
+      headers: { ...init.headers, authorization: `Bearer ${caller.accessToken}`, "x-bff-assertion": assertion },
+    });
+  } catch (error) {
+    throw new ApiUnavailable(`API not reachable for ${path}`, { cause: error });
+  }
 }
+
+const readSignal = (deps: Deps) => AbortSignal.timeout(deps.timeoutMs ?? READ_TIMEOUT_MS);
 
 /**
  * GET on the API in the caller's name. 404 is a normal answer (foreign and unknown look
- * the same, F01-AC12); 401 throws ApiUnauthorized; anything else throws.
+ * the same, F01-AC12); 401 throws ApiUnauthorized; no answer within 5 s or 502/503/504
+ * throws ApiUnavailable (F10-AC13); anything else throws.
  */
 export async function apiGet<T>(path: string, caller: Caller, deps: Deps = {}): Promise<ApiResult<T>> {
-  const response = await callApi(path, caller, { method: "GET" }, deps);
+  const response = await callApi(path, caller, { method: "GET", signal: readSignal(deps) }, deps);
   if (response.status === 404) return { status: 404, data: null };
   if (response.status === 401) throw new ApiUnauthorized("API rejected token or assertion");
+  if (UNAVAILABLE.has(response.status)) throw new ApiUnavailable(`API answered ${response.status} for ${path}`);
   if (!response.ok) throw new Error(`API answered ${response.status} for ${path}`);
   return { status: 200, data: (await response.json()) as T };
 }
@@ -81,8 +108,11 @@ export async function apiGetForSession<T>(
 }
 
 /**
- * A writing call (upload, retry). Client errors (403, 409, 413, 415, 422, 429) are passed on
- * with the API's {error_code, message}, so the app can show the reason; 401 and 5xx throw.
+ * A writing call (upload, retry). Client errors (403, 409, 413, 415, 422, 429) and the
+ * maintenance 503 of the nightly reset (F10-AC7) are passed on with the API's
+ * {error_code, message}, so the app can show the reason. 401 throws ApiUnauthorized,
+ * no answer or 502/503/504 ApiUnavailable, other 5xx an error. No timeout: an upload to a
+ * starting API may take longer than a read.
  */
 export async function apiSend(
   path: string,
@@ -92,8 +122,11 @@ export async function apiSend(
 ): Promise<{ status: number; data: unknown }> {
   const response = await callApi(path, caller, init, deps);
   if (response.status === 401) throw new ApiUnauthorized("API rejected token or assertion");
+  const data = await response.json().catch(() => null);
+  if (response.status === 503 && data?.error_code === "maintenance") return { status: 503, data };
+  if (UNAVAILABLE.has(response.status)) throw new ApiUnavailable(`API answered ${response.status} for ${path}`);
   if (response.status >= 500) throw new Error(`API answered ${response.status} for ${path}`);
-  return { status: response.status, data: await response.json().catch(() => null) };
+  return { status: response.status, data };
 }
 
 /** The original file of a document (F03-AC4), or null if unknown or foreign (404). */
@@ -110,4 +143,20 @@ export async function apiFile(
     body: await response.arrayBuffer(),
     contentType: response.headers.get("content-type") ?? "application/octet-stream",
   };
+}
+
+/**
+ * Is the API up, with its database? Public health check, no token (F10-AC9, AC13): the
+ * start-up notice asks this every 5 s before it reloads the page.
+ */
+export async function apiReady(deps: Deps = {}): Promise<boolean> {
+  try {
+    const response = await (deps.fetch ?? fetch)(new URL("/health/ready", apiBase(deps)).toString(), {
+      cache: "no-store",
+      signal: readSignal(deps),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }

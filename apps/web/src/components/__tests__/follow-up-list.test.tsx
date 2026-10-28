@@ -65,6 +65,15 @@ describe("FollowUpList", () => {
     expect(goTo).not.toHaveBeenCalled();
   });
 
+  // F10-AC7, AC13: the BFF's answers during the reset or a cold start carry `message`.
+  it("shows the maintenance message of the nightly reset", async () => {
+    const body = { error_code: "maintenance", message: "Demo wird gerade zurückgesetzt – bitte in einer Minute erneut versuchen" };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body), { status: 503 })));
+    render(<FollowUpList residentId="r1" followUps={[entry({})]} />);
+    fireEvent.click(screen.getByRole("button", { name: /als erledigt markieren/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(body.message);
+  });
+
   it("leaves an ended session", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 401 })));
     render(<FollowUpList residentId="r1" followUps={[entry({})]} />);

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { ApiStatusBoundary } from "@/components/api-status";
 import { ResidentList } from "@/components/resident-list";
 import { listResidents } from "@/lib/residents";
 
@@ -16,5 +17,7 @@ export default function ResidentsPage() {
 }
 
 async function Residents() {
-  return <ResidentList residents={await listResidents()} />;
+  const result = await listResidents();
+  if (result.status === 503) return <ApiStatusBoundary />;
+  return <ResidentList residents={result.data ?? []} />;
 }

@@ -8,3 +8,8 @@ export function goTo(path: string) {
 export function leaveEndedSession() {
   goTo("/?sitzung=abgelaufen");
 }
+
+/** The same page again, freshly from the server (after the API has started, F10-AC13). */
+export function reloadPage() {
+  window.location.reload();
+}

@@ -41,9 +41,9 @@ Da die Dateien in Postgres liegen (Entscheidung F02), ist der gesamte Reset eine
 
 | Komponente | Ort | Verhalten |
 |---|---|---|
-| `ApiStatusBoundary` | `apps/web/src/components/api-status.tsx` | Timeout (5 s)/502/503 → Startet-Hinweis + Link `/muster`, Neuversuch alle 5 s, max. 6 Versuche, dann „Demo gerade nicht erreichbar“ |
-| `QuotaNotice` | `components/quota-notice.tsx` | bei 429 mit `error_code=daily_quota` bzw. `session_upload_limit` |
-| `MaintenanceNotice` | `components/maintenance-notice.tsx` | bei 503 mit `error_code=maintenance` |
+| `ApiStatusBoundary` | `apps/web/src/components/api-status.tsx` | Lesen: Timeout (5 s)/Netzfehler/502/503/504 → `ApiUnavailable` → Seite zeigt Startet-Hinweis + Link `/muster`, fragt alle 5 s `/api/status`, lädt bei Bereitschaft neu, max. 6 Versuche, dann „Demo gerade nicht erreichbar“. Schreiben: 503 `api_starting` mit „Demo startet gerade … (bis zu 30 Sekunden) – bitte gleich erneut versuchen.“ |
+| Kontingent- und Wartungsmeldung | dort, wo geklickt wurde (Upload, Neuversuch, Freigabe, Erledigt) | der BFF reicht 429 (`daily_quota`, `session_upload_limit`) und 503 `maintenance` mit der `message` der API durch; die Komponenten zeigen sie an. *(Umsetzung 28.10.2026: statt eigener Komponenten `QuotaNotice`/`MaintenanceNotice` – die Meldungstexte kommen ohnehin von der API.)* |
+| Statusprüfung | `apps/web/src/app/api/status/route.ts` | öffentlich, ohne Nutzerdaten: fragt `GET /health/ready` der API (5 s Timeout) → `{ready}` |
 | Musterakte | `apps/web/src/app/muster/page.tsx` | statisch aus `sample-record.json` |
 | Keep-alive | `.github/workflows/keep-alive.yml` | `cron: "0 6 */2 * *"`, ruft `GET /health/ready` (API prüft DB mit `select 1`) |
 

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { ApiStatusBoundary } from "@/components/api-status";
 import { NoAccess } from "@/components/no-access";
 import { ResidentRecordView } from "@/components/resident-record";
 import { getRecord } from "@/lib/residents";
@@ -17,7 +18,8 @@ export default function ResidentPage({ params }: PageProps<"/bewohner/[id]">) {
 
 async function ResidentRecord({ params }: Pick<PageProps<"/bewohner/[id]">, "params">) {
   const { id } = await params;
-  const record = await getRecord(id);
-  if (!record) return <NoAccess />;
-  return <ResidentRecordView record={record} />;
+  const result = await getRecord(id);
+  if (result.status === 503) return <ApiStatusBoundary />;
+  if (!result.data) return <NoAccess />;
+  return <ResidentRecordView record={result.data} />;
 }
