@@ -1,5 +1,6 @@
 "use client";
-// F04-AC5, AC8: follow-ups of the record; open ones can be marked done.
+// F04-AC5, AC8: follow-ups of the record; open ones can be marked done - except in the
+// static sample record (F10-AC14), which has no login and no API.
 import { useState } from "react";
 
 import { Provenance } from "@/components/provenance";
@@ -8,7 +9,15 @@ import { formatDate, formatDay } from "@/lib/dates";
 import { goTo, leaveEndedSession } from "@/lib/navigation";
 import type { RecordFollowUp } from "@/lib/residents";
 
-export function FollowUpList({ residentId, followUps }: { residentId: string; followUps: RecordFollowUp[] }) {
+export function FollowUpList({
+  residentId,
+  followUps,
+  sample = false,
+}: {
+  residentId: string;
+  followUps: RecordFollowUp[];
+  sample?: boolean;
+}) {
   const [busy, setBusy] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -52,13 +61,13 @@ export function FollowUpList({ residentId, followUps }: { residentId: string; fo
                 </span>
               )}
             </span>
-            <Provenance provenance={entry.provenance} />
+            <Provenance provenance={entry.provenance} sample={sample} />
             {entry.status === "done" ? (
               <span className="text-muted-foreground text-xs">
                 erledigt von {entry.done_by_name}
                 {entry.done_at ? ` am ${formatDay(entry.done_at)}` : ""}
               </span>
-            ) : (
+            ) : sample ? null : (
               <Button
                 variant="outline"
                 size="sm"

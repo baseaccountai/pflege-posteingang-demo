@@ -8,7 +8,7 @@
 | `supabase/seed/02_documents.sql` | ältere Musterdokumente (Status `approved`) inkl. `document_files` (PDF mit Wasserzeichen) und `ocr_pages`; **erzeugt** von `samples/generate.py` (`make samples`), damit Datei und Text zusammenpassen; nicht die Upload-Muster aus `samples/`, denn die sind neuer als die Akte |
 | `supabase/seed/03_record.sql` | Medikationen mit `medication_events`, Diagnosen, Wiedervorlagen mit Herkunft; ein Eintrag `actor_type='agent'` für F04-AC6 |
 | `supabase/seed/chunks.jsonl` | vorberechnete Chunks + Embeddings (einmalig mit echtem Mistral, Skript `apps/api/scripts/build_seed_chunks.py`) |
-| `apps/web/src/content/sample-record.json` | statische Musterakte für `/muster`, erzeugt aus dem Seed (`make sample-record`); Test prüft Übereinstimmung |
+| `apps/web/src/content/sample-record.json` | statische Musterakte (Fr. Beispiel) für `/muster`, erzeugt aus dem Seed (`make sample-record`: lokales Supabase zurücksetzen, Akte über die API-Funktion `get_record` als Pflegekraft WB1 unter RLS lesen); seed-relative Zeitpunkte als Kalendertage + `generated_on`, die Seite verschiebt sie auf heute; Originale als `apps/web/public/muster/<id>.pdf`; DB-Test prüft Übereinstimmung mit dem Seed |
 | `samples/generate.py` | PDFs/Bilder (reportlab + Pillow) mit diagonalem Wasserzeichen „MUSTER“; `samples/bad/` per Bildfilter |
 
 Ein Medikationsplan in `samples/` ist bewusst **neuer** als der Seed-Stand (ein Medikament neu, eins abgesetzt, eins geändert), damit der Abgleich (F03-AC7) sofort vorführbar ist.

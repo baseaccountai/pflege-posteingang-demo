@@ -17,3 +17,10 @@ export function formatDate(isoDate: string): string {
 export function formatDay(isoTimestamp: string): string {
   return DAY.format(new Date(isoTimestamp));
 }
+
+const ISO_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" });
+
+/** The current day in Berlin as "2026-10-28" (en-CA formats dates as ISO). */
+export function todayInBerlin(now: Date = new Date()): string {
+  return ISO_DAY.format(now);
+}

@@ -1,0 +1,144 @@
+"""Static sample record for /muster (F10-AC14).
+
+The page /muster shows one resident's record without login and without the API - also
+while the API sleeps. Its content must come from the seed, never from data a visitor
+loaded. So this script
+
+1. resets the local database to the seed (same code as the nightly reset),
+2. reads the record of Fr. Beispiel exactly like the API does: the route function
+   `get_record`, as a WB1 nurse, under RLS,
+3. writes it to apps/web/src/content/sample-record.json and the original PDFs to
+   apps/web/public/muster/<document id>.pdf.
+
+    make sample-record          (needs the local Supabase: make db-start)
+
+The seed sets its times relative to the moment it runs ("3 days ago"). The file therefore
+stores those times as calendar days plus the day it was made (`generated_on`); the web page
+moves them to today, so "neu" and "überfällig" look the same as in the live demo. Dates
+printed in the documents (`document_date`) are fixed and are not moved.
+
+A test (tests/rls/test_sample_record.py) fails as soon as the file no longer matches the seed.
+"""
+
+import asyncio
+import json
+from datetime import date, datetime, timedelta
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+from app.auth.principal import Principal
+from app.db import Database
+from app.residents.routes import get_record
+from scripts.reset_demo import LOCAL_ADMIN_DSN, SEED_DIR, reset
+
+BERLIN = ZoneInfo("Europe/Berlin")
+WEB_DIR = Path(__file__).parents[2] / "web"
+SAMPLE_RECORD = WEB_DIR / "src" / "content" / "sample-record.json"
+PUBLIC_DIR = WEB_DIR / "public" / "muster"
+
+SAMPLE_RESIDENT = "33333333-3333-3333-3333-333333333333"  # Fr. Beispiel (WB1)
+NURSE_WB1 = Principal(
+    sub="sample-record", app_role="nurse", ward_ids=("wb1",), display_name="Pflegekraft WB1"
+)
+# Fields the seed sets relative to now() / current_date - moved to today by the page.
+RELATIVE = {"created_at", "confirmed_at", "discontinued_at", "approved_at", "done_at", "due_date"}
+
+
+def berlin_today() -> date:
+    return datetime.now(BERLIN).date()
+
+
+def _plain(value):
+    """Dates and times as ISO calendar days (times: their day in Berlin), recursively."""
+    if isinstance(value, datetime):
+        return value.astimezone(BERLIN).date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {
+            # Provenance is jsonb from SQL: its times arrive as ISO text, not as datetime.
+            key: _plain(
+                datetime.fromisoformat(item) if key in RELATIVE and isinstance(item, str) else item
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_plain(item) for item in value]
+    return value
+
+
+def to_static(record: dict) -> dict:
+    """The API's record as JSON-ready data with calendar days and stable ids."""
+    static = _plain(record)
+    # Diagnoses confirmed at the same moment come from the API in random-id order.
+    static["diagnoses"].sort(key=lambda d: (d["provenance"]["confirmed_at"], d["text"]))
+    # Diagnoses and follow-ups get random ids in the seed; numbered ids keep the file stable.
+    for number, diagnosis in enumerate(static["diagnoses"], start=1):
+        diagnosis["id"] = f"diagnosis-{number}"
+    for number, follow_up in enumerate(static["follow_ups"], start=1):
+        follow_up["id"] = f"follow-up-{number}"
+    return static
+
+
+def shift_days(value, days: int):
+    """Moves every relative day (see RELATIVE) by `days`; everything else stays."""
+    if isinstance(value, dict):
+        return {
+            key: (
+                (date.fromisoformat(item) + timedelta(days=days)).isoformat()
+                if key in RELATIVE and item is not None
+                else shift_days(item, days)
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [shift_days(item, days) for item in value]
+    return value
+
+
+async def read_record(database: Database) -> tuple[dict, dict[str, bytes]]:
+    """The sample resident's record and the PDFs of its documents, read under RLS."""
+    async with database.as_principal(NURSE_WB1) as conn:
+        record = await get_record(SAMPLE_RESIDENT, conn)
+        cursor = await conn.execute(
+            "select document_id::text, content from public.document_files"
+            " where document_id = any(%s::uuid[])",
+            [[d["id"] for d in record["documents"]]],
+        )
+        files = {document_id: bytes(content) for document_id, content in await cursor.fetchall()}
+    return record, files
+
+
+async def build(dsn: str) -> None:
+    database = Database(dsn, max_size=1)
+    await database.open()
+    try:
+        record, files = await read_record(database)
+    finally:
+        await database.close()
+
+    SAMPLE_RECORD.parent.mkdir(parents=True, exist_ok=True)
+    content = {
+        "_comment": "Generated by `make sample-record` from supabase/seed - do not edit by hand.",
+        "generated_on": berlin_today().isoformat(),
+        "record": to_static(record),
+    }
+    SAMPLE_RECORD.write_text(
+        json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
+    for old in PUBLIC_DIR.glob("*.pdf"):
+        old.unlink()
+    for document_id, content_bytes in files.items():
+        (PUBLIC_DIR / f"{document_id}.pdf").write_bytes(content_bytes)
+
+
+def main() -> None:
+    # Only the seed may end up in the file: start from a freshly reset local database.
+    reset(LOCAL_ADMIN_DSN, sorted(SEED_DIR.glob("*.sql")))
+    asyncio.run(build(LOCAL_ADMIN_DSN))
+    print(f"Musterakte geschrieben: {SAMPLE_RECORD} und {PUBLIC_DIR}/")
+
+
+if __name__ == "__main__":
+    main()

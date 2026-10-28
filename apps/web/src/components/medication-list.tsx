@@ -22,9 +22,11 @@ function documentName(provenance: ProvenanceData | null): string {
 export function MedicationList({
   active,
   discontinued,
+  sample = false,
 }: {
   active: RecordMedication[];
   discontinued: RecordMedication[];
+  sample?: boolean;
 }) {
   if (active.length === 0 && discontinued.length === 0) {
     return <p className="text-muted-foreground">Keine Medikation erfasst.</p>;
@@ -45,8 +47,8 @@ export function MedicationList({
               </span>
             )}
           </span>
-          <Provenance provenance={med.provenance} />
-          <History events={med.events} />
+          <Provenance provenance={med.provenance} sample={sample} />
+          <History events={med.events} sample={sample} />
         </li>
       ))}
       {discontinued.map((med) => (
@@ -58,8 +60,8 @@ export function MedicationList({
               {documentName(med.provenance)}
             </span>
           </span>
-          <Provenance provenance={med.provenance} />
-          <History events={med.events} />
+          <Provenance provenance={med.provenance} sample={sample} />
+          <History events={med.events} sample={sample} />
         </li>
       ))}
     </ul>
@@ -68,7 +70,7 @@ export function MedicationList({
 
 const KIND = { new: "angesetzt", changed: "geändert", discontinued: "abgesetzt" } as const;
 
-function History({ events }: { events: MedicationEvent[] }) {
+function History({ events, sample }: { events: MedicationEvent[]; sample: boolean }) {
   if (events.length === 0) return null;
   return (
     <details className="text-sm">
@@ -82,7 +84,7 @@ function History({ events }: { events: MedicationEvent[] }) {
               event.before &&
               event.after &&
               `: ${side(event.before)} → ${side(event.after)}`}
-            <Provenance provenance={event.provenance} />
+            <Provenance provenance={event.provenance} sample={sample} />
           </li>
         ))}
       </ol>

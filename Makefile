@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record
 
 COMPOSE := docker compose -f infra/docker-compose.yml
 SUPABASE := pnpm dlx supabase@2.122.0
@@ -42,6 +42,10 @@ e2e:
 # Regenerates the sample documents in samples/ (reproducible, commit the result)
 samples:
 	cd apps/api && PYTHONPATH=../.. uv run python -m samples.generate ../../samples
+
+# Static sample record for /muster from the seed (F10-AC14); resets the local Supabase first
+sample-record:
+	cd apps/api && uv run python -m scripts.build_sample_record
 
 lint:
 	cd apps/api && uv run ruff check . && uv run ruff format --check .

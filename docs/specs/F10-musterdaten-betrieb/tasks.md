@@ -7,6 +7,6 @@
 - [ ] **5. Kostenrechnung** — `F10-AC11` · Preise aus dem Mistral-Konto in ADR 0003; Unit-Tests der Längenbegrenzung → rot → grün · Commit
 - [x] **6. Wartungsmodus + Reset-Skript** — `F10-AC5`, `F10-AC6`, `F10-AC7`, `F10-AC8` · DB-/API-Tests → rot → `system_state`, Flag-Prüfung, `reset_demo.py` → grün · Commit `feat(ops): add transactional nightly reset`
 - [x] **7. Workflows Reset + Keep-alive + `/health/ready`** — `F10-AC5`, `F10-AC9` · Unit-Test Zeitprüfung, API-Test `/health/ready` → rot → grün; nach Deployment manuell auslösen · Commit `ci: add nightly reset and keep-alive`
-- [ ] **8. Musterakte** — `F10-AC14` · Vitest + Übereinstimmungstest mit Seed → rot → `make sample-record`, `/muster` → grün · Commit
+- [x] **8. Musterakte** — `F10-AC14` · Vitest + Übereinstimmungstest mit Seed → rot → `make sample-record`, `/muster` → grün · Commit
 - [ ] **9. Hinweise in der App** — `F10-AC12`, `F10-AC13`, `F10-AC15` · Vitest + Playwright mit Attrappe → rot → grün · Commit `feat(web): show startup, quota and maintenance notices`
 - [ ] **10. Layout-Regression** — `F10-AC4` · Playwright über alle Seitentypen (desktop + mobile) → grün · Commit

@@ -1,6 +1,7 @@
 // F04-AC5, AC6: where an entry of the record came from and who confirmed it - one line,
 // e.g. "Arztbrief vom 12.10.2026 · freigegeben von Pflegekraft WB1 am 24.10.2026".
 import { formatDate, formatDay } from "@/lib/dates";
+import { fileHref } from "@/lib/documents/file-href";
 import { DOC_TYPE_LABELS } from "@/lib/documents/labels";
 
 export type ProvenanceData = {
@@ -12,7 +13,8 @@ export type ProvenanceData = {
   confirmed_at: string;
 };
 
-export function Provenance({ provenance }: { provenance: ProvenanceData | null }) {
+// `sample`: the static sample record (F10-AC14) opens the originals as static files.
+export function Provenance({ provenance, sample = false }: { provenance: ProvenanceData | null; sample?: boolean }) {
   if (!provenance) {
     return (
       <p data-testid="provenance" className="text-muted-foreground text-xs">
@@ -23,7 +25,7 @@ export function Provenance({ provenance }: { provenance: ProvenanceData | null }
   const confirmed = `${provenance.confirmed_by_name} am ${formatDay(provenance.confirmed_at)}`;
   return (
     <p data-testid="provenance" className="text-muted-foreground text-xs">
-      <DocumentLink provenance={provenance} />
+      <DocumentLink provenance={provenance} sample={sample} />
       {" · "}
       {provenance.actor_type === "agent"
         ? `vom Agenten angelegt · bestätigt von ${confirmed}`
@@ -32,14 +34,14 @@ export function Provenance({ provenance }: { provenance: ProvenanceData | null }
   );
 }
 
-function DocumentLink({ provenance }: { provenance: ProvenanceData }) {
+function DocumentLink({ provenance, sample }: { provenance: ProvenanceData; sample: boolean }) {
   if (!provenance.document_id) return <>ohne Herkunftsdokument</>;
   const type = (provenance.doc_type && DOC_TYPE_LABELS[provenance.doc_type]) || "Dokument";
   const date = provenance.document_date ? ` vom ${formatDate(provenance.document_date)}` : "";
   return (
     // The original opens in the browser's own viewer (PDF/image) via the BFF (F04-AC10).
     <a
-      href={`/api/documents/${encodeURIComponent(provenance.document_id)}/file`}
+      href={fileHref(provenance.document_id, sample)}
       target="_blank"
       rel="noopener"
       className="underline"
