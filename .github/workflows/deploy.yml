@@ -1,0 +1,95 @@
+name: Deploy
+
+# F11-AC7 to AC9: production deployments only from here, only for a commit on main whose
+# CI is completely green, in this order: database migrations -> API -> web. A failed step
+# stops everything after it (F11-AC8). Runs never overlap and are never cancelled midway.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: # manual run for the same checks, e.g. on a throwaway branch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  # Exactly the commit the green CI ran on - not whatever main points to by now.
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+jobs:
+  migrate:
+    name: Migrations (Supabase)
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+      - name: Deploy exactly the tested commit
+        run: test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - name: Apply new migrations
+        env:
+          SUPABASE_DB_ADMIN_URL: ${{ secrets.SUPABASE_DB_ADMIN_URL }}
+        run: supabase db push --db-url "$SUPABASE_DB_ADMIN_URL" --include-all
+
+  api:
+    name: API (Vercel, fra1)
+    needs: migrate
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_API_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+      - run: test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v6
+      - run: npm install --global vercel@65.5.0
+      - run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - run: vercel build --prod --token="$VERCEL_TOKEN"
+      - run: vercel deploy --prebuilt --prod --meta gitSha="$DEPLOY_SHA" --token="$VERCEL_TOKEN"
+      - name: Wait until the API and its database answer
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -fsS --max-time 10 "$API_BASE_URL/health/ready" | grep -q '"db":"ok"'; then exit 0; fi
+            sleep 10
+          done
+          echo "API not ready after 5 minutes" >&2
+          exit 1
+
+  web:
+    name: Web (Vercel, fra1)
+    needs: api
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+      - run: test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --global vercel@65.5.0
+      - run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - run: vercel build --prod --token="$VERCEL_TOKEN"
+      - run: vercel deploy --prebuilt --prod --meta gitSha="$DEPLOY_SHA" --token="$VERCEL_TOKEN"
