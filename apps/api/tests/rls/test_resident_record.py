@@ -424,3 +424,12 @@ def test_foreign_unknown_and_malformed_follow_up_are_404(api):
         assert response.status_code == 404
         assert response.json() == {"detail": "Nicht gefunden"}
     assert admin("select status from public.follow_ups where id = %s", [foreign]) == [("open",)]
+
+
+def test_a_medication_shows_its_hint(api):
+    # Decision 2A (Codex review Phase 3 #5): "bei Bedarf" belongs into the record (F04-AC4).
+    med_id = medication("Metamizol", "500 mg")
+    admin("update public.medications set hint = 'bei Bedarf' where id = %s", [med_id])
+    event(med_id, "new", 2, after=dict(side("500 mg"), name="Metamizol", hint="bei Bedarf"))
+    active = record(api).json()["medications"]["active"]
+    assert [(m["name"], m["hint"]) for m in active] == [("Metamizol", "bei Bedarf")]

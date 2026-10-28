@@ -33,7 +33,7 @@ Hilfsfunktionen (Schema `app`, `stable`, `security invoker`): `app.ward_ids() �
 | `residents` | `id`, `ward_id`, `display_name`, `birth_date`, `room`; `unique (id, ward_id)` | F01 |
 | `documents` | `id`, `ward_id`, `resident_id` (null bis Freigabe), `doc_type`, `status`, `error_code`, `ocr_pages jsonb` (`[{page, markdown}]`), `suggestion jsonb`, `suggestion_model`, `document_date`, `uploaded_by`, `upload_session`, `attempts`, `status_changed_at`, `approved_by`, `approved_by_name`, `approved_at`, `indexing_status`; `unique (id, ward_id)` | F02 |
 | `document_files` | `document_id` (PK), `ward_id`, `mime`, `size_bytes`, `content bytea` (≤ 4 MB) | F02 |
-| `medications` | `id`, `ward_id`, `resident_id`, `name`, `strength`, `dosage jsonb` (morgens/mittags/abends/nachts), `status` (`active` \| `discontinued`) | F03 |
+| `medications` | `id`, `ward_id`, `resident_id`, `name`, `strength`, `dosage jsonb` (morgens/mittags/abends/nachts), `hint` (z. B. „bei Bedarf“, ≤ 500 Zeichen, seit 28.10.2026), `status` (`active` \| `discontinued`) | F03 |
 | `medication_events` | `id`, `ward_id`, `medication_id`, `kind` (`new` \| `changed` \| `discontinued`), `document_id`, `before jsonb`, `after jsonb`, `actor_type`, `created_by`, `confirmed_by`, `confirmed_by_name`, `created_at` | F03 |
 | `diagnoses` | `id`, `ward_id`, `resident_id`, `text`, `source_document_id`, `actor_type`, `created_by`, `confirmed_by`, `confirmed_by_name`, `created_at` | F03 |
 | `follow_ups` (Wiedervorlagen) | wie `diagnoses` + `title`, `due_date`, `status` (`open` \| `done`), `done_by`, `done_by_name`, `done_at` | F03 (Erledigt-Regel F04: nur offene, `done_by` aus Claims) |

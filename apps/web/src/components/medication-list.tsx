@@ -11,7 +11,7 @@ export function dosageText(dosage: Dosage): string {
   return [dosage.morgens, dosage.mittags, dosage.abends, dosage.nachts].map((v) => v || "0").join("-");
 }
 
-const side = (s: MedicationSide) => [s.strength, dosageText(s.dosage)].filter(Boolean).join(", ");
+const side = (s: MedicationSide) => [s.strength, dosageText(s.dosage), s.hint].filter(Boolean).join(", ");
 
 function documentName(provenance: ProvenanceData | null): string {
   if (!provenance?.document_id) return "ohne Dokument";
@@ -38,6 +38,7 @@ export function MedicationList({
           <span className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{[med.name, med.strength].filter(Boolean).join(" ")}</span>
             <span className="font-mono text-sm">{dosageText(med.dosage)}</span>
+            {med.hint && <span className="text-sm">· {med.hint}</span>}
             {med.marker === "new" && (
               <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-800">neu</span>
             )}

@@ -44,6 +44,8 @@ Umschalten **nur per Konfiguration** (`LLM_PROVIDER`, `OCR_PROVIDER`). Öffentli
 | Embeddings | 500 Chunks × 800 Tokens | 0,040 € |
 | **Summe** | | **0,446 € ≤ 0,50 €** |
 
+**Grenze der Rechnung (Entscheidung Bewerber 28.10.2026, Codex-Review Phase 3 #3):** Die Eingabe ist in Zeichen begrenzt, die Tokenzahl ist mit 3 Zeichen/Token *geschätzt* – realistisch für deutschen Text, aber keine harte Obergrenze (ein Byte-BPE-Tokenizer kann bis zu 1 Token je Byte erzeugen; im theoretisch schlimmsten Fall ≈ 0,80 €/Tag). Bewusst so belassen; harte Grenze nach oben ist das Monatslimit im Mistral-Konto. Derzeit läuft die Demo im **kostenlosen Kontingent** von Mistral (Probe 27.10.2026), es fallen keine Kosten an.
+
 Die Rechnung steht als Code in `apps/api/app/costs.py`; der Test `tests/rls/test_daily_cost.py` liest die Limits aus der Datenbank und schlägt fehl, sobald ein Limit oder eine Längenbegrenzung die 0,50 € überschreitet. Zusätzlich: Monatslimit 10 € im Mistral-Konto.
 
 ## Offen (Task 0.7)

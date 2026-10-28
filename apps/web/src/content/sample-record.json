@@ -21,6 +21,7 @@
             "mittags": "0",
             "morgens": "1"
           },
+          "hint": null,
           "status": "active",
           "provenance": {
             "document_id": "5eed0000-0000-0000-0000-000000000002",
@@ -68,6 +69,7 @@
             "mittags": "1",
             "morgens": "1"
           },
+          "hint": null,
           "status": "active",
           "provenance": {
             "document_id": "5eed0000-0000-0000-0000-000000000003",
@@ -117,6 +119,7 @@
             "mittags": "0",
             "morgens": "1"
           },
+          "hint": null,
           "status": "discontinued",
           "provenance": {
             "document_id": "5eed0000-0000-0000-0000-000000000003",

@@ -20,7 +20,7 @@ export type ResidentSummary = Resident & {
 };
 
 export type Dosage = Record<"morgens" | "mittags" | "abends" | "nachts", string>;
-export type MedicationSide = { name: string; strength: string | null; dosage: Dosage };
+export type MedicationSide = { name: string; strength: string | null; dosage: Dosage; hint?: string | null };
 
 export type MedicationEvent = {
   kind: "new" | "changed" | "discontinued";
@@ -35,6 +35,7 @@ export type RecordMedication = {
   name: string;
   strength: string | null;
   dosage: Dosage;
+  hint?: string | null; // "bei Bedarf" (F04-AC4)
   status: "active" | "discontinued";
   marker?: "new" | "changed" | null;
   previous?: MedicationSide | null;

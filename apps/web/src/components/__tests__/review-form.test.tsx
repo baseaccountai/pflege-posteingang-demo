@@ -184,6 +184,29 @@ describe("ReviewForm", () => {
     expect(screen.getByText("unverändert")).toBeInTheDocument();
   });
 
+  // Decision 2A (Codex review Phase 3 #5): the hint is a field like the others (AC4).
+  it("shows the hint of a medication, lets it be edited and sends it", async () => {
+    const withHint: Suggestion = {
+      ...SUGGESTION,
+      medications: [found({ name: "Metamizol", strength: "500 mg", dosage: DOSE, hint: "bei Bedarf" })],
+    };
+    const fetch = vi.fn().mockResolvedValue(json({ status: "approved" }));
+    vi.stubGlobal("fetch", fetch);
+    render(<ReviewForm {...props({ suggestion: withHint })} />);
+    const hint = screen.getByLabelText("Hinweis 1");
+    expect(hint).toHaveValue("bei Bedarf");
+    fireEvent.change(hint, { target: { value: "bei Bedarf, max. 4x täglich" } });
+    fireEvent.click(screen.getByLabelText("Bewohner bestätigen"));
+    fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(JSON.parse(fetch.mock.calls[0][1].body).medications[0].hint).toBe("bei Bedarf, max. 4x täglich");
+  });
+
+  it("shows the issuer for information only", () => {
+    render(<ReviewForm {...props()} />);
+    expect(screen.getByText("Aussteller: Hausarztpraxis Dr. Ipsum")).toBeInTheDocument();
+  });
+
   it("switches between original and fields on small screens (AC4)", () => {
     render(<ReviewForm {...props()} />);
     const original = screen.getByRole("button", { name: "Original" });

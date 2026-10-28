@@ -1,6 +1,6 @@
 """Medication comparison (F03-AC7): record vs. new document, computed - never by the LLM.
 
-Every medication of the new document is new, changed (strength or dosage differ) or
+Every medication of the new document is new, changed (strength, dosage or hint differ) or
 unchanged; every active medication of the record that the document no longer lists is
 discontinued. Names, strengths and doses are compared after normalising spelling
 ("5mg" = "5 MG" = "5,0 mg"), so a different way of writing is not a change.
@@ -63,10 +63,17 @@ def norm_dosage(dosage: dict[str, str]) -> tuple[str, ...]:
     return tuple(values)
 
 
+def norm_hint(hint: str | None) -> str:
+    """ "bei Bedarf" = " Bei  bedarf ": spacing and case are no change."""
+    return " ".join((hint or "").split()).casefold()
+
+
 def _same(a: Med, b: Med) -> bool:
-    return norm_strength(a.strength) == norm_strength(b.strength) and norm_dosage(
-        a.dosage
-    ) == norm_dosage(b.dosage)
+    return (
+        norm_strength(a.strength) == norm_strength(b.strength)
+        and norm_dosage(a.dosage) == norm_dosage(b.dosage)
+        and norm_hint(a.hint) == norm_hint(b.hint)
+    )
 
 
 def diff(current: list[Med], proposed: list[Med]) -> list[MedChange]:
@@ -95,7 +102,9 @@ def diff_hash(changes: list[MedChange]) -> str:
     """Fingerprint of a comparison result (F03-AC8a): equal results, equal hash."""
 
     def side(med: Med | None):
-        return None if med is None else [norm_strength(med.strength), norm_dosage(med.dosage)]
+        if med is None:
+            return None
+        return [norm_strength(med.strength), norm_dosage(med.dosage), norm_hint(med.hint)]
 
     canonical = [
         [change.kind, norm_name(change.name), side(change.before), side(change.after)]

@@ -41,6 +41,28 @@ describe("MedicationList", () => {
     expect(row).toHaveTextContent("Medikationsplan vom 22.10.2026");
   });
 
+  // Decision 2A (Codex review Phase 3 #5), F04-AC4: the hint belongs to the medication.
+  it("shows the hint next to the dosage, also in the history", () => {
+    const after = { name: "Metamizol", strength: "500 mg", dosage: DOSE, hint: "bei Bedarf" };
+    render(
+      <MedicationList
+        active={[
+          med({
+            name: "Metamizol",
+            strength: "500 mg",
+            hint: "bei Bedarf",
+            events: [{ kind: "new", before: null, after, created_at: "2026-10-26T08:00:00Z", provenance: prov() }],
+          }),
+        ]}
+        discontinued={[]}
+      />,
+    );
+    const row = screen.getByTestId("medication-m1");
+    expect(row).toHaveTextContent("1-0-1-0· bei Bedarf");
+    fireEvent.click(screen.getByText("Verlauf (1)"));
+    expect(row).toHaveTextContent("angesetzt: 500 mg, 1-0-1-0, bei Bedarf");
+  });
+
   it("marks new and changed medications, with the value before", () => {
     render(
       <MedicationList

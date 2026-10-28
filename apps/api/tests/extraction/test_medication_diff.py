@@ -79,3 +79,17 @@ def test_trailing_zeros_of_numbers_do_not_count(a, b):
 
 def test_different_numbers_stay_different():
     assert [c.kind for c in diff([Med("X", "0,5 mg")], [Med("X", "5 mg")])] == ["changed"]
+
+
+# Codex review Phase 3 #5 / decision 2A: the hint ("bei Bedarf") is part of the medication.
+def test_a_changed_hint_alone_is_a_change() -> None:
+    before = Med(name="Metamizol", strength="500 mg", dosage={"morgens": "1"})
+    after = Med(name="Metamizol", strength="500 mg", dosage={"morgens": "1"}, hint="bei Bedarf")
+    assert kinds([before], [after]) == [("changed", "Metamizol")]
+    assert diff_hash(diff([before], [after])) != diff_hash(diff([before], [before]))
+
+
+def test_a_hint_in_another_spelling_is_no_change() -> None:
+    before = Med(name="Metamizol", strength="500 mg", dosage={"morgens": "1"}, hint="bei Bedarf")
+    after = Med(name="Metamizol", strength="500 mg", dosage={"morgens": "1"}, hint=" Bei  bedarf ")
+    assert kinds([before], [after]) == [("unchanged", "Metamizol")]

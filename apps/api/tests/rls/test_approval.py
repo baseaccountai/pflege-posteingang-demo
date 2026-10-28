@@ -237,6 +237,38 @@ def test_approval_writes_the_record_with_origin_and_events(api):
     ]
 
 
+# Decision 2A (Codex review Phase 3 #5): the hint is stored with the medication and its
+# events, and a changed hint is a change of its own.
+def test_the_hint_is_stored_with_medication_and_event(api):
+    meds = [dict(med("Metamizol", "500 mg"), hint="bei Bedarf")]
+    doc = review_document(meds=meds)
+    answer = api.post(
+        f"/documents/{doc}/approve",
+        headers=headers(),
+        json=body(current_hash(api, doc, meds), meds),
+    )
+    assert answer.status_code == 200
+    assert admin("select hint from public.medications where name = 'Metamizol'") == [
+        ("bei Bedarf",)
+    ]
+    assert admin("select after->>'hint' from public.medication_events") == [("bei Bedarf",)]
+
+
+def test_a_changed_hint_changes_the_medication(api):
+    record_med("Metamizol", "500 mg")
+    meds = [dict(med("Metamizol", "500 mg"), hint="bei Bedarf")]
+    doc = review_document(meds=meds)
+    api.post(
+        f"/documents/{doc}/approve",
+        headers=headers(),
+        json=body(current_hash(api, doc, meds), meds),
+    )
+    assert admin("select kind, before->>'hint', after->>'hint' from public.medication_events") == [
+        ("changed", None, "bei Bedarf")
+    ]
+    assert admin("select hint from public.medications") == [("bei Bedarf",)]
+
+
 def test_approval_without_confirmed_resident_is_refused(api):
     doc = review_document()
     answer = api.post(

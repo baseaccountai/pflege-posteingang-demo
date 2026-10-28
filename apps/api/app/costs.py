@@ -10,7 +10,8 @@ fails if the result is above 0.50 EUR.
 
 Everything is counted on the safe side:
 - prices are the highest public list prices found (ADR 0003), USD counted as EUR,
-- 3 characters per token (German text needs more tokens than English),
+- 3 characters per token (German text needs more tokens than English) - an estimate,
+  not a hard bound (accepted, ADR 0003; the monthly limit in the Mistral account is),
 - every LLM call is counted as the more expensive kind (field extraction or question),
 - a retry is a call of its own (it is booked against the quota, too).
 """

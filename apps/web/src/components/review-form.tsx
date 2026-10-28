@@ -215,6 +215,10 @@ export function ReviewForm(props: ReviewProps) {
                 ))}
               </select>
             </label>
+            {/* Shown only: the issuer is not stored anywhere (decision 2A, F03-AC4). */}
+            {suggestion?.issuer.value && (
+              <p className="text-muted-foreground text-sm sm:col-span-2">Aussteller: {suggestion.issuer.value}</p>
+            )}
             <label className="text-sm">
               Dokumentdatum
               <input type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} className={input} />
@@ -252,6 +256,13 @@ export function ReviewForm(props: ReviewProps) {
                     className={`${input} text-center`}
                   />
                 ))}
+                <input
+                  aria-label={`Hinweis ${i + 1}`}
+                  placeholder="Hinweis, z. B. bei Bedarf"
+                  value={med.hint ?? ""}
+                  onChange={(e) => set({ ...med, hint: e.target.value || null })}
+                  className={`${input} col-span-6`}
+                />
               </div>
             )}
             removeLabel={(i) => `Medikament ${i + 1} entfernen`}

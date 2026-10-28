@@ -84,9 +84,9 @@ def _med(item: MedicationIn | dict) -> Med:
 
 
 def _side(med: Med | None) -> dict | None:
-    return (
-        None if med is None else {"name": med.name, "strength": med.strength, "dosage": med.dosage}
-    )
+    if med is None:
+        return None
+    return {"name": med.name, "strength": med.strength, "dosage": med.dosage, "hint": med.hint}
 
 
 def changes_json(changes: list[MedChange]) -> list[dict]:
@@ -123,13 +123,13 @@ async def comparison(
     discontinued just because it is not mentioned.
     """
     cur = await conn.execute(
-        "select id::text, name, strength, dosage from public.medications"
+        "select id::text, name, strength, dosage, hint from public.medications"
         " where resident_id = %s and status = 'active' order by created_at",
         [resident_id],
     )
     current = [
-        Med(name=name, strength=strength, dosage=dosage or {}, id=med_id)
-        for med_id, name, strength, dosage in await cur.fetchall()
+        Med(name=name, strength=strength, dosage=dosage or {}, hint=hint, id=med_id)
+        for med_id, name, strength, dosage, hint in await cur.fetchall()
     ]
     changes = diff(current, [_med(m) for m in medications])
     if doc_type != "medikationsplan":
@@ -227,22 +227,29 @@ async def _write_medications(
             continue
         if change.kind == "new":
             cur = await conn.execute(
-                "insert into public.medications (ward_id, resident_id, name, strength, dosage)"
-                " values (%s, %s, %s, %s, %s) returning id",
+                "insert into public.medications"
+                " (ward_id, resident_id, name, strength, dosage, hint)"
+                " values (%s, %s, %s, %s, %s, %s) returning id",
                 [
                     ward,
                     resident_id,
                     change.after.name,
                     change.after.strength,
                     Jsonb(change.after.dosage),
+                    change.after.hint,
                 ],
             )
             (medication_id,) = await cur.fetchone()
         elif change.kind == "changed":
             medication_id = change.medication_id
             await conn.execute(
-                "update public.medications set strength = %s, dosage = %s where id = %s",
-                [change.after.strength, Jsonb(change.after.dosage), medication_id],
+                "update public.medications set strength = %s, dosage = %s, hint = %s where id = %s",
+                [
+                    change.after.strength,
+                    Jsonb(change.after.dosage),
+                    change.after.hint,
+                    medication_id,
+                ],
             )
         else:  # discontinued
             medication_id = change.medication_id

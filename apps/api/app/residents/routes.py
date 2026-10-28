@@ -108,7 +108,7 @@ async def get_record(resident_id: str, conn: Conn) -> dict:
 
     medications = await _rows(
         conn,
-        "select id::text, name, strength, dosage, status from public.medications"
+        "select id::text, name, strength, dosage, hint, status from public.medications"
         " where resident_id = %(resident)s order by name",
         params,
     )
