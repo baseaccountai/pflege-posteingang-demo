@@ -1,6 +1,9 @@
 node_modules
 .next
 e2e
+# Test-only config; it imports from e2e/ and would fail the image's type check
+playwright.config.ts
+vitest.config.*
 playwright-report
 test-results
 

@@ -1,6 +1,7 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe up-test smoke db-local-roles
 
 COMPOSE := docker compose -f infra/docker-compose.yml
+COMPOSE_TEST := $(COMPOSE) -f infra/docker-compose.test.yml
 SUPABASE := pnpm dlx supabase@2.122.0
 
 # One-time install of all dependencies (incl. Playwright browser)
@@ -60,8 +61,23 @@ lint:
 	cd apps/api && uv run ruff check . && uv run ruff format --check .
 	cd apps/web && pnpm lint
 
-up:
-	$(COMPOSE) up --build
+# Local stack (F11-AC5): Supabase via CLI, then web + api in Docker (host network)
+up: db-start db-local-roles
+	$(COMPOSE) up --build --detach
+	@echo "Web: http://localhost:3000  API: http://localhost:8000"
+
+# Same, plus the test OIDC server and fake providers - no account or key needed
+up-test: db-start db-local-roles
+	$(COMPOSE_TEST) up --build --detach
+	@echo "Web: http://localhost:3000  Test-IdP: http://localhost:18090/default"
+
+# Checks the running local stack: start page, API with database, test IdP
+smoke:
+	infra/smoke.sh
+
+# Local-only passwords of the login roles (the same the tests use)
+db-local-roles:
+	cd apps/api && uv run python -m scripts.local_db_roles
 
 down:
-	$(COMPOSE) down
+	$(COMPOSE_TEST) down

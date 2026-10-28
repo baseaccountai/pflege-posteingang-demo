@@ -23,8 +23,8 @@
 | Dienst | Quelle | Start |
 |---|---|---|
 | Supabase | `supabase start` (CLI, eigene Container) | `make up` ruft es vor Compose auf |
-| `web`, `api` | vorhandene Dockerfiles | `make up` |
-| `oidc-mock` | `ghcr.io/navikt/mock-oauth2-server`, Konfiguration `infra/oidc-mock/config.json` (gleiche Rollen-Claims) | `make up-test` (Profil `test`) |
+| `web`, `api` | vorhandene Dockerfiles, **Host-Netzwerk** (Browser, Container und Supabase erreichen sich einheitlich als `localhost`; gleicher OIDC-Issuer für Browser und BFF), lokale Rollen-Passwörter wie in den Tests (`scripts/local_db_roles.py`) | `make up` |
+| `oidc-mock` | `ghcr.io/navikt/mock-oauth2-server`, Konfiguration `infra/oidc-mock/config.json` (Login-Formular, Rollen als Claims eintragen), Port 18090 (E2E nutzt 18080) | `make up-test` (Zusatzdatei `infra/docker-compose.test.yml`) |
 | `keycloak`, `ollama`, `docling` | Phase 8 | – |
 
 ## CI/CD

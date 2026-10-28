@@ -27,8 +27,13 @@ Voraussetzungen: Python ≥ 3.12 mit [uv](https://docs.astral.sh/uv/), Node 22 m
 make setup  # einmalig: Abhängigkeiten + Playwright-Browser
 make test   # Unit-Tests API + Web
 make e2e    # End-to-End (Desktop + Handy)
-make up     # Web (http://localhost:3000) + API (http://localhost:8000)
+make up-test  # ohne Konto/Schlüssel: Supabase + Web + API + Test-IdP, Attrappen für OCR/LLM
+make smoke    # prüft Startseite, API mit Datenbank und Test-IdP
+make up       # wie oben, aber echte Anbieter und IdP aus .env
+make down
 ```
+
+Lokal laufen Web (http://localhost:3000) und API (http://localhost:8000) im Host-Netzwerk von Docker; Supabase kommt über die CLI (`make db-start`). Im Test-IdP (http://localhost:18090/default) meldet man sich mit beliebigem Namen an und trägt die Rolle als Claims ein, z. B. `{"roles": ["nurse_wb1"]}` (Rollen: `nurse_wb1`, `nurse_wb2`, `pdl`).
 
 ## Dokumentation
 

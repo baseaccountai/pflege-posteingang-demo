@@ -12,6 +12,7 @@ dependencies = [
     "pypdf>=6.21.2",
     "httpx>=0.28.1",
     "python-multipart>=0.0.32",
+    "pillow>=13.0.0",
 ]
 
 # Public hosting on Vercel (ADR 0011): the function loads this ASGI app.
@@ -21,7 +22,6 @@ entrypoint = "app.main:app"
 [dependency-groups]
 dev = [
     "httpx2>=2.16.0",
-    "pillow>=13.0.0",
     "pytest>=8.3",
     "reportlab>=5.1.0",
     "respx>=0.23.1",
