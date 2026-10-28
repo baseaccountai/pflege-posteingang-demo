@@ -119,3 +119,37 @@ jobs:
             apps/web/playwright-report
             apps/web/test-results
           retention-days: 7
+
+  # Secret scan over the whole history (F11-AC6, AC10); allowlist: .gitleaks.toml.
+  secrets:
+    name: Secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: >-
+          docker run --rm -v "$PWD:/repo:ro" ghcr.io/gitleaks/gitleaks:v8.28.0
+          git /repo --redact --no-banner --config /repo/.gitleaks.toml
+
+  # The production images build and run: web + api + test IdP like `make up-test`, then the
+  # smoke test (F11-AC5). Catches what unit tests cannot see, e.g. a runtime dependency that
+  # is only installed for development.
+  docker:
+    name: Docker (images, local stack, smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - run: supabase start -x "$SUPABASE_EXCLUDE"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen && uv run python -m scripts.local_db_roles
+        working-directory: apps/api
+      - run: infra/local-stack.sh up-test
+      - run: infra/smoke.sh
+      - if: failure()
+        run: for c in pp-local-api pp-local-web pp-local-oidc; do echo "== $c"; docker logs "$c" 2>&1 | tail -40; done

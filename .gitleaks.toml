@@ -1,0 +1,14 @@
+# Secret scan (F11-AC6, AC10): gitleaks with its default rules. Allowed are only the fixed,
+# invented values of the local test setup - by value, not by file, so a real secret in the
+# same file is still found. Real secrets live only in GitHub/Vercel and the local .env.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Local/CI test values (e2e and make up-test), never used anywhere else"
+regexes = [
+  '''^e2e-bff-api-secret-at-least-32-bytes$''',
+  '''^local-bff-api-secret-at-least-32-bytes$''',
+  '''^local-client-secret$''',
+  '''^e2e-client-secret$''',
+]

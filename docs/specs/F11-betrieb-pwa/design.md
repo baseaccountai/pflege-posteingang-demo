@@ -33,7 +33,7 @@
 
 | Workflow | Auslöser | Jobs |
 |---|---|---|
-| `ci.yml` (vorhanden, erweitert) | push, PR | `api` (ruff, pytest unit), `db` (supabase start, Migrationen, DB- und Integrationstests), `web` (lint, vitest, playwright mit `oidc-mock`), `secrets` (gitleaks) |
+| `ci.yml` (vorhanden, erweitert) | push, PR | `api` (ruff, pytest unit), `db` (supabase start, Migrationen, DB- und Integrationstests), `web` (lint, vitest), `e2e` (playwright mit `oidc-mock`), `secrets` (gitleaks über die ganze Historie, `.gitleaks.toml`), `docker` (Images bauen, `infra/local-stack.sh up-test`, `infra/smoke.sh`) |
 | `deploy.yml` | `workflow_run` von CI, `conclusion == success`, Branch `main`; `concurrency: deploy` (keine Parallelität, nicht abbrechen) | checkout **`github.event.workflow_run.head_sha`** → `migrate` (`supabase db push`) → `api` (Vercel-Projekt der API: `vercel pull` / `vercel build --prod` / `vercel deploy --prebuilt --prod`, danach `/health` abwarten; Deployment trägt die SHA als Metadatum, [ADR 0011](../../architecture/adr/0011-api-on-vercel.md)) → `web` (`vercel pull` / `vercel build --prod` / `vercel deploy --prebuilt --prod`); `needs` verkettet, Abbruch beim ersten Fehler |
 | Vercel-Git-Integration | nur Vorschau | `apps/web/vercel.json` und `apps/api/vercel.json`: `git.deploymentEnabled.main = false` |
 
