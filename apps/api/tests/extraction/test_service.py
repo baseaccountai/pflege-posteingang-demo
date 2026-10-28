@@ -148,6 +148,55 @@ async def test_a_dose_that_differs_from_its_source_is_not_prefilled():
     assert entry["proposed"]["strength"] == "50 mg"
 
 
+# Codex review Phase 3 #2: name and strength alone are not enough - an invented dosage or
+# a strength that is only part of another number must not be prefilled either (F03-AC3).
+async def test_an_invented_dosage_is_not_prefilled():
+    dose = {"morgens": "99", "mittags": "99", "abends": "99", "nachts": "99"}
+    med = dict(answer()["medications"][0], dosage=dose)
+    entry = (await extract(FakeLlm([answer(medications=[med])]))).data["medications"][0]
+    assert entry["evidence_found"] is False and entry["value"] is None
+
+
+async def test_a_dosage_in_other_slots_than_the_source_is_not_prefilled():
+    dose = {"morgens": "0", "mittags": "0", "abends": "0", "nachts": "1"}  # source: 1-0-0-0
+    med = dict(answer()["medications"][0], dosage=dose)
+    entry = (await extract(FakeLlm([answer(medications=[med])]))).data["medications"][0]
+    assert entry["evidence_found"] is False
+
+
+async def test_a_dosage_in_separate_table_columns_is_found():
+    row = "| Ramipril | 5 mg | 1 | 0 | 0 | 0 |"
+    med = dict(answer()["medications"][0], evidence=row)
+    entry = (await extract(FakeLlm([answer(medications=[med])]), text=f"{TEXT}\n{row}")).data[
+        "medications"
+    ][0]
+    assert entry["evidence_found"] is True
+
+
+async def test_a_strength_that_is_only_part_of_another_number_is_not_prefilled():
+    row = "| Ramipril | 15 mg | 1-0-0-0 |"
+    med = dict(answer()["medications"][0], evidence=row)  # claims 5 mg
+    entry = (await extract(FakeLlm([answer(medications=[med])]), text=f"{TEXT}\n{row}")).data[
+        "medications"
+    ][0]
+    assert entry["evidence_found"] is False
+
+
+async def test_a_name_ending_in_a_digit_does_not_hide_the_strength():
+    row = "| Vitamin B12 | 10 µg | 1-0-0-0 |"
+    med = dict(answer()["medications"][0], name="Vitamin B12", strength="10 µg", evidence=row)
+    entry = (await extract(FakeLlm([answer(medications=[med])]), text=f"{TEXT}\n{row}")).data[
+        "medications"
+    ][0]
+    assert entry["evidence_found"] is True
+
+
+async def test_a_hint_that_is_not_in_the_source_is_not_prefilled():
+    med = dict(answer()["medications"][0], hint="bei Bedarf bis 4x täglich")
+    entry = (await extract(FakeLlm([answer(medications=[med])]))).data["medications"][0]
+    assert entry["evidence_found"] is False
+
+
 async def test_a_value_that_does_not_occur_in_its_source_is_not_prefilled():
     entry = (
         await extract(

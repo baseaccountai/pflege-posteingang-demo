@@ -160,3 +160,15 @@ export async function apiReady(deps: Deps = {}): Promise<boolean> {
     return false;
   }
 }
+
+/** Like apiFile, but the file is only released if the session still exists afterwards (F01-AC13). */
+export async function apiFileForSession(
+  path: string,
+  caller: Caller,
+  isActive: (sid: string) => Promise<boolean>,
+  deps: Deps = {},
+): Promise<{ body: ArrayBuffer; contentType: string } | null> {
+  const file = await apiFile(path, caller, deps);
+  if (!(await isActive(caller.sid))) throw new SessionEnded("session ended during the download");
+  return file;
+}

@@ -48,6 +48,36 @@ def compact(text: str | None) -> str:
     return norm(text).replace(" ", "")
 
 
+NUMBER = re.compile(r"[\d½¼¾]+(?:[.,]\d+)?")
+
+
+def numbers(text: str | None) -> list[str]:
+    """All numbers in order: "| Ramipril | 5 mg | 1-0-0-0 |" -> ["5", "1", "0", "0", "0"]."""
+    return NUMBER.findall(text or "")
+
+
+def strength_in(strength: str, evidence: str | None) -> bool:
+    """ "5 mg" is in "5 mg" but not in "15 mg" or "2,5 mg": no digit, comma or dot before it.
+    Only the space between number and unit is dropped ("5 mg" = "5mg"), so a name that
+    ends in a digit ("Vitamin B12 10 µg") stays apart from the strength."""
+    unit_joined = re.sub(r"(?<=\d) +(?=[^\d\s])", "", norm(evidence))
+    pattern = r"(?<![\d.,])" + re.escape(compact(strength))
+    return re.search(pattern, unit_joined) is not None
+
+
+def dosage_in(dosage: dict, evidence: str | None) -> bool:
+    """The four slots (morgens-mittags-abends-nachts) must stand in the source as a run of
+    numbers in this order: "1-0-1-0" or one table column per slot. No dosage, nothing to
+    check."""
+    order = ("morgens", "mittags", "abends", "nachts")
+    slots = [(dosage.get(slot) or "").strip() for slot in order]
+    if not any(slots):
+        return True
+    wanted = [slot or "0" for slot in slots]
+    found = numbers(evidence)
+    return any(found[i : i + 4] == wanted for i in range(len(found) - 3))
+
+
 def date_forms(iso: str) -> list[str]:
     day = date.fromisoformat(iso)
     return [iso, f"{day.day:02d}.{day.month:02d}.{day.year}", f"{day.day}.{day.month}.{day.year}"]
@@ -90,10 +120,14 @@ class Checker:
             "dosage": med.dosage.model_dump(),
             "hint": med.hint,
         }
+        # Every part of the medication must stand in its source - an invented dose is
+        # worse than an empty field (F03-AC3, Codex review Phase 3 #2).
         found = (
             self.source_ok(med.evidence)
             and norm(med.name) in norm(med.evidence)
-            and (med.strength is None or compact(med.strength) in compact(med.evidence))
+            and (med.strength is None or strength_in(med.strength, med.evidence))
+            and dosage_in(value["dosage"], med.evidence)
+            and (not med.hint or norm(med.hint) in norm(med.evidence))
         )
         return {
             "value": value if found else None,

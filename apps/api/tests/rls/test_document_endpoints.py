@@ -15,6 +15,7 @@ from app.main import create_app
 from app.providers.llm.fake import FakeLlm
 from app.providers.ocr.fake import FakeOcr
 from tests.rls.conftest import ADMIN_DSN, GATEWAY_DSN
+from tests.support.images import JPEG
 from tests.support.oidc import (
     AUDIENCE,
     BFF_SECRET,
@@ -26,8 +27,6 @@ from tests.support.oidc import (
 )
 
 pytestmark = pytest.mark.db
-
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
 
 
 def admin(sql: str, params: list | None = None) -> list[tuple]:

@@ -6,9 +6,7 @@ import pytest
 from pypdf import PdfWriter
 
 from app.documents.validation import MAX_BYTES, InvalidFile, validate_upload
-
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 100
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+from tests.support.images import JPEG, PNG
 
 
 def pdf(pages: int) -> bytes:
@@ -75,3 +73,30 @@ def test_a_pdf_without_pages_is_rejected():
     with pytest.raises(InvalidFile) as error:
         validate_upload(pdf(0))
     assert error.value.status == 422
+
+
+# Codex review Phase 3 #6: a valid signature followed by anything else is no image; it must
+# be rejected before it is stored, counted against the quota and sent to OCR.
+@pytest.mark.parametrize(
+    "data",
+    [b"\xff\xd8\xffnot an image", b"\x89PNG\r\n\x1a\n" + b"\x00" * 100, JPEG[: len(JPEG) // 2]],
+    ids=["jpeg-signature-only", "png-signature-only", "truncated-jpeg"],
+)
+def test_a_damaged_image_is_rejected(data):
+    with pytest.raises(InvalidFile) as error:
+        validate_upload(data)
+    assert error.value.error_code == "unreadable_image"
+    assert error.value.status == 422
+    assert error.value.message == "Das Bild ist beschädigt und kann nicht gelesen werden."
+
+
+def test_an_image_with_too_many_pixels_is_rejected_before_decoding():
+    # 7000 x 7000 white pixels compress to a small PNG but would unpack to ~150 MB.
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("L", (7000, 7000), 255).save(buffer, format="PNG")
+    assert len(buffer.getvalue()) < MAX_BYTES
+    with pytest.raises(InvalidFile) as error:
+        validate_upload(buffer.getvalue())
+    assert error.value.error_code == "unreadable_image"

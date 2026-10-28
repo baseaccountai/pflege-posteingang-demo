@@ -210,3 +210,32 @@ async def test_another_ward_cannot_process_the_document(db, seeded):
     ocr = FakeOcr(default=READABLE)
     await Pipeline(db, ocr, FakeExtractor()).run(NURSE_WB2, doc)
     assert state(doc)[0] == "uploaded" and ocr.calls == 0
+
+
+class TypedExtractor(FakeExtractor):
+    """Suggestion in the real shape (app.extraction.service): value is None if not verified."""
+
+    def __init__(self, doc_type: str | None):
+        super().__init__()
+        self.doc_type = doc_type
+
+    async def __call__(self, principal: Principal, document_id: str, text: str) -> Suggestion:
+        field = {
+            "value": self.doc_type,
+            "proposed": "medikationsplan",
+            "evidence_found": bool(self.doc_type),
+        }
+        return Suggestion(data={"doc_type": field}, model="fake-llm")
+
+
+# Codex review Phase 3 #7, F02-AC13: the inbox shows the type as soon as it is recognised,
+# not only after the approval.
+@pytest.mark.parametrize(
+    ("recognised", "expected"), [("medikationsplan", "medikationsplan"), (None, None)]
+)
+async def test_a_recognised_type_is_stored_on_the_document(db, seeded, recognised, expected):
+    doc = new_document()
+    await Pipeline(db, FakeOcr(default=READABLE), TypedExtractor(recognised)).run(NURSE_WB1, doc)
+    assert admin("select doc_type::text from public.documents where id = %s", [doc]) == [
+        (expected,)
+    ]

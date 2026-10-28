@@ -25,6 +25,8 @@ test("a sample letter becomes ready for review without reloading (AC5, AC6, AC13
   const id = await upload(page, "Datei hochladen", sample("arztbrief_muster-bauer.pdf"));
   await expect(row(page, id)).toBeVisible();
   await expect(row(page, id)).toContainText("bereit zur Prüfung", { timeout: 15_000 });
+  // The recognised type is shown before the approval (Codex review Phase 3 #7).
+  await expect(row(page, id)).toContainText("Arztbrief");
   await expect(row(page, id).getByRole("link", { name: "Prüfen" })).toHaveAttribute(
     "href",
     `/posteingang/${id}`,

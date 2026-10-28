@@ -17,12 +17,14 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from typing import get_args
 
 from psycopg.types.json import Jsonb
 
 from app.auth.principal import Principal
 from app.db import Database
 from app.documents.readability import check_readability
+from app.extraction.schema import DocType
 from app.providers.llm.base import LlmUnavailable
 from app.providers.ocr.base import OcrProvider, OcrUnavailable
 from app.quotas import QuotaExceeded
@@ -141,6 +143,14 @@ class Pipeline:
             return
         await self._move(principal, doc, "extracting", "ready_for_review", suggestion=suggestion)
 
+    @staticmethod
+    def recognised_type(suggestion: Suggestion | None) -> str | None:
+        """The document type, if the extraction verified it in the text (F02-AC13: the inbox
+        shows it before the approval). An unverified guess stays out."""
+        field = (suggestion.data or {}).get("doc_type") if suggestion else None
+        value = field.get("value") if isinstance(field, dict) else None
+        return value if value in get_args(DocType) else None
+
     async def _fail(self, principal: Principal, doc: str, from_status: str, code: str) -> None:
         await self._move(principal, doc, from_status, "failed", error_code=code)
 
@@ -168,7 +178,8 @@ class Pipeline:
                   ocr_pages = coalesce(%(pages)s, ocr_pages),
                   suggestion = case when %(set_suggestion)s then %(suggestion)s else suggestion end,
                   suggestion_model = case when %(set_suggestion)s then %(model)s
-                                          else suggestion_model end
+                                          else suggestion_model end,
+                  doc_type = coalesce(%(doc_type)s::public.doc_type, doc_type)
                 where id = %(id)s and status = %(from)s::public.document_status
                 returning id
                 """,
@@ -184,6 +195,7 @@ class Pipeline:
                     if suggestion and suggestion.data
                     else None,
                     "model": suggestion.model if suggestion else None,
+                    "doc_type": self.recognised_type(suggestion),
                 },
             )
             return await cur.fetchone() is not None

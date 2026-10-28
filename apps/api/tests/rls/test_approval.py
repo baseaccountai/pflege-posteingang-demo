@@ -392,3 +392,30 @@ async def test_approval_against_rejection_only_one_wins(db, seeded, slow_compari
     (status,) = admin("select status::text from public.documents where id = %s", [doc])[0]
     entries = admin("select count(*) from public.diagnoses")[0][0]
     assert (status, entries) in [("approved", 1), ("rejected", 0)]
+
+
+async def test_two_documents_of_one_resident_in_other_id_spellings_are_serialised(
+    db, seeded, slow_comparison
+):
+    # Codex review Phase 3 #1: Postgres reads both spellings as the same uuid; the resident
+    # lock must too, otherwise both plans compare against the old record (F03-AC8).
+    meds = [med("Torasemid", "10 mg")]
+    first, second = review_document(meds=meds), review_document(meds=meds)
+    async with db.as_principal(NURSE_WB1) as conn:
+        _, diff_hash = await slow_comparison(conn, WB1_RESIDENT, "medikationsplan", meds)
+    other_spelling = WB1_RESIDENT.replace("-", "").upper()
+    results = await asyncio.gather(
+        outcome(approve(db, NURSE_WB1, first, approval_of(first, meds, diff_hash))),
+        outcome(
+            approve(
+                db,
+                NURSE_WB1,
+                second,
+                approval_of(second, meds, diff_hash).model_copy(
+                    update={"resident_id": other_spelling}
+                ),
+            )
+        ),
+    )
+    assert sorted(results) == ["conflict", "ok"]
+    assert admin("select count(*) from public.medications where name = 'Torasemid'") == [(1,)]

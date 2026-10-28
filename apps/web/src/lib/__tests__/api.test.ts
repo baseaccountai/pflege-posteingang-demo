@@ -11,6 +11,7 @@ import {
   apiGet,
   apiReady,
   apiFile,
+  apiFileForSession,
   apiGetForSession,
   apiSend,
   bffAssertion,
@@ -230,5 +231,28 @@ describe("apiReady", () => {
   it("is false when the API or its database is not ready", async () => {
     expect(await apiReady({ env, fetch: vi.fn().mockResolvedValue(new Response("{}", { status: 503 })) })).toBe(false);
     expect(await apiReady({ env, fetch: vi.fn().mockRejectedValue(new TypeError("fetch failed")) })).toBe(false);
+  });
+});
+
+// Codex review Phase 3 #4: a slow original of WB1 must not arrive after a switch to WB2
+// (F01-AC13), like the JSON reads.
+describe("apiFileForSession", () => {
+  const env = { API_BASE_URL: "http://api.test", BFF_API_SECRET: SECRET };
+  const caller = { sid: SID, accessToken: "access-123" };
+  const pdf = () =>
+    vi.fn().mockResolvedValue(new Response(new Uint8Array([0x25, 0x50]), { headers: { "content-type": "application/pdf" } }));
+
+  it("releases the file while the session still exists", async () => {
+    const isActive = vi.fn().mockResolvedValue(true);
+    const file = await apiFileForSession("/documents/d1/file", caller, isActive, { env, fetch: pdf() });
+    expect(file?.contentType).toBe("application/pdf");
+    expect(isActive).toHaveBeenCalledWith(SID);
+  });
+
+  it("withholds the file if the session ended during the download", async () => {
+    const isActive = vi.fn().mockResolvedValue(false);
+    await expect(
+      apiFileForSession("/documents/d1/file", caller, isActive, { env, fetch: pdf() }),
+    ).rejects.toBeInstanceOf(SessionEnded);
   });
 });

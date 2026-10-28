@@ -10,6 +10,7 @@ Only a human approval writes the record. The approval is one transaction as the 
      document as origin and the confirming user from the claims - and approve the document.
 """
 
+import uuid
 from datetime import date
 from typing import Literal
 
@@ -158,15 +159,26 @@ async def _lock_for_review(conn: AsyncConnection, document_id: str) -> str:
     return ward
 
 
+UNKNOWN_RESIDENT = ("resident_unknown", "Bewohner nicht gefunden oder in anderem Wohnbereich.")
+
+
+def canonical_resident(resident_id: str) -> str:
+    """One spelling per resident: Postgres reads '1111…' with or without hyphens, in any
+    case, as the same uuid - the resident lock below must do the same."""
+    try:
+        return str(uuid.UUID(resident_id))
+    except ValueError as invalid:
+        raise Invalid(*UNKNOWN_RESIDENT) from invalid
+
+
 async def approve(db: Database, principal: Principal, document_id: str, approval: Approval) -> None:
     if not approval.resident_confirmed:
         raise Invalid("resident_not_confirmed", "Bitte den Bewohner bestätigen.")
+    approval = approval.model_copy(update={"resident_id": canonical_resident(approval.resident_id)})
     async with db.as_principal(principal) as conn:
         ward = await _lock_for_review(conn, document_id)
         if await resident_ward(conn, approval.resident_id) != ward:
-            raise Invalid(
-                "resident_unknown", "Bewohner nicht gefunden oder in anderem Wohnbereich."
-            )
+            raise Invalid(*UNKNOWN_RESIDENT)
         # Plans of the same resident are approved one after the other (F03-AC8).
         await conn.execute(
             "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
