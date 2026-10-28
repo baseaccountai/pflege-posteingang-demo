@@ -16,9 +16,11 @@ from app.db import Database
 from app.documents.pipeline import Pipeline
 from app.documents.routes import router as documents_router
 from app.extraction.service import Extractor
+from app.providers.embeddings import EmbeddingProvider, create_embedding_provider
 from app.providers.llm import LlmProvider, create_llm_provider
 from app.providers.ocr import OcrProvider, create_ocr_provider
 from app.quotas import consume
+from app.rag.indexer import Indexer
 from app.residents.routes import router as residents_router
 
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
@@ -30,15 +32,17 @@ def create_app(
     verifier: TokenVerifier | None = None,
     ocr: OcrProvider | None = None,
     llm: LlmProvider | None = None,
+    embeddings: EmbeddingProvider | None = None,
 ) -> FastAPI:
     """Application factory; reads settings from the environment unless given explicitly.
 
-    `verifier` replaces the JWKS-based token check in tests (test IdP), `ocr` and `llm` the
-    providers chosen by OCR_PROVIDER and LLM_PROVIDER.
+    `verifier` replaces the JWKS-based token check in tests (test IdP), `ocr`, `llm` and
+    `embeddings` the providers chosen by OCR_PROVIDER and LLM_PROVIDER.
     """
     settings = settings or Settings()
     ocr = ocr or create_ocr_provider(settings)
     llm = llm or create_llm_provider(settings)
+    embeddings = embeddings or create_embedding_provider(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -50,6 +54,7 @@ def create_app(
             )
         app.state.database = Database(settings.database_url) if settings.database_url else None
         app.state.pipeline = None
+        app.state.indexer = None
         if app.state.database:
             await app.state.database.open()
             database = app.state.database
@@ -60,6 +65,7 @@ def create_app(
                     await consume(conn, "llm_call", 1)
 
             app.state.pipeline = Pipeline(database, ocr, Extractor(llm, book_retry))
+            app.state.indexer = Indexer(database, embeddings)
         try:
             yield
         finally:

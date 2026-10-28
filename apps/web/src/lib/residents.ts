@@ -66,6 +66,7 @@ export type ResidentRecord = {
     document_date: string | null;
     approved_by_name: string | null;
     approved_at: string | null;
+    indexing_status?: "pending" | "done" | "failed" | null; // F05-AC1a
   }[];
 };
 

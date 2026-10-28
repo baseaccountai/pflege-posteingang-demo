@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { FollowUpList } from "@/components/follow-up-list";
 import { MedicationList } from "@/components/medication-list";
 import { Provenance } from "@/components/provenance";
+import { SearchState } from "@/components/search-state";
 import { formatDate, formatDay } from "@/lib/dates";
 import { fileHref } from "@/lib/documents/file-href";
 import { DOC_TYPE_LABELS } from "@/lib/documents/labels";
@@ -88,6 +89,12 @@ export function ResidentRecordView({ record, sample = false }: { record: Residen
                   {document.approved_by_name ? ` von ${document.approved_by_name}` : ""}
                   {document.approved_at ? ` am ${formatDay(document.approved_at)}` : ""}
                 </span>
+                <SearchState
+                  documentId={document.id}
+                  residentId={resident.id}
+                  status={document.indexing_status}
+                  sample={sample}
+                />
               </li>
             ))}
           </ul>

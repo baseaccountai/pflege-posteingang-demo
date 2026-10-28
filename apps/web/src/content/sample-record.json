@@ -249,14 +249,16 @@
         "doc_type": "arztbrief",
         "document_date": "2026-10-21",
         "approved_by_name": "Pflegekraft WB1",
-        "approved_at": "2026-10-25"
+        "approved_at": "2026-10-25",
+        "indexing_status": "pending"
       },
       {
         "id": "5eed0000-0000-0000-0000-000000000002",
         "doc_type": "arztbrief",
         "document_date": "2026-09-02",
         "approved_by_name": "Pflegekraft WB1",
-        "approved_at": "2026-09-04"
+        "approved_at": "2026-09-04",
+        "indexing_status": "pending"
       }
     ]
   }

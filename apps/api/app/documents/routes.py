@@ -32,6 +32,7 @@ from app.documents.pipeline import Pipeline, mark_stalled
 from app.documents.validation import MAX_BYTES, InvalidFile, count_pdf_pages, validate_upload
 from app.extraction.resident_match import suggest_resident
 from app.quotas import QuotaExceeded, consume
+from app.rag.indexer import Indexer
 
 router = APIRouter(prefix="/documents")
 
@@ -288,9 +289,46 @@ async def _decide(action) -> JSONResponse | dict:
     return {"ok": True}
 
 
+def indexer(request: Request) -> Indexer:
+    return request.app.state.indexer
+
+
 @router.post("/{document_id}/approve")
-async def approve_document(request: Request, principal: Caller, document_id: str, body: Approval):
-    return await _decide(approve(database(request), principal, checked_id(document_id), body))
+async def approve_document(
+    request: Request,
+    background: BackgroundTasks,
+    principal: Caller,
+    document_id: str,
+    body: Approval,
+):
+    document_id = checked_id(document_id)
+    answer = await _decide(approve(database(request), principal, document_id, body))
+    if answer == {"ok": True}:
+        # F03-AC11: make the approved document searchable for questions (F05), afterwards.
+        background.add_task(indexer(request).run, principal, document_id)
+    return answer
+
+
+@router.post("/{document_id}/reindex", status_code=202)
+async def reindex_document(
+    request: Request, background: BackgroundTasks, principal: Caller, document_id: str
+):
+    """F05-AC1a: start a failed indexing again (the record offers it). Not found for foreign
+    and unknown documents alike; 409 if there is nothing to repeat."""
+    document_id = checked_id(document_id)
+    async with database(request).as_principal(principal) as conn:
+        cur = await conn.execute(
+            "select indexing_status::text from public.documents"
+            " where id = %s and status = 'approved'",
+            [document_id],
+        )
+        row = await cur.fetchone()
+    if row is None:
+        raise NOT_FOUND
+    if row[0] != "failed":
+        return error(409, "not_failed", "Das Dokument ist bereits durchsuchbar oder in Arbeit.")
+    background.add_task(indexer(request).run, principal, document_id)
+    return {"id": document_id, "indexing_status": "failed"}
 
 
 @router.post("/{document_id}/reject")

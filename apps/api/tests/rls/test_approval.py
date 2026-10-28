@@ -14,6 +14,7 @@ from app.auth.principal import Principal
 from app.config import Settings
 from app.documents.approval import Approval, Conflict, approve, reject
 from app.main import create_app
+from app.providers.embeddings.fake import FakeEmbeddings
 from app.providers.llm.fake import FakeLlm
 from app.providers.ocr.fake import FakeOcr
 from tests.rls.conftest import ADMIN_DSN, GATEWAY_DSN, WB1_RESIDENT, WB2_RESIDENT
@@ -49,6 +50,10 @@ def found(value) -> dict:
     return {"value": value, "proposed": value, "evidence": "x", "evidence_found": True}
 
 
+# Every document in review has its OCR text; the approval indexes it (F05).
+OCR_PAGES = [{"page": 1, "markdown": "# Medikationsplan\n## Diagnosen\n- Herzinsuffizienz"}]
+
+
 def review_document(
     ward: str = "wb1", doc_type: str = "medikationsplan", meds=(), name="Hr. Muster-Bauer"
 ) -> str:
@@ -64,8 +69,9 @@ def review_document(
     }
     admin(
         "insert into public.documents (id, ward_id, uploaded_by, upload_session, status,"
-        " suggestion, suggestion_model) values (%s, %s, 'u', 's', 'ready_for_review', %s, 'fake')",
-        [doc, ward, Jsonb(suggestion)],
+        " suggestion, suggestion_model, ocr_pages)"
+        " values (%s, %s, 'u', 's', 'ready_for_review', %s, 'fake', %s)",
+        [doc, ward, Jsonb(suggestion), Jsonb(OCR_PAGES)],
     )
     return doc
 
@@ -87,7 +93,13 @@ def api(seeded) -> Iterator[TestClient]:
         oidc_roles_claim=ROLES_CLAIM,
         bff_api_secret=BFF_SECRET,
     )
-    app = create_app(settings, verifier=test_verifier(), ocr=FakeOcr(), llm=FakeLlm())
+    app = create_app(
+        settings,
+        verifier=test_verifier(),
+        ocr=FakeOcr(),
+        llm=FakeLlm(),
+        embeddings=FakeEmbeddings(),
+    )
     with TestClient(app) as client:
         yield client
 
@@ -211,7 +223,7 @@ def test_approval_writes_the_record_with_origin_and_events(api):
         "approved",
         WB1_RESIDENT,
         "Pflegekraft WB1",
-        "pending",
+        "done",  # F03-AC11: the approval started the indexing (background task, F05)
     )
     events = admin(
         "select m.name, e.kind, e.before->>'strength', e.after->>'strength', e.confirmed_by_name,"
@@ -267,6 +279,59 @@ def test_a_changed_hint_changes_the_medication(api):
         ("changed", None, "bei Bedarf")
     ]
     assert admin("select hint from public.medications") == [("bei Bedarf",)]
+
+
+def test_the_approval_makes_the_document_searchable(api):
+    # F03-AC11 / F05-AC1: the background task after the response has written the chunks.
+    meds = [med("Torasemid", "10 mg")]
+    doc = review_document(meds=meds)
+    api.post(
+        f"/documents/{doc}/approve",
+        headers=headers(),
+        json=body(current_hash(api, doc, meds), meds),
+    )
+    assert admin("select count(*) > 0 from public.chunks where document_id = %s", [doc]) == [
+        (True,)
+    ]
+
+
+def reindex(api, doc, role="nurse_wb1"):
+    return api.post(f"/documents/{doc}/reindex", headers=headers(role))
+
+
+def test_a_failed_indexing_can_be_started_again(api):
+    meds = [med("Torasemid", "10 mg")]
+    doc = review_document(meds=meds)
+    api.post(
+        f"/documents/{doc}/approve",
+        headers=headers(),
+        json=body(current_hash(api, doc, meds), meds),
+    )
+    admin("delete from public.chunks where document_id = %s", [doc])
+    admin("update public.documents set indexing_status = 'failed' where id = %s", [doc])
+    answer = reindex(api, doc)
+    assert answer.status_code == 202
+    assert admin("select indexing_status::text from public.documents where id = %s", [doc]) == [
+        ("done",)
+    ]
+    assert admin("select count(*) > 0 from public.chunks where document_id = %s", [doc]) == [
+        (True,)
+    ]
+
+
+def test_reindex_only_for_failed_documents_of_the_own_ward(api):
+    meds = [med("Torasemid", "10 mg")]
+    doc = review_document(meds=meds)
+    api.post(
+        f"/documents/{doc}/approve",
+        headers=headers(),
+        json=body(current_hash(api, doc, meds), meds),
+    )
+    assert reindex(api, doc).status_code == 409  # done, nothing to repeat
+    admin("update public.documents set indexing_status = 'failed' where id = %s", [doc])
+    assert reindex(api, doc, "nurse_wb2").status_code == 404
+    assert reindex(api, str(uuid.uuid4())).status_code == 404
+    assert api.post("/documents/kaputt/reindex", headers=headers()).status_code == 404
 
 
 def test_approval_without_confirmed_resident_is_refused(api):

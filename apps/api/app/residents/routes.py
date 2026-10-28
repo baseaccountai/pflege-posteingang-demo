@@ -186,7 +186,8 @@ async def get_record(resident_id: str, conn: Conn) -> dict:
     )
     documents = await _rows(
         conn,
-        "select id::text, doc_type::text, document_date, approved_by_name, approved_at"
+        "select id::text, doc_type::text, document_date, approved_by_name, approved_at,"
+        " indexing_status::text"
         " from public.documents"
         " where resident_id = %(resident)s and status = 'approved'"
         " order by document_date desc nulls last, approved_at desc",

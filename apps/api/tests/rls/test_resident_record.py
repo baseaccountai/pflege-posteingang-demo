@@ -433,3 +433,11 @@ def test_a_medication_shows_its_hint(api):
     event(med_id, "new", 2, after=dict(side("500 mg"), name="Metamizol", hint="bei Bedarf"))
     active = record(api).json()["medications"]["active"]
     assert [(m["name"], m["hint"]) for m in active] == [("Metamizol", "bei Bedarf")]
+
+
+def test_documents_say_whether_they_are_searchable(api):
+    # F05-AC1a: the record shows "noch nicht durchsuchbar" and offers a retry.
+    doc = approved_document()
+    admin("update public.documents set indexing_status = 'failed' where id = %s", [doc])
+    documents = record(api).json()["documents"]
+    assert [(d["id"], d["indexing_status"]) for d in documents] == [(doc, "failed")]
