@@ -8,7 +8,7 @@ text is defused before it goes in (indirect prompt injection, OWASP LLM01).
 The model must cite every statement with [Q1], [Q2], ... An answer counts only if it cites
 at least one source and every citation points to a source that was really retrieved;
 otherwise the user gets NO_EVIDENCE instead of an unproven answer (OWASP LLM09). Only the
-cited sources are shown with the answer.
+cited sources are shown with the answer, renumbered Q1, Q2, ... in citation order.
 """
 
 import re
@@ -80,4 +80,8 @@ def check_answer(answer: str, hits: list[Hit]) -> CheckedAnswer:
     if not cited or any(not 1 <= n <= len(hits) for n in cited):
         return CheckedAnswer(NO_EVIDENCE)
     order = list(dict.fromkeys(cited))  # first citation first, each source once
-    return CheckedAnswer(answer.strip(), [hits[n - 1] for n in order])
+    # The app lists the cited sources as [Q1], [Q2], ... in this order, so the answer text
+    # gets the same numbers: "[Q2]" becomes "[Q1]" if the second source is the first cited.
+    new_number = {old: new for new, old in enumerate(order, start=1)}
+    renumbered = CITATION.sub(lambda m: f"[Q{new_number[int(m.group(1))]}]", answer.strip())
+    return CheckedAnswer(renumbered, [hits[n - 1] for n in order])

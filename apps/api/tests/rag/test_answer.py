@@ -73,3 +73,11 @@ def test_an_answer_without_valid_citations_is_replaced(answer):
 def test_a_source_cited_twice_is_listed_once():
     checked = check_answer("Ramipril [Q1], morgens [Q1], Torasemid [Q2].", HITS)
     assert [s.document_id for s in checked.sources] == ["d1", "d2"]
+
+
+def test_citations_are_renumbered_to_match_the_listed_sources():
+    # The UI labels the listed sources [Q1], [Q2], ... in order. An answer that cites only
+    # the second source must therefore say [Q1], or text and source list disagree.
+    checked = check_answer("Torasemid [Q2], Ramipril [Q1], wieder Torasemid [Q2].", HITS)
+    assert checked.answer == "Torasemid [Q1], Ramipril [Q2], wieder Torasemid [Q1]."
+    assert [s.document_id for s in checked.sources] == ["d2", "d1"]
