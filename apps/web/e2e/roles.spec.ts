@@ -78,10 +78,17 @@ test("role switch WB1 -> WB2 leaves no WB1 data anywhere (AC13)", async ({ page,
 
   // Back button through the whole history: no page shows WB1 data again, including the
   // WB1 residents page from before the switch (which the loop must actually reach).
+  // Each app page must be hydrated before the next step back: Next.js writes its own
+  // history entry state (__NA) then, and a back step during that is dropped by the browser.
+  const hydrated = async () => {
+    if (new URL(page.url()).origin === APP_ORIGIN) {
+      await page.waitForFunction(() => window.history.state?.__NA === true);
+    }
+  };
   let residentPagesSeen = 0;
   for (let i = 0; i < 10; i++) {
+    await hydrated();
     if (!(await page.goBack())) break;
-    await page.waitForLoadState();
     const url = new URL(page.url());
     if (url.origin !== APP_ORIGIN) continue;
     if (url.pathname === "/bewohner") residentPagesSeen++;
