@@ -6,7 +6,7 @@
 |---|---|
 | Manifest | `apps/web/src/app/manifest.ts` (Next.js Metadata-Route) |
 | Icons | `apps/web/public/icons/` (192, 512, maskable), schlichtes Briefkasten-Symbol in Petrol, kein Hochschul-Logo |
-| Service Worker | **eigener, minimaler** `apps/web/public/sw.js` (ca. 60 Zeilen) statt Serwist: Next 16 baut standardmäßig mit Turbopack, und der Umfang (Precache + Offline-Seite) rechtfertigt keine Build-Integration. Precache-Liste wird beim Build aus `.next/static` erzeugt (`scripts/sw-manifest.mjs`). ADR 0008. |
+| Service Worker | **eigener, minimaler** `apps/web/public/sw.js` (ca. 60 Zeilen) statt Serwist: Next 16 baut standardmäßig mit Turbopack, und der Umfang (Precache + Offline-Seite) rechtfertigt keine Build-Integration. *(Umsetzung 28.10.2026: keine Precache-Liste aus dem Build; nur `offline.html` wird vorab geladen, Allowlist-Dateien beim ersten Abruf.)* [ADR 0008](../../architecture/adr/0008-minimal-service-worker.md). |
 | Cache-Regeln | `fetch`-Handler: Pfad in Allowlist (`/_next/static/`, `/icons/`, `/offline.html`) → Cache-first; Navigationsanfrage ohne Netz → `/offline.html`; alles andere: **kein** `respondWith` (Browser-Standard, nichts gespeichert) |
 | Offline-Seite | `apps/web/public/offline.html`: statisches HTML ohne Skripte, eigenes Stylesheet, Banner und Footer als Text |
 | Navigation | `components/app-nav.tsx`: unten fix (< 768 px), Seitenleiste (≥ 768 px); aktive Route hervorgehoben; Icons aus `lucide-react` |

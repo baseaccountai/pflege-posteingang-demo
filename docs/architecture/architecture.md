@@ -82,7 +82,7 @@ Gleiche Architektur in beiden Umgebungen, nur andere Anbieter. CI/CD: GitHub Act
 | [0005](adr/0005-zitadel-public-keycloak-local.md) | Zitadel öffentlich, Keycloak lokal |
 | [0006](adr/0006-kiro-spec-format.md) | Spec-Format im Kiro-Stil |
 | [0007](adr/0007-db-access-on-behalf-of-user.md) | Datenbankzugriff im Namen des Nutzers (Login-Rolle + `set local role`, Spike F01) |
-| 0008 | Eigener minimaler Service Worker (folgt mit F11) |
+| [0008](adr/0008-minimal-service-worker.md) | Eigener minimaler Service Worker mit Allowlist |
 | [0009](adr/0009-server-side-sessions.md) | Login-Sitzung serverseitig in Postgres |
 | [0010](adr/0010-files-in-postgres.md) | Originaldateien in Postgres statt Supabase Storage |
 | [0011](adr/0011-api-on-vercel.md) | API auf Vercel statt Koyeb (Koyeb-Übernahme durch Mistral, kein günstiger Tarif mehr) |

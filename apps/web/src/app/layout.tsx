@@ -8,6 +8,7 @@ import { AppNav } from "@/components/app-nav";
 import { THEME_COLOR } from "@/app/manifest";
 import { DemoBanner } from "@/components/demo-banner";
 import { SiteFooter } from "@/components/site-footer";
+import { ServiceWorker } from "@/components/service-worker";
 import { SessionSync } from "@/components/session-sync";
 import { SiteHeader } from "@/components/site-header";
 import { currentSession } from "@/lib/auth/current";
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col pb-16 md:pb-0">
         <DemoBanner />
         <SessionSync />
+        <ServiceWorker />
         <Suspense fallback={<SiteHeader />}>
           <SessionHeader />
         </Suspense>
