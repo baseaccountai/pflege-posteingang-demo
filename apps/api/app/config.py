@@ -1,7 +1,8 @@
 """Runtime configuration, read from environment variables.
 
 Providers are switched by configuration only (never by code changes):
-  LLM_PROVIDER=mistral|ollama, OCR_PROVIDER=mistral|docling (fake: tests only, both)
+  LLM_PROVIDER=mistral|ollama (chat and embeddings), OCR_PROVIDER=mistral|docling
+  (fake: tests only, both)
 """
 
 from typing import Literal
@@ -21,8 +22,11 @@ class Settings(BaseSettings):
     mistral_api_key: str = ""
     mistral_ocr_model: str = "mistral-ocr-latest"
     mistral_chat_model: str = "mistral-small-latest"
+    mistral_embed_model: str = "mistral-embed"
     ollama_base_url: str = "http://localhost:11434"
     ollama_chat_model: str = "qwen3:8b"
+    # Must give 1024-dimensional vectors like mistral-embed (column chunks.embedding).
+    ollama_embed_model: str = "bge-m3"
     # Shared with the Next.js BFF only; empty means "not configured" and every request fails.
     bff_api_secret: str = ""
     # Login role api_gateway via the transaction pooler; empty: business routes answer 503.

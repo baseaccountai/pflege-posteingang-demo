@@ -10,7 +10,7 @@ Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `MISTRAL_CHAT_MODEL` | API | bei `mistral` | `mistral-small-latest` | nein | Feldvorschläge, Antworten |
 | `MISTRAL_OCR_MODEL` | API | bei `mistral` | aus ADR 0003 | nein | OCR |
 | `MISTRAL_EMBED_MODEL` | API | bei `mistral` | `mistral-embed` | nein | Embeddings (1024) |
-| `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBED_MODEL` | API | bei `ollama` (Phase 8) | – | nein | lokales LLM |
+| `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBED_MODEL` | API | bei `ollama` (Phase 8) | `http://localhost:11434`, `qwen3:8b`, `bge-m3` | nein | lokales LLM; das Embedding-Modell muss 1024 Dimensionen liefern (sonst `EmbeddingUnavailable`) |
 | `DOCLING_BASE_URL` | API | bei `docling` (Phase 8) | – | nein | lokale OCR |
 | `RAG_MIN_SIMILARITY` | API | nein | `0.35` | nein | Treffer-Schwelle (F05) |
 | `OIDC_ISSUER` | Web, API | ja | – | nein | IdP-Adresse |

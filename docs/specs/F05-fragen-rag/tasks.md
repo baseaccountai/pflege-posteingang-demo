@@ -2,7 +2,7 @@
 
 - [x] **1. Chunker** — `F05-AC2`, `F05-AC3`
   - [x] `tests/rag/test_chunker.py` mit Muster-Markdown (Arztbrief mit Abschnitten, Medikationsplan mit Tabelle, sehr langer Abschnitt, Riesentabelle) → rot → `chunker.py` → grün · Commit `feat(api): add structure-aware chunker`
-- [ ] **2. Embedding-Schnittstelle + Mistral-Adapter** — `F05-AC13` · Tests (`respx`, Batch, Dimension) → rot → grün · Commit
+- [x] **2. Embedding-Schnittstelle + Mistral-Adapter** — `F05-AC13` · Tests (`respx`, Batch, Dimension) → rot → grün · Commit
 - [ ] **3. Migration `chunks` + `match_chunks`** — `F05-AC4`, `F05-AC5`
   - [ ] RLS-Tests: WB2 findet keine WB1-Chunks; Bewohnerfilter wirkt; anderes Modell ignoriert; WB2 kann WB1-Chunks nicht löschen → rot → Migration → grün · Commit `feat(db): add vector chunks with ward isolation`
 - [ ] **3a. Vorberechnete Seed-Chunks (F10 Aufgabe 3)** — `F10-AC1`, `F10-AC6` · nach Aufgabe 3: `apps/api/scripts/build_seed_chunks.py` einmalig mit echtem Mistral (Schlüssel des Bewerbers, eigenes Terminal), `supabase/seed/chunks.jsonl` committen, Reset lädt sie; Test: Laden ohne Netz → Chunks vorhanden, `indexing_status = done` · Commit
