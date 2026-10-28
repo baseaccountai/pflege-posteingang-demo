@@ -20,7 +20,7 @@ Bewusst **schlank selbst gebaut** statt LlamaIndex/LangChain (Design 11 überlä
 | Chunker | `apps/api/app/rag/chunker.py` | Markdown-Abschnitte (Überschriften `#`–`###`), Tabellenblöcke atomar, rekursiver Rückfall mit Überlappung; Tokenzählung über einfache Schätzung (Zeichen/4), austauschbar |
 | Embeddings | `apps/api/app/providers/embeddings/{base,mistral,ollama}.py` | `embed(texts) -> list[list[float]]`, `dimension`; Mistral `mistral-embed` (1024) |
 | Indexer | `rag/indexer.py` | je Dokument in **einer** Transaktion unter `as_principal`: alte Chunks löschen, neue einfügen, `indexing_status = done`; Fehler → `failed` (AC1a); Seite aus `documents.ocr_pages` |
-| Retrieval | `rag/retrieval.py` | Namensauflösung, `match_chunks`, Schwellwert `RAG_MIN_SIMILARITY` (Start 0,35, an Musterdaten kalibrieren) |
+| Retrieval | `rag/retrieval.py` | Namensauflösung, `match_chunks`, Schwellwert `RAG_MIN_SIMILARITY` (Start 0,35; kalibriert 28.10.2026 mit mistral-embed auf 0,72 – siehe Aufgabe 8) |
 | Antwort | `rag/answer.py` | Prompt-Aufbau mit nummerierten Quellen `[Q1]…[Q6]`; Antwortprüfung: mindestens ein Zitat, alle Zitate ⊆ abgerufene Quellen, sonst Ersatzantwort (AC8a); `max_tokens` 600 |
 | Fragen-UI | `apps/web/src/app/fragen/page.tsx` | Chat (Client-State), Bewohner-Filter (`?bewohner=`), Quellen-Chips, Modellhinweis |
 

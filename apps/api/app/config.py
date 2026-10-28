@@ -27,8 +27,10 @@ class Settings(BaseSettings):
     ollama_chat_model: str = "qwen3:8b"
     # Must give 1024-dimensional vectors like mistral-embed (column chunks.embedding).
     ollama_embed_model: str = "bge-m3"
-    # Questions (F05): chunks below this cosine similarity are no hit; calibrated in Task 8.
-    rag_min_similarity: float = 0.35
+    # Questions (F05): chunks below this cosine similarity are no hit. Calibrated with
+    # mistral-embed on the seed (F05 Task 8, 28.10.2026): real hits 0.77-0.86, an off-topic
+    # question 0.75 - so 0.72 keeps every real hit; the citation check catches the rest.
+    rag_min_similarity: float = 0.72
     # Shared with the Next.js BFF only; empty means "not configured" and every request fails.
     bff_api_secret: str = ""
     # Login role api_gateway via the transaction pooler; empty: business routes answer 503.

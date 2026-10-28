@@ -12,7 +12,7 @@ Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `MISTRAL_EMBED_MODEL` | API | bei `mistral` | `mistral-embed` | nein | Embeddings (1024) |
 | `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBED_MODEL` | API | bei `ollama` (Phase 8) | `http://localhost:11434`, `qwen3:8b`, `bge-m3` | nein | lokales LLM; das Embedding-Modell muss 1024 Dimensionen liefern (sonst `EmbeddingUnavailable`) |
 | `DOCLING_BASE_URL` | API | bei `docling` (Phase 8) | – | nein | lokale OCR |
-| `RAG_MIN_SIMILARITY` | API | nein | `0.35` | nein | Treffer-Schwelle (F05) |
+| `RAG_MIN_SIMILARITY` | API | nein | `0.72` | nein | Treffer-Schwelle (F05), kalibriert mit mistral-embed am 28.10.2026; ein lokales Modell braucht eigene Kalibrierung |
 | `OIDC_ISSUER` | Web, API | ja | – | nein | IdP-Adresse |
 | `OIDC_CLIENT_ID` | Web | ja | – | nein | OIDC-Client |
 | `OIDC_CLIENT_SECRET` | Web | bei Basic (Spike S2) | – | **ja** | Client-Authentifizierung |
