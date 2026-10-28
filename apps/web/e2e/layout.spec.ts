@@ -11,6 +11,19 @@ import { row, sample, upload } from "./support/inbox";
 const BANNER = "MUSTERDATEN · keine echten Personen";
 const DISCLAIMER = "Unabhängige Bewerbungsdemo, inspiriert von KLARA — kein Produkt der Hochschule Anhalt";
 
+// F11-AC11: the production build causes no CSP violation on any page type.
+const violations = new WeakMap<Page, string[]>();
+test.beforeEach(({ page }) => {
+  const found: string[] = [];
+  violations.set(page, found);
+  page.on("console", (message) => {
+    if (/Content Security Policy|Content-Security-Policy/i.test(message.text())) found.push(message.text());
+  });
+});
+test.afterEach(({ page }) => {
+  expect(violations.get(page), "CSP violations").toEqual([]);
+});
+
 async function expectFrame(page: Page) {
   await expect(page.getByText(BANNER, { exact: true })).toBeVisible();
   await expect(page.getByTestId("disclaimer")).toHaveText(DISCLAIMER);

@@ -13,7 +13,7 @@
 
 ## Sicherheitsheader
 
-- `apps/web/src/proxy.ts` (Next 16 „Proxy“, früher Middleware) erzeugt pro Anfrage eine Nonce und setzt die CSP: `default-src 'self'; script-src 'self' 'nonce-…' 'strict-dynamic'; style-src 'self' 'nonce-…'; img-src 'self' blob: data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self' <OIDC_ISSUER>`. Alle App-Seiten werden dadurch pro Anfrage gerendert.
+- `apps/web/src/proxy.ts` (Next 16 „Proxy“, früher Middleware) erzeugt pro Anfrage eine Nonce und setzt die CSP: `default-src 'self'; script-src 'self' 'nonce-…' 'strict-dynamic'; style-src 'self' 'nonce-…'; img-src 'self' blob: data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self' <OIDC_ISSUER>`. Alle App-Seiten werden dadurch pro Anfrage gerendert. *(Umsetzung 28.10.2026: `cacheComponents`/Partial Prerendering dafür abgeschaltet – vorgerenderte Seitenhüllen können keine Nonce tragen, Next.js-Leitfaden „Content Security Policy“; die CSP gilt nicht für `/api/*` – keine HTML-Seiten, das Original-PDF soll im Browser-Viewer laufen – und nicht für statische Dateien mit eigenen Headern.)*
 - Statische Dateien (`offline.html`, Icons) erhalten über `next.config.ts` `headers()` eine feste CSP ohne Skripte.
 - Übrige Header für alle Pfade in `next.config.ts`.
 - API: `CORSMiddleware` ohne erlaubte Origins.

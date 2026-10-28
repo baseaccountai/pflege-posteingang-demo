@@ -1,5 +1,6 @@
 // @vitest-environment node
 // F01-AC15: writing requests need Origin == APP_ORIGIN, otherwise 403.
+// F11-AC11: every page gets its own nonce and the Content-Security-Policy.
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -39,4 +40,27 @@ describe("proxy (CSRF)", () => {
     vi.stubEnv("APP_ORIGIN", "");
     expect(proxy(request("POST", ORIGIN)).status).toBe(403);
   });
+});
+
+describe("proxy (Content-Security-Policy)", () => {
+  const get = (path: string) => proxy(new NextRequest(`${ORIGIN}${path}`));
+
+  it("gives every page a fresh nonce in the CSP and passes it to the rendering", () => {
+    const first = get("/bewohner");
+    const second = get("/bewohner");
+    const nonce = (response: Response) =>
+      /'nonce-([^']+)'/.exec(response.headers.get("content-security-policy") ?? "")?.[1];
+    expect(nonce(first)).toBeTruthy();
+    expect(nonce(first)).not.toBe(nonce(second));
+    // Next.js reads the nonce from the request's CSP header for its own scripts.
+    expect(first.headers.get("x-middleware-request-content-security-policy")).toContain(`'nonce-${nonce(first)}'`);
+    expect(first.headers.get("x-middleware-request-x-nonce")).toBe(nonce(first));
+  });
+
+  it.each(["/api/documents/d1/file", "/api/questions", "/offline.html", "/sw.js", "/icons/icon-192.png", "/manifest.webmanifest", "/muster/5eed.pdf"])(
+    "leaves %s without the page CSP (no HTML page, or fixed headers)",
+    (path) => {
+      expect(get(path).headers.get("content-security-policy")).toBeNull();
+    },
+  );
 });

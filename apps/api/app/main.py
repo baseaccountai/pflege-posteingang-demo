@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import current_principal
@@ -87,6 +88,10 @@ def create_app(
                 content={"error_code": "maintenance", "message": MAINTENANCE_MESSAGE},
             )
         return await call_next(request)
+
+    # F11-AC12: no browser origin may call the API; only the BFF does, server to server.
+    # Spelled out on purpose, so nobody "fixes" a CORS error by allowing an origin here.
+    app.add_middleware(CORSMiddleware, allow_origins=[], allow_credentials=False)
 
     app.include_router(documents_router)
     app.include_router(residents_router)
