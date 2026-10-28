@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe
 
 COMPOSE := docker compose -f infra/docker-compose.yml
 SUPABASE := pnpm dlx supabase@2.122.0
@@ -47,6 +47,10 @@ samples:
 # reads MISTRAL_API_KEY from .env and never prints it
 seed-chunks:
 	cd apps/api && PYTHONPATH=../.. uv run python -m scripts.build_seed_chunks ../../.env
+
+# Real test of questions (F05 Task 8): resets the LOCAL Supabase, asks Mistral 6 questions
+rag-probe:
+	cd apps/api && PYTHONPATH=../.. uv run python -m scripts.rag_probe ../../.env
 
 # Static sample record for /muster from the seed (F10-AC14); resets the local Supabase first
 sample-record:
