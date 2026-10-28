@@ -22,7 +22,7 @@ Repo-Links werden aus `NEXT_PUBLIC_REPO_URL` + `repoPath` gebildet (Repo ist zun
 | RAG, agentenbasierte KI | gefordert | `/fragen` (Agent: Stufe 2) | `apps/api/app/rag/` |
 | IT-/API-Sicherheit, OAuth 2.0/OIDC | gefordert | Rollenwechsel, `/bewohner` | `apps/api/app/auth/`, `supabase/migrations/` |
 | Lokale Modelle | wünschenswert | – | `infra/` (Phase 8) |
-| Docker, CI/CD | wünschenswert | – | `infra/docker-compose.yml`, `.github/workflows/` |
+| Docker, CI/CD | wünschenswert | – | `apps/*/Dockerfile`, `infra/local-stack.sh`, `.github/workflows/` |
 | Sicherheitsrisiken von LLM-Anwendungen | wünschenswert | Stufe 2 | `docs/security/threat-model.md` |
 
 ## Tests je Ebene

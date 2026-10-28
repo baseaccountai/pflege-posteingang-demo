@@ -85,9 +85,9 @@ export const REQUIREMENTS: RequirementEntry[] = [
     text: "Docker, CI/CD",
     level: "wuenschenswert",
     how:
-      "Docker Compose für den lokalen Betrieb; GitHub Actions für Tests, nächtlichen Reset und " +
-      "Keep-alive der Datenbank.",
-    repoPaths: ["infra/docker-compose.yml", ".github/workflows/"],
+      "Docker-Images für Web und API, lokaler Betrieb mit `make up`; GitHub Actions für Tests, " +
+      "nächtlichen Reset und Keep-alive der Datenbank.",
+    repoPaths: ["apps/api/Dockerfile", "apps/web/Dockerfile", "infra/local-stack.sh", ".github/workflows/"],
     status: "live",
   },
   {

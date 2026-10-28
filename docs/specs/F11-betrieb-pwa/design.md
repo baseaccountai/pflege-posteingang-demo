@@ -18,13 +18,15 @@
 - Übrige Header für alle Pfade in `next.config.ts`.
 - API: `CORSMiddleware` ohne erlaubte Origins.
 
-## Lokal (Docker Compose)
+## Lokal (Docker, ohne Compose)
+
+*28.10.2026, Entscheidung Bewerber: kein Compose-Plugin; `infra/local-stack.sh up|up-test|down` startet dieselben Dienste per `docker run --network host`.*
 
 | Dienst | Quelle | Start |
 |---|---|---|
 | Supabase | `supabase start` (CLI, eigene Container) | `make up` ruft es vor Compose auf |
 | `web`, `api` | vorhandene Dockerfiles, **Host-Netzwerk** (Browser, Container und Supabase erreichen sich einheitlich als `localhost`; gleicher OIDC-Issuer für Browser und BFF), lokale Rollen-Passwörter wie in den Tests (`scripts/local_db_roles.py`) | `make up` |
-| `oidc-mock` | `ghcr.io/navikt/mock-oauth2-server`, Konfiguration `infra/oidc-mock/config.json` (Login-Formular, Rollen als Claims eintragen), Port 18090 (E2E nutzt 18080) | `make up-test` (Zusatzdatei `infra/docker-compose.test.yml`) |
+| `oidc-mock` | `ghcr.io/navikt/mock-oauth2-server`, Konfiguration `infra/oidc-mock/config.json` (Login-Formular, Rollen als Claims eintragen), Port 18090 (E2E nutzt 18080) | `make up-test` |
 | `keycloak`, `ollama`, `docling` | Phase 8 | – |
 
 ## CI/CD

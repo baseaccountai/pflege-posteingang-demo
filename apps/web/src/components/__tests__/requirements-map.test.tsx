@@ -28,8 +28,8 @@ describe("RequirementsMap", () => {
   it("links into the repository on GitHub", () => {
     render(<RequirementsMap />);
     const docker = screen.getByTestId("requirement-docker-cicd");
-    const link = within(docker).getByRole("link", { name: "infra/docker-compose.yml" });
-    expect(link.getAttribute("href")).toMatch(/\/blob\/main\/infra\/docker-compose\.yml$/);
+    const link = within(docker).getByRole("link", { name: "infra/local-stack.sh" });
+    expect(link.getAttribute("href")).toMatch(/\/blob\/main\/infra\/local-stack\.sh$/);
     expect(link).toHaveAttribute("target", "_blank");
   });
 

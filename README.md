@@ -21,7 +21,7 @@ Pseudonymisierung vor dem LLM, Prompt-Injection-Erkennung.
 
 ## Schnellstart lokal
 
-Voraussetzungen: Python ≥ 3.12 mit [uv](https://docs.astral.sh/uv/), Node 22 mit pnpm, Docker mit Compose-Plugin, make.
+Voraussetzungen: Python ≥ 3.12 mit [uv](https://docs.astral.sh/uv/), Node 22 mit pnpm, Docker (ohne Compose-Plugin), make.
 
 ```bash
 make setup  # einmalig: Abhängigkeiten + Playwright-Browser
@@ -33,7 +33,7 @@ make up       # wie oben, aber echte Anbieter und IdP aus .env
 make down
 ```
 
-Lokal laufen Web (http://localhost:3000) und API (http://localhost:8000) im Host-Netzwerk von Docker; Supabase kommt über die CLI (`make db-start`). Im Test-IdP (http://localhost:18090/default) meldet man sich mit beliebigem Namen an und trägt die Rolle als Claims ein, z. B. `{"roles": ["nurse_wb1"]}` (Rollen: `nurse_wb1`, `nurse_wb2`, `pdl`).
+Lokal laufen Web (http://localhost:3000) und API (http://localhost:8000) per `docker run` im Host-Netzwerk (`infra/local-stack.sh`); Supabase kommt über die CLI (`make db-start`). Im Test-IdP (http://localhost:18090/default) meldet man sich mit beliebigem Namen an und trägt die Rolle als Claims ein, z. B. `{"roles": ["nurse_wb1"]}` (Rollen: `nurse_wb1`, `nurse_wb2`, `pdl`).
 
 ## Dokumentation
 
