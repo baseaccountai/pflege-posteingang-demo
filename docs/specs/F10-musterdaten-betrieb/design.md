@@ -30,12 +30,12 @@ Da die Dateien in Postgres liegen (Entscheidung F02), ist der gesamte Reset eine
 
 ## Kosten- und Missbrauchsschutz
 
-- `quota_limits(kind, scope, max_count)`: `upload/session/5` (gilt für die **ganze Sitzung**, Zeitraum `lifetime`), `ocr_page/global/100`, `llm_call/global/300`, `embed_chunk/global/500` (je Kalendertag in `Europe/Berlin`); per Migration, änderbar per SQL, nicht durch Aufrufer.
+- `quota_limits(kind, scope, max_count)`: `upload/session/5` (gilt für die **ganze Sitzung**, Zeitraum `lifetime`), `ocr_page/global/50`, `llm_call/global/100`, `embed_chunk/global/500` (je Kalendertag in `Europe/Berlin`; *28.10.2026 von 100/300 gesenkt, damit die Kostenrechnung ≤ 0,50 € ergibt, Migration `20261028020000_f10_cost_limits.sql`*); per Migration, änderbar per SQL, nicht durch Aufrufer.
 - `usage_counters(period, kind, subject, count)` mit `period` = Datum (`2026-10-25`) für globale Kontingente bzw. `lifetime` für Sitzungskontingente; Primärschlüssel `(period, kind, subject)`.
 - `app.consume_quota(kind text, subject text, amount int) returns boolean`: `security definer`, Eigentümer `quota_owner`, `set search_path = app, pg_temp`; `amount` muss 1–20 sein; Limit und Zeitraum werden aus `quota_limits` gelesen; ist `amount` größer als das Limit, sofort `false`; sonst `insert … values (period, kind, subject, amount) on conflict (period, kind, subject) do update set count = usage_counters.count + excluded.count where usage_counters.count + excluded.count <= limit returning` – damit ist auch die Erstbuchung begrenzt; `revoke execute … from public, anon`, `grant execute … to authenticated`. `subject` ist `'global'` oder der Sitzungs-Hash aus dem BFF-Nachweis (F01-AC8).
 - Buchung **vor** dem externen Aufruf; wird der Aufruf nicht ausgeführt, verfällt die Buchung (konservativ).
 - Längenbegrenzung: Extraktion ≤ 20 000 Zeichen Eingabe / 1500 Tokens Ausgabe; Fragen ≤ 6 Chunks × 800 Tokens / 600 Tokens Ausgabe.
-- Kostenrechnung in ADR 0003 (vor Phase 3, mit den Preisen aus dem Mistral-Konto): `Tagesmaximum = OCR-Seiten × Seitenpreis + LLM-Aufrufe × (max. Eingabe × Eingabepreis + max. Ausgabe × Ausgabepreis) + Embedding-Chunks × 800 × Embeddingpreis`; Limits so wählen, dass das Ergebnis ≤ 0,50 € ist (AC11). Zusätzlich Monatslimit im Mistral-Konto (10 €).
+- Kostenrechnung in ADR 0003 und als Code in `apps/api/app/costs.py` (DB-Test `tests/rls/test_daily_cost.py` liest die Limits aus `quota_limits`): `Tagesmaximum = OCR-Seiten × Seitenpreis + LLM-Aufrufe × (max. Eingabe × Eingabepreis + max. Ausgabe × Ausgabepreis) + Embedding-Chunks × 800 × Embeddingpreis`; Limits so wählen, dass das Ergebnis ≤ 0,50 € ist (AC11). Zusätzlich Monatslimit im Mistral-Konto (10 €).
 
 ## Hinweise in der App
 

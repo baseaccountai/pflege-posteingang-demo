@@ -188,3 +188,10 @@ async def test_the_fake_llm_reads_the_sample_documents(lines, doc_type, meds):
     assert data["resident_name"]["value"] == "Hr. Muster-Bauer"
     assert len(data["medications"]) == meds
     assert all(m["evidence_found"] for m in data["medications"])
+
+
+async def test_the_answer_is_limited_to_1500_tokens():
+    # F10-AC11: the output limit is part of the daily cost calculation (app/costs.py).
+    llm = FakeLlm([answer()])
+    await extract(llm)
+    assert llm.max_tokens == [1500]

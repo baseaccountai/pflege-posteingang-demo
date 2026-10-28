@@ -45,8 +45,9 @@ async def book(db, kind: str, amount: int, subject: str = "global") -> bool:
 def test_limits_from_the_migration():
     assert dict(admin("select kind || '/' || scope, max_count from public.quota_limits")) == {
         "upload/session": 5,
-        "ocr_page/global": 100,
-        "llm_call/global": 300,
+        # Lowered on 28.10.2026 so that a full day costs at most 0.50 EUR (F10-AC11).
+        "ocr_page/global": 50,
+        "llm_call/global": 100,
         "embed_chunk/global": 500,
     }
 

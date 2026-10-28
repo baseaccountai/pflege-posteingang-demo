@@ -87,9 +87,11 @@ class FakeLlm:
     def __init__(self, answers: list[dict | Exception] | None = None):
         self.answers = list(answers or [])
         self.calls: list[tuple[str, str]] = []
+        self.max_tokens: list[int] = []  # the output limit of every call (F10-AC11)
 
     async def structured(self, system: str, user: str, schema: dict, max_tokens: int) -> dict:
         self.calls.append((system, user))
+        self.max_tokens.append(max_tokens)
         if self.answers:
             answer = self.answers.pop(0)
             if isinstance(answer, Exception):
