@@ -1,8 +1,8 @@
 name: CI
 
+# F11-AC6: every push (any branch) and every pull request.
 on:
   push:
-    branches: [main]
   pull_request:
 
 permissions:

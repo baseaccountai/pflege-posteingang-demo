@@ -8,10 +8,11 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
-  workflow_dispatch: # manual run for the same checks, e.g. on a throwaway branch
+  workflow_dispatch: # manual re-run, only for a main commit whose CI push run is green
 
 permissions:
   contents: read
+  actions: read # look up the CI run for a manual start
 
 concurrency:
   group: deploy
@@ -26,9 +27,29 @@ env:
 jobs:
   migrate:
     name: Migrations (Supabase)
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # A CI run counts only if a push to this repository started it: a pull request from a
+    # fork whose branch is called "main" also matches the branch filter above.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
+      - name: Manual start only for main with green CI
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "Deploy only from main, not from $GITHUB_REF" >&2
+            exit 1
+          fi
+          green=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$DEPLOY_SHA&event=push&status=success" --jq .total_count)
+          if [ "$green" = 0 ]; then
+            echo "No green CI run for $DEPLOY_SHA" >&2
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.DEPLOY_SHA }}
