@@ -14,6 +14,7 @@ import {
   apiFileForSession,
   apiGetForSession,
   apiSend,
+  apiSendForSession,
   bffAssertion,
 } from "../api";
 
@@ -253,6 +254,27 @@ describe("apiFileForSession", () => {
     const isActive = vi.fn().mockResolvedValue(false);
     await expect(
       apiFileForSession("/documents/d1/file", caller, isActive, { env, fetch: pdf() }),
+    ).rejects.toBeInstanceOf(SessionEnded);
+  });
+});
+
+// F05-AC11: an answer that arrives after a role switch is never delivered.
+describe("apiSendForSession", () => {
+  const env = { API_BASE_URL: "http://api.test", BFF_API_SECRET: SECRET };
+  const caller = { sid: SID, accessToken: "access-123" };
+  const answer = () => vi.fn().mockResolvedValue(new Response(JSON.stringify({ answer: "x" }), { status: 200 }));
+
+  it("passes the answer on while the session still exists", async () => {
+    const isActive = vi.fn().mockResolvedValue(true);
+    const result = await apiSendForSession("/questions", caller, { method: "POST" }, isActive, { env, fetch: answer() });
+    expect(result).toEqual({ status: 200, data: { answer: "x" } });
+    expect(isActive).toHaveBeenCalledWith(SID);
+  });
+
+  it("withholds the answer if the session ended meanwhile", async () => {
+    const isActive = vi.fn().mockResolvedValue(false);
+    await expect(
+      apiSendForSession("/questions", caller, { method: "POST" }, isActive, { env, fetch: answer() }),
     ).rejects.toBeInstanceOf(SessionEnded);
   });
 });

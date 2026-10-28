@@ -1,6 +1,6 @@
 // F10-AC4: banner and footer on every page type of the app, on desktop and phone, and no
 // sideways scrolling on the phone. The IdP's login pages are not ours and are left out.
-// Still to come with their features: Fragen (F05), /projekt (F09), Offline-Seite (F11).
+// Still to come with their features: /projekt (F09), Offline-Seite (F11).
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -60,6 +60,12 @@ test.describe("as WB1 nurse", () => {
     await expectFrame(page);
     await page.goto(`/bewohner/${WB2_RESIDENT.id}`);
     await expect(page.getByRole("heading", { level: 1, name: "Nicht gefunden oder kein Zugriff" })).toBeVisible();
+    await expectFrame(page);
+  });
+
+  test("questions", async ({ page }) => {
+    await page.goto("/fragen");
+    await expect(page.getByRole("heading", { level: 1, name: "Fragen an die Dokumente" })).toBeVisible();
     await expectFrame(page);
   });
 

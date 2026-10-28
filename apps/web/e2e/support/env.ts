@@ -41,7 +41,9 @@ export const API_ENV = {
   // OCR stand-in that "reads" the files in samples/ (F02, no Mistral key in tests).
   OCR_PROVIDER: "fake",
   FAKE_OCR_SAMPLES: SAMPLES_DIR,
-  LLM_PROVIDER: "fake", // rule-based reading of the sample documents
+  LLM_PROVIDER: "fake", // rule-based reading of the sample documents; fake embeddings too
+  // Fake vectors are only similar through shared words, so the e2e threshold is lower.
+  RAG_MIN_SIMILARITY: "0.1",
   DATABASE_URL: GATEWAY_DSN,
   OIDC_ISSUER: MOCK_OIDC_ISSUER,
   OIDC_AUDIENCE: "default",

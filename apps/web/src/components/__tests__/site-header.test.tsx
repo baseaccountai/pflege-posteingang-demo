@@ -15,6 +15,13 @@ describe("SiteHeader", () => {
     expect(new URL(form.action).search).toBe("");
   });
 
+  it("links inbox, residents and questions when signed in", () => {
+    render(<SiteHeader roleLabel="Pflegekraft WB1" />);
+    expect(screen.getByRole("link", { name: "Posteingang" })).toHaveAttribute("href", "/posteingang");
+    expect(screen.getByRole("link", { name: "Bewohner" })).toHaveAttribute("href", "/bewohner");
+    expect(screen.getByRole("link", { name: "Fragen" })).toHaveAttribute("href", "/fragen");
+  });
+
   it("shows no logout button without a session", () => {
     render(<SiteHeader roleLabel={null} />);
     expect(screen.getByRole("banner")).toHaveTextContent("Nicht angemeldet");

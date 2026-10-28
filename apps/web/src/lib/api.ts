@@ -172,3 +172,19 @@ export async function apiFileForSession(
   if (!(await isActive(caller.sid))) throw new SessionEnded("session ended during the download");
   return file;
 }
+
+/**
+ * Like apiSend, but the answer is only released if the session still exists afterwards:
+ * an answer to a WB1 question that arrives after a switch to WB2 is dropped (F05-AC11).
+ */
+export async function apiSendForSession(
+  path: string,
+  caller: Caller,
+  init: { method: "POST"; body?: BodyInit; headers?: Record<string, string> },
+  isActive: (sid: string) => Promise<boolean>,
+  deps: Deps = {},
+): Promise<{ status: number; data: unknown }> {
+  const result = await apiSend(path, caller, init, deps);
+  if (!(await isActive(caller.sid))) throw new SessionEnded("session ended during the call");
+  return result;
+}

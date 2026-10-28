@@ -21,6 +21,9 @@ export function SiteHeader({ roleLabel }: { roleLabel?: string | null }) {
             <Link href="/bewohner" className="underline">
               Bewohner
             </Link>
+            <Link href="/fragen" className="underline">
+              Fragen
+            </Link>
           </nav>
           <span>{roleLabel}</span>
           {/* Plain form POST: a hard page change, so no client cache keeps old data (AC13). */}
