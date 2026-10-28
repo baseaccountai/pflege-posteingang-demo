@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks
 
 COMPOSE := docker compose -f infra/docker-compose.yml
 SUPABASE := pnpm dlx supabase@2.122.0
@@ -42,6 +42,11 @@ e2e:
 # Regenerates the sample documents in samples/ (reproducible, commit the result)
 samples:
 	cd apps/api && PYTHONPATH=../.. uv run python -m samples.generate ../../samples
+
+# Precomputed seed chunks with real Mistral embeddings (F10-AC6); run by the applicant,
+# reads MISTRAL_API_KEY from .env and never prints it
+seed-chunks:
+	cd apps/api && PYTHONPATH=../.. uv run python -m scripts.build_seed_chunks ../../.env
 
 # Static sample record for /muster from the seed (F10-AC14); resets the local Supabase first
 sample-record:
