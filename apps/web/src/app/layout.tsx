@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { Suspense } from "react";
 
 import { AppNav } from "@/components/app-nav";
+import { THEME_COLOR } from "@/app/manifest";
 import { DemoBanner } from "@/components/demo-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SessionSync } from "@/components/session-sync";
@@ -24,7 +25,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Pflege-Posteingang",
   description: "Bewerbungsdemo: sichere KI für Pflegedokumente (Musterdaten)",
+  // F11-AC1: Safari/iOS reads these instead of the manifest.
+  appleWebApp: { capable: true, title: "Posteingang", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
+
+export const viewport: Viewport = { themeColor: THEME_COLOR };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

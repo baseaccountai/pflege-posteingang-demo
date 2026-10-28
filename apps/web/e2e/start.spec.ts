@@ -33,3 +33,13 @@ test("the project page is a placeholder with links to architecture, specs and re
     await expect(page.getByRole("link", { name })).toHaveAttribute("href", /github\.com\/baseaccountai\/pflege-posteingang-demo/);
   }
 });
+
+test("the app can be installed: manifest and apple touch icon are linked (F11-AC1)", async ({ page }) => {
+  await page.goto("/");
+  const href = await page.locator('link[rel="manifest"]').getAttribute("href");
+  const manifest = await (await page.request.get(href!)).json();
+  expect(manifest).toMatchObject({ name: "Pflege-Posteingang", display: "standalone", theme_color: "#115e59" });
+  const apple = await page.locator('link[rel="apple-touch-icon"]').getAttribute("href");
+  expect((await page.request.get(apple!)).headers()["content-type"]).toContain("image/png");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#115e59");
+});
