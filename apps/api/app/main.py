@@ -21,6 +21,7 @@ from app.providers.llm import LlmProvider, create_llm_provider
 from app.providers.ocr import OcrProvider, create_ocr_provider
 from app.quotas import consume
 from app.rag.indexer import Indexer
+from app.rag.routes import router as questions_router
 from app.residents.routes import router as residents_router
 
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
@@ -55,6 +56,7 @@ def create_app(
         app.state.database = Database(settings.database_url) if settings.database_url else None
         app.state.pipeline = None
         app.state.indexer = None
+        app.state.llm, app.state.embeddings = llm, embeddings
         if app.state.database:
             await app.state.database.open()
             database = app.state.database
@@ -88,6 +90,7 @@ def create_app(
 
     app.include_router(documents_router)
     app.include_router(residents_router)
+    app.include_router(questions_router)
     # The BFF assertion check reads its secret through this dependency.
     app.dependency_overrides[get_settings] = lambda: settings
 

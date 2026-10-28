@@ -2,7 +2,8 @@
 
 With prepared answers it returns them in order (tests). Without, it reads the document in
 the prompt with simple rules - enough for the sample documents in samples/ - and quotes
-every value verbatim, like a well-behaved model would.
+every value verbatim, like a well-behaved model would. A question (schema with "answer",
+F05) is answered with the first text line of source Q1 and cites it.
 """
 
 import re
@@ -97,5 +98,18 @@ class FakeLlm:
             if isinstance(answer, Exception):
                 raise answer
             return answer
+        if "answer" in schema.get("properties", {}):
+            return answer_question(user)
         document = user.split("<<<DOKUMENT", 1)[-1].rsplit("DOKUMENT>>>", 1)[0]
         return read_document(document)
+
+
+FIRST_SOURCE = re.compile(r'<quelle id="Q1"[^>]*>\n(.*?)\n</quelle>', re.S)
+
+
+def answer_question(user: str) -> dict:
+    """The first line of source Q1 that is not a heading, cited as [Q1]."""
+    match = FIRST_SOURCE.search(user)
+    lines = [line.strip() for line in (match.group(1) if match else "").splitlines()]
+    text = next((line for line in lines if line and not line.startswith("#")), "")
+    return {"answer": f"{text} [Q1]" if text else "Dazu steht nichts in den Quellen."}
