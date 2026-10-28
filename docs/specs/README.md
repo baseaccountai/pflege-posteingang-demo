@@ -20,6 +20,18 @@ Gemeinsames Datenmodell aller Features: [`datenmodell.md`](datenmodell.md) · Al
 
 Bei Zeitnot wird zuerst F11-PWA-Feinschliff verschoben, nie Rechte- oder Sicherheitskriterien.
 
+## Umsetzungsreihenfolge Stufe 2
+
+Leitfaden ist ein Rundgang von fünf Minuten: (1) präpariertes Dokument → „Angriff erkannt“ (F07), (2) Frage mit „Das hat das KI-Modell gesehen“ (F06), (3) Agent gleicht Medikation ab und schlägt eine Wiedervorlage vor, Bestätigung (F08), (4) Agent lehnt Dosisänderung und WB2 ab (F08), (5) PDL-Protokoll und Testbericht (F12, F13).
+
+| Schritt | Phase | Inhalt |
+|---|---|---|
+| 0 | 6 | F08 Aufgabe 1: Spike Token Exchange (Bewerber schaltet Zitadel-Beta ein) – Ergebnis vor allem anderen, weil RLS und Werkzeuge darauf aufbauen |
+| 1 | 6 | F06 (Gateway zuerst, alle Modellaufrufe laufen danach hindurch) → F07 |
+| 2 | 7 | F08 (RLS mit Bestätigung vor Werkzeugen und Oberfläche) → F12 → F13 |
+
+**Bei Zeitnot (nach Rückfrage):** zuerst F13-Korpusgröße und Bericht kürzen, dann F12-Filter, dann die Oberfläche „Das hat das KI-Modell gesehen“ vereinfachen – nie RLS, Bestätigungspflicht, Prüfung vor dem Feldvorschlag oder die Pseudonymisierung selbst.
+
 ## Ablauf
 
 1. Ordner aus [`_template/`](_template/) kopieren.
@@ -36,14 +48,14 @@ Bei Zeitnot wird zuerst F11-PWA-Feinschliff verschoben, nie Rechte- oder Sicherh
 | F03 | Felder vorschlagen & freigeben | Muss | 1 | freigegeben |
 | F04 | Bewohnerakte mit Herkunft | Muss | 1 | freigegeben |
 | F05 | Fragen an Dokumente (RAG) mit Quellen | Muss | 1 | freigegeben |
-| F06 | Pseudonymisierung vor dem LLM | Muss | 2 | offen |
-| F07 | Prompt-Injection-Schutz + Testdokument | Muss | 2 | offen |
-| F08 | Agenten-Rechte + bestätigte Aktionen | Muss | 2 | offen |
+| F06 | Pseudonymisierung vor dem LLM | Muss | 2 | Entwurf |
+| F07 | Prompt-Injection-Schutz + Testdokument | Muss | 2 | Entwurf |
+| F08 | Agenten-Rechte + bestätigte Aktionen | Muss | 2 | Entwurf |
 | F09 | Anforderungs-Landkarte | Muss | 1 | freigegeben |
 | F10 | Musterdaten, nächtlicher Reset, Upload-Hinweis | Muss | 1 | freigegeben |
 | F11 | Docker Compose lokal + CI/CD | Muss | 1 | freigegeben |
-| F12 | Protokoll für PDL | Sollte | 2 | offen |
-| F13 | Automatische Sicherheitstests mit Bericht | Sollte | 2 | offen |
+| F12 | Protokoll für PDL | Sollte | 2 | Entwurf |
+| F13 | Automatische Sicherheitstests mit Bericht | Sollte | 2 | Entwurf |
 | F14 | Modellvergleich Cloud vs. lokal | Kann | – | offen |
 
 Status-Werte: `offen` · `Entwurf` · `freigegeben` · `in Umsetzung` · `fertig`

@@ -10,6 +10,12 @@ Stand: 28.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `MISTRAL_CHAT_MODEL` | API | bei `mistral` | `mistral-small-latest` | nein | Feldvorschläge, Antworten |
 | `MISTRAL_OCR_MODEL` | API | bei `mistral` | aus ADR 0003 | nein | OCR |
 | `MISTRAL_EMBED_MODEL` | API | bei `mistral` | `mistral-embed` | nein | Embeddings (1024) |
+| `GUARD_MODEL` | API | nein | `ministral-8b-latest` | nein | Injection-Klassifikator (F07, Stufe 2) |
+| `AGENT_TOKEN_MODE` | API | Stufe 2 | `exchange` | nein | `exchange` (RFC 8693 beim IdP) \| `self_signed` (Rückfall), F08 |
+| `AGENT_ID` | API | Stufe 2 | – | nein | erwartetes `act.sub` (Service-User des Agenten), F08 |
+| `AGENT_CLIENT_ID`, `AGENT_CLIENT_SECRET` | API | bei `exchange` | – | **ja** (Secret) | Zugang des Agenten-Service-Users zum Token-Endpunkt, F08 |
+| `AGENT_SIGNING_KEY` | API | bei `self_signed` | – | **ja** | ES256-Schlüssel für selbst ausgestellte Agenten-Tokens, F08 |
+| `AGENT_TOKEN_MAX_SECONDS` | API | nein | `300` | nein | längste angenommene Laufzeit eines Agenten-Tokens, F08 |
 | `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBED_MODEL` | API | bei `ollama` (Phase 8) | `http://localhost:11434`, `qwen3:8b`, `bge-m3` | nein | lokales LLM; das Embedding-Modell muss 1024 Dimensionen liefern (sonst `EmbeddingUnavailable`) |
 | `DOCLING_BASE_URL` | API | bei `docling` (Phase 8) | – | nein | lokale OCR |
 | `RAG_MIN_SIMILARITY` | API | nein | `0.72` | nein | Treffer-Schwelle (F05), kalibriert mit mistral-embed am 28.10.2026; ein lokales Modell braucht eigene Kalibrierung |
