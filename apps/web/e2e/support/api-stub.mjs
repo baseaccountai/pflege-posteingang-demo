@@ -5,6 +5,7 @@
 //
 //   GET  /residents/51000000-…/record   answers after 7 s (longer than the 5 s timeout)
 //   GET  /residents/50300000-…/record   503 on the first call per id, then the record
+//   GET  /residents/50000000-…/record   500 (an unexpected error: the error page)
 //   POST /documents                     429 daily_quota
 //   POST /follow-ups/{id}/done          503 maintenance (nightly reset)
 import http from "node:http";
@@ -59,6 +60,7 @@ http
     if (get && pathname === "/documents") return send(response, 200, []);
     if (get && recordMatch) {
       const id = recordMatch[1];
+      if (id.startsWith("50000000")) return send(response, 500, { detail: "Interner Fehler" });
       if (id.startsWith("51000000")) return setTimeout(() => send(response, 200, record(id)), 7000);
       if (id.startsWith("50300000")) {
         const calls = (seen.get(id) ?? 0) + 1;
