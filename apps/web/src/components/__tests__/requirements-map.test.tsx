@@ -25,6 +25,13 @@ describe("RequirementsMap", () => {
     expect(within(rag).getByRole("link", { name: "In der App: Fragen" })).toHaveAttribute("href", "/fragen");
   });
 
+  it("marks the part of a live requirement that is still to come (F09-AC4)", () => {
+    render(<RequirementsMap />);
+    const rag = screen.getByTestId("requirement-rag-agents");
+    expect(rag).toHaveTextContent("Agent mit eigenen Rechten: in Arbeit (Stufe 2)");
+    expect(within(rag).getByRole("link", { name: "In der App: Fragen" })).toBeInTheDocument();
+  });
+
   it("links into the repository on GitHub", () => {
     render(<RequirementsMap />);
     const docker = screen.getByTestId("requirement-docker-cicd");

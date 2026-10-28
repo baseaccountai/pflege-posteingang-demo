@@ -11,6 +11,8 @@ export type RequirementEntry = {
   /** Where to see it in the app; none while the feature is still to come (F09-AC4). */
   appHref?: string;
   appLabel?: string;
+  /** Part of a live requirement that only comes in Stufe 2 (F09-AC4). */
+  stage2Part?: string;
   /** Files or folders in the repository; a folder ends with "/". */
   repoPaths: string[];
   status: "live" | "stufe2";
@@ -52,9 +54,10 @@ export const REQUIREMENTS: RequirementEntry[] = [
     level: "gefordert",
     how:
       "Fragen an freigegebene Dokumente: strukturbewusstes Chunking, Vektorsuche nur im eigenen " +
-      "Wohnbereich, Antworten nur mit geprüften Quellenzitaten. Agent mit eigenen Rechten folgt in Stufe 2.",
+      "Wohnbereich, Antworten nur mit geprüften Quellenzitaten.",
     appHref: "/fragen",
     appLabel: "Fragen",
+    stage2Part: "Agent mit eigenen Rechten",
     repoPaths: ["apps/api/app/rag/", "supabase/migrations/20261028040000_f05_chunks.sql"],
     status: "live",
   },
