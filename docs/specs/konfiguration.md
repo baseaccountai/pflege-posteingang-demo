@@ -1,6 +1,6 @@
 # Konfiguration (alle Umgebungsvariablen)
 
-Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen ohne Werte. **Geheim** = nur in `.env` bzw. Secret-Stores, nie im Repo, nie im Chat.
+Stand: 28.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen ohne Werte. **Geheim** = nur in `.env` bzw. Secret-Stores, nie im Repo, nie im Chat.
 
 | Variable | Dienst | Pflicht | Standard | Geheim | Zweck |
 |---|---|---|---|---|---|
@@ -29,11 +29,10 @@ Stand: 25.10.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `SUPABASE_URL` | Skripte | nein | – | nein | Projekt-URL |
 | `SUPABASE_PUBLISHABLE_KEY` | – | nein | – | nein (aber nicht veröffentlichen) | derzeit ungenutzt (kein Browserzugriff auf Supabase) |
 | `SUPABASE_SECRET_KEY` | – | nein | – | **ja** | derzeit ungenutzt; nie im Anfragepfad |
-| `SUPABASE_DB_ADMIN_URL` | Reset-Workflow, Rollen-Skript | ja (GitHub-Secret; lokal in `.env`) | – | **ja** | Reset und Seed (F10, `nightly-reset.yml`); Session-Pooler, Port 5432 |
-| `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (Ref: nein) | `supabase db push` |
+| `SUPABASE_DB_ADMIN_URL` | Reset- und Deploy-Workflow, Rollen-Skript | ja (GitHub-Secret; lokal in `.env`) | – | **ja** | Reset und Seed (F10, `nightly-reset.yml`); Migrationen im Deploy (`supabase db push --db-url`, F11); Session-Pooler, Port 5432. Darum braucht der Deploy kein `SUPABASE_ACCESS_TOKEN` |
 | `ZITADEL_ADMIN_PAT` | Setup-Skript, Passwort-Workflow | für Setup | – | **ja** | Management-API |
 | `ZITADEL_PROJECT_ID` | Setup-Skript, Passwort-Workflow | für Setup | – | nein | Zitadel-Projekt (= `OIDC_AUDIENCE`), schreibt das Setup-Skript |
-| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (IDs: nein) | Web-Deployment |
+| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Deploy-Workflow | ja (nur GitHub) | – | **ja** (IDs: nein) | Web-Deployment (`deploy.yml`, nur nach grüner CI auf `main`); Token unter vercel.com → Account Settings → Tokens, IDs unter Settings → General |
 | `VERCEL_API_PROJECT_ID` | Deploy-Workflow | ja (nur GitHub) | – | nein | API-Deployment (zweites Vercel-Projekt, ADR 0011; ersetzt `KOYEB_*`) |
 | `NEXT_PUBLIC_REPO_URL` | Web | ja | – | nein | Repo-Links der Landkarte (F09) |
 
