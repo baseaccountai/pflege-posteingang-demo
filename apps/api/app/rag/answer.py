@@ -22,6 +22,8 @@ from app.auth.principal import Principal
 from app.privacy.gateway import ModelGateway
 from app.providers.llm.base import LlmInvalidOutput
 from app.rag.retrieval import Hit
+from app.security.delimiters import defuse
+from app.security.output import unsafe_output
 
 NO_EVIDENCE = "Dazu konnte ich keine belegte Antwort in den Dokumenten finden."
 MAX_OUTPUT_TOKENS = 600
@@ -32,7 +34,7 @@ DOC_TYPE_LABELS = {
     "sonstiges": "Dokument",
 }
 CITATION = re.compile(r"\[Q(\d+)\]")
-DELIMITER = re.compile(r"</?\s*(quelle|dokumente)\b", re.IGNORECASE)
+TAGS = ("quelle", "dokumente")
 
 SYSTEM_PROMPT = """Du beantwortest Fragen von Pflegekräften zu Dokumenten aus der Bewohnerakte.
 Regeln:
@@ -53,7 +55,7 @@ ANSWER_SCHEMA = {
 
 def _defuse(text: str) -> str:
     """ "</quelle>" in a document becomes "‹/quelle>": readable, but no longer a delimiter."""
-    return DELIMITER.sub(lambda m: "‹" + m.group(0)[1:], text)
+    return defuse(text, TAGS)
 
 
 def _attribute(value: object) -> str:
@@ -121,6 +123,8 @@ async def answer_with_sources(
         text = raw.get("answer", "") if isinstance(raw, dict) else ""
     except LlmInvalidOutput:
         text = ""  # no usable answer -> no evidence
+    if unsafe_output(str(text)):  # F07-AC10: links, images, HTML are never shown
+        text = ""
     checked = check_answer(str(text), sent_hits)
     visible = await gateway.visible_residents(principal)
     by_chunk = {hit.chunk_id: hit for hit in hits}

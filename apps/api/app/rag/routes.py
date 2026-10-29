@@ -13,19 +13,30 @@ from pydantic import BaseModel, Field
 
 from app.auth.dependencies import current_principal
 from app.auth.principal import Principal
-from app.documents.routes import database, quota_error
+from app.documents.routes import database, error, quota_error
 from app.privacy.gateway import PseudonymizationFailed
 from app.providers.embeddings.base import EmbeddingUnavailable
 from app.providers.llm.base import LlmUnavailable
 from app.quotas import QuotaExceeded, consume
 from app.rag.answer import answer_with_sources
 from app.rag.retrieval import Hit, retrieve
+from app.security.classifier import classify_question
+from app.security.patterns import matching_rules
 
 router = APIRouter()
 
 NO_HITS_ANSWER = "Keine Treffer in deinem Wohnbereich."
 UNAVAILABLE_ANSWER = "Die Antwort ist gerade nicht möglich – bitte gleich erneut versuchen."
 REFUSED_ANSWER = "Die Anfrage wurde aus Datenschutzgründen nicht gesendet."
+INJECTION_MESSAGE = (
+    "Die Anfrage wurde als Versuch erkannt, die Regeln der KI zu umgehen, und nicht ausgeführt."
+)
+# For a question only attempts to steer the AI itself count: a nurse may well ask about
+# all residents of her ward (RLS keeps it there); rules on data leaks are for documents.
+QUESTION_CATEGORIES = {"ignore_instructions", "role_override", "addresses_ai", "outbound_link"}
+SCREENING_DOWN = (
+    "Die Sicherheitsprüfung ist gerade nicht verfügbar – bitte später erneut versuchen."
+)
 
 Caller = Annotated[Principal, Depends(current_principal)]
 
@@ -61,6 +72,22 @@ async def ask_question(request: Request, principal: Caller, body: Question):
             "no_hits": no_hits,
             "sent_to_model": sent,
         }
+
+    # F07-AC9: rules, then the checker model, see the question before any other model.
+    if any(rule.category in QUESTION_CATEGORIES for rule in matching_rules(body.question)):
+        return error(422, "injection_detected", INJECTION_MESSAGE)
+    try:
+        async with db.as_principal(principal) as conn:
+            await consume(conn, "guard_question", 1)
+        verdict = await classify_question(gateway, body.question)
+    except QuotaExceeded as exceeded:
+        return quota_error(exceeded)
+    except LlmUnavailable:
+        return error(503, "screening_unavailable", SCREENING_DOWN)  # fail closed
+    except PseudonymizationFailed:
+        return reply(REFUSED_ANSWER)
+    if verdict.injection:
+        return error(422, "injection_detected", INJECTION_MESSAGE)
 
     try:
         found = await retrieve(

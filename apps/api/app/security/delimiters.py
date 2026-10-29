@@ -10,3 +10,11 @@ def defuse(text: str, tags: tuple[str, ...]) -> str:
     """ "</abschnitt>" in a text becomes "‹/abschnitt>": still readable, no marker any more."""
     pattern = re.compile(r"</?\s*(" + "|".join(map(re.escape, tags)) + r")\b", re.IGNORECASE)
     return pattern.sub(lambda m: "‹" + m.group(0)[1:], text)
+
+
+def defuse_markers(text: str, markers: tuple[str, ...]) -> str:
+    """For fixed text markers like "DOKUMENT>>>": the arrows become "›››"/"‹‹‹"."""
+    for marker in markers:
+        safe = marker.replace(">", "›").replace("<", "‹")
+        text = re.sub(re.escape(marker), safe, text, flags=re.IGNORECASE)
+    return text

@@ -28,6 +28,7 @@ from app.extraction.schema import SCHEMA, DocumentSuggestion
 from app.privacy.gateway import ModelGateway
 from app.privacy.pseudonymizer import Pseudonymizer
 from app.providers.llm.base import LlmInvalidOutput
+from app.security.delimiters import defuse_markers
 
 MAX_INPUT_CHARS = 20_000
 MAX_OUTPUT_TOKENS = 1500
@@ -211,7 +212,9 @@ class Extractor:
     async def __call__(self, principal: Principal, document_id: str, text: str) -> Suggestion:
         pseudonymizer = await self.gateway.pseudonymizer()
         sent = pseudonymizer.pseudonymize(text[:MAX_INPUT_CHARS])
-        user = f"<<<DOKUMENT\n{sent.text}\nDOKUMENT>>>"
+        # F07-AC8: the document cannot write the end marker itself.
+        body = defuse_markers(sent.text, ("<<<DOKUMENT", "DOKUMENT>>>"))
+        user = f"<<<DOKUMENT\n{body}\nDOKUMENT>>>"
         model = self.gateway.llm_model
         answer = await self._ask(user, pseudonymizer, sent.mapping)
         if answer is None:
