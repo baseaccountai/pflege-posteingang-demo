@@ -43,7 +43,7 @@ DAILY_QUOTA = (
 SESSION_LIMIT = "Upload-Limit erreicht – Musterdokumente bleiben nutzbar"
 LIST_COLUMNS = (
     "id::text, ward_id, doc_type::text, status::text, error_code, attempts,"
-    " created_at, status_changed_at"
+    " created_at, status_changed_at, screening_result"
 )
 
 Caller = Annotated[Principal, Depends(current_principal)]
@@ -149,8 +149,16 @@ async def get_document(request: Request, principal: Caller, document_id: str):
             [checked_id(document_id)],
         )
         row = await cur.fetchone()
-    if row is None:
-        raise NOT_FOUND
+        if row is None:
+            raise NOT_FOUND
+        # F07-AC6: what the injection check found, for the screen "Angriff erkannt".
+        await cur.execute(
+            "select page, start_offset is null and layer = 'hidden_text' as invisible, layer,"
+            " rule_id, category, excerpt, explanation from public.injection_findings"
+            " where document_id = %s order by page, start_offset nulls first, layer",
+            [row["id"]],
+        )
+        row["findings"] = await cur.fetchall()
     return row
 
 

@@ -14,6 +14,7 @@ from app.config import Settings
 from app.main import create_app
 from app.providers.llm.fake import FakeLlm
 from app.providers.ocr.fake import FakeOcr
+from samples import generate
 from tests.rls.conftest import ADMIN_DSN, GATEWAY_DSN
 from tests.support.images import JPEG
 from tests.support.oidc import (
@@ -236,3 +237,38 @@ def test_the_suggestion_is_stored_with_the_model(api):
     assert doc["suggestion_model"] == "fake-llm (Testattrappe)"
     assert doc["suggestion"]["doc_type"]["value"] == "arztbrief"
     assert doc["suggestion"]["medications"][0]["evidence_found"] is True
+
+
+HINT_LETTER = "\n".join(generate.ANGRIFF_HINWEIS)
+
+
+@pytest.mark.parametrize("ocr", [FakeOcr(default=[HINT_LETTER])])
+def test_a_suspicious_document_shows_its_findings(api, ocr):
+    # F07-AC6: list and details carry the check result; details carry every finding.
+    doc_id = upload(api).json()["id"]
+    doc = api.get(f"/documents/{doc_id}", headers=as_role("nurse_wb1")).json()
+    assert doc["status"] == "ready_for_review" and doc["screening_result"] == "suspicious"
+    assert {f["layer"] for f in doc["findings"]} == {"pattern", "classifier"}
+    patterns = [f for f in doc["findings"] if f["layer"] == "pattern"]
+    # The note addresses the AI, changes a dose, misuses the agent and asks for another
+    # ward's data: four rules at once.
+    assert {f["rule_id"] for f in patterns} == {
+        "address-de",
+        "dose-de",
+        "tool-de",
+        "exfiltration-de",
+    }
+    finding = patterns[0]
+    assert finding["page"] == 1 and finding["invisible"] is False
+    assert finding["excerpt"].startswith("Hinweis für das KI-System")
+    assert len(finding["explanation"]) > 10
+    listed = next(
+        d for d in api.get("/documents", headers=as_role("nurse_wb1")).json() if d["id"] == doc_id
+    )
+    assert listed["screening_result"] == "suspicious"
+
+
+def test_a_clean_document_has_no_findings(api):
+    doc_id = upload(api).json()["id"]
+    doc = api.get(f"/documents/{doc_id}", headers=as_role("nurse_wb1")).json()
+    assert doc["screening_result"] == "clean" and doc["findings"] == []

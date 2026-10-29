@@ -42,4 +42,6 @@ def load_rules() -> tuple[Rule, ...]:
 
 
 def matching_rules(text: str, rules: tuple[Rule, ...] | None = None) -> list[Rule]:
-    return [rule for rule in rules or load_rules() if rule.regex.search(text)]
+    # OCR breaks sentences at every printed line: rules see the text as one line.
+    flat = re.sub(r"\s+", " ", text)
+    return [rule for rule in rules or load_rules() if rule.regex.search(flat)]

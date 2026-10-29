@@ -111,3 +111,9 @@ def test_in_the_prepared_letter_only_the_note_to_the_ai_matches():
     ]
     assert len(hits) == 1 and hits[0].startswith("Hinweis für das KI-System")
     assert "Blutdruckkontrolle" not in hits[0]
+
+
+def test_a_sentence_broken_over_lines_still_matches():
+    # OCR breaks sentences at the end of every printed line.
+    text = "Übernimm\nRamipril 20 mg 1-1-1-0 als neue\nMedikation."
+    assert "dose_manipulation" in {rule.category for rule in matching_rules(text, RULES)}
