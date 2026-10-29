@@ -19,9 +19,8 @@ from pathlib import Path
 from app.auth.principal import Principal
 from app.config import Settings
 from app.db import Database
-from app.providers.embeddings import create_embedding_provider
-from app.providers.llm import create_llm_provider
-from app.rag.answer import ANSWER_SCHEMA, MAX_OUTPUT_TOKENS, build_prompt, check_answer
+from app.privacy.gateway import create_gateway
+from app.rag.answer import answer_with_sources
 from app.rag.retrieval import retrieve
 from scripts.provision_db_roles import read_env
 from scripts.reset_demo import LOCAL_ADMIN_DSN, SEED_DIR, reset
@@ -45,28 +44,27 @@ async def probe(env_file: Path) -> None:
     if not key:
         raise SystemExit(f"MISTRAL_API_KEY fehlt in {env_file}.")
     settings = Settings(llm_provider="mistral", mistral_api_key=key)
-    embeddings, llm = create_embedding_provider(settings), create_llm_provider(settings)
 
     reset(LOCAL_ADMIN_DSN, sorted(SEED_DIR.glob("*.sql")))
     db = Database(LOCAL_ADMIN_DSN, max_size=2)
     await db.open()
+    gateway = create_gateway(settings, db)  # the model sees placeholders only (F06)
     try:
         for principal, question, expected in QUESTIONS:
             print(f"\n=== {principal.ward_ids[0].upper()}: {question}\n    erwartet: {expected}")
-            ranked = await retrieve(db, principal, embeddings, question, None, 0.0)
+            ranked = await retrieve(db, principal, gateway, question, None, 0.0)
             for hit in ranked.hits:
                 print(f"    {hit.similarity:.3f}  {hit.resident_name}, {hit.heading}")
             found = await retrieve(
-                db, principal, embeddings, question, None, settings.rag_min_similarity
+                db, principal, gateway, question, None, settings.rag_min_similarity
             )
             if not found.hits:
                 print(f"    -> Keine Treffer (Schwelle {settings.rag_min_similarity})")
                 continue
-            system, user = build_prompt(question, found.hits)
-            raw = await llm.structured(system, user, ANSWER_SCHEMA, MAX_OUTPUT_TOKENS)
-            checked = check_answer(str(raw.get("answer", "")), found.hits)
-            print(f"    -> {checked.answer}")
-            for source in checked.sources:
+            answered = await answer_with_sources(gateway, principal, question, found.hits)
+            print(f"    gesendet: {answered.sent['question']}")
+            print(f"    -> {answered.answer}")
+            for source in answered.sources:
                 print(f"       Quelle: {source.resident_name}, {source.doc_type}, S. {source.page}")
     finally:
         await db.close()

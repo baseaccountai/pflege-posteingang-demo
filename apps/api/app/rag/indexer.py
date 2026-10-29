@@ -8,7 +8,9 @@ the chunk policies check that every chunk belongs to it.
    indexed; anything else (foreign ward, not approved, already done) is left alone.
 2. Cut the OCR pages into chunks (rag/chunker.py).
 3. Book the embedding quota BEFORE the paid call (F10-AC10).
-4. Embed all chunks - outside of any transaction, a model call can take seconds.
+4. Embed all chunks - outside of any transaction, a model call can take seconds. The
+   embedding model only gets the pseudonymised text (F06-AC4); the chunk itself is stored
+   as it is and pseudonymised again before every later model call (questions).
 5. One transaction, one document at a time (advisory lock): delete the old chunks, insert
    the new ones, set indexing_status = 'done'. Two runs at once cannot double the chunks.
 
@@ -21,7 +23,7 @@ import logging
 
 from app.auth.principal import Principal
 from app.db import Database
-from app.providers.embeddings.base import EmbeddingProvider
+from app.privacy.gateway import ModelGateway
 from app.quotas import consume
 from app.rag.chunker import Chunk, split_pages
 
@@ -31,9 +33,9 @@ MAX_BOOKING = 20  # app.consume_quota accepts 1 to 20 per call
 
 
 class Indexer:
-    def __init__(self, db: Database, embeddings: EmbeddingProvider):
+    def __init__(self, db: Database, gateway: ModelGateway):
         self.db = db
-        self.embeddings = embeddings
+        self.gateway = gateway
 
     async def run(self, principal: Principal, document_id: str) -> None:
         try:
@@ -61,7 +63,9 @@ class Indexer:
         async with self.db.as_principal(principal) as conn:
             for start in range(0, len(chunks), MAX_BOOKING):
                 await consume(conn, "embed_chunk", len(chunks[start : start + MAX_BOOKING]))
-        vectors = await self.embeddings.embed([chunk.content for chunk in chunks])
+        pseudonymizer, mapping = await self.gateway.pseudonymizer(), {}
+        texts = [pseudonymizer.pseudonymize(chunk.content, mapping).text for chunk in chunks]
+        vectors = await self.gateway.embed(texts)
 
         async with self.db.as_principal(principal) as conn:
             # One run per document at a time; the second one waits and replaces again.
@@ -103,7 +107,7 @@ class Indexer:
                 chunk.heading,
                 chunk.content,
                 "[" + ",".join(map(str, vector)) + "]",
-                self.embeddings.model_name,
+                self.gateway.embedding_model,
             ],
         )
 

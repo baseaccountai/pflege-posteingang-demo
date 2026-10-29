@@ -1,6 +1,8 @@
 """F10-AC1, AC6: the seed brings precomputed chunks with embeddings, so the nightly reset
 needs no LLM or embedding call. The SQL is rendered from the seed documents and the chunker."""
 
+import re
+
 import pytest
 
 from app.providers.embeddings.fake import FakeEmbeddings
@@ -46,3 +48,22 @@ async def test_the_sql_refuses_vectors_of_the_wrong_size():
     rows = seed_chunks()[:1]
     with pytest.raises(ValueError):
         render_sql(rows, [[0.1] * 3], "mistral-embed")
+
+
+def test_the_seed_chunks_are_embedded_without_names():
+    # F06-AC4: the precomputed vectors come from pseudonymised text, like the indexer's.
+    from app.privacy.pseudonymizer import KnownResident, Pseudonymizer
+    from samples.generate import RESIDENT_IDS
+    from scripts.build_seed_chunks import texts_to_embed
+
+    residents = [
+        KnownResident(rid, f"X{n:02}", name, None)
+        for n, (name, rid) in enumerate(RESIDENT_IDS.items())
+    ]
+    rows = seed_chunks()
+    texts = texts_to_embed(rows, Pseudonymizer(residents))
+    assert len(texts) == len(rows)
+    joined = "\n".join(texts)
+    for name in RESIDENT_IDS:  # whole words: "Haus Beispielhof" is a place, not Fr. Beispiel
+        assert not re.search(rf"(?<![\w-]){re.escape(name.split(' ')[1])}(?![\w-])", joined)
+    assert "Bewohner_X" in joined and "Dr. med. Lorem" not in joined

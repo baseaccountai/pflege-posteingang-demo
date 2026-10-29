@@ -69,6 +69,7 @@ def test_the_same_value_keeps_its_placeholder_within_one_call(p):
     second = p.pseudonymize("Antwort von Dr. Lorem", first.mapping)
     assert first.text == "Person_1 schreibt an Person_2."
     assert second.text == "Antwort von Person_1"
+    assert second.mapping is first.mapping  # one mapping, extended in place
 
 
 def test_placeholders_go_back_to_the_original_for_visible_residents(p):

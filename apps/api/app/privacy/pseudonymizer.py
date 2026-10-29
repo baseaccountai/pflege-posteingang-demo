@@ -109,7 +109,8 @@ class Pseudonymizer:
                 self._birth_dates.append((re.compile(pattern), r.pseudonym))
 
     def pseudonymize(self, text: str, mapping: dict[str, str] | None = None) -> Pseudonymized:
-        mapping = dict(mapping or {})
+        """Replaces in `text`; new placeholders are added to `mapping` (shared per call)."""
+        mapping = mapping if mapping is not None else {}
         for titled, bare, code in self._names:
             text = bare.sub(f"Bewohner_{code}", titled.sub(f"Bewohner_{code}", text))
         for pattern, code in self._birth_dates:

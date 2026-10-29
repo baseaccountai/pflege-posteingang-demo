@@ -17,9 +17,9 @@ from app.db import Database
 from app.documents.pipeline import Pipeline
 from app.documents.routes import router as documents_router
 from app.extraction.service import Extractor
-from app.privacy.gateway import ModelGateway, database_directory, database_visible
-from app.providers.embeddings import EmbeddingProvider, create_embedding_provider
-from app.providers.llm import LlmProvider, create_llm_provider
+from app.privacy.gateway import create_gateway
+from app.providers.embeddings.base import EmbeddingProvider
+from app.providers.llm.base import LlmProvider
 from app.providers.ocr import OcrProvider, create_ocr_provider
 from app.quotas import consume
 from app.rag.indexer import Indexer
@@ -44,8 +44,6 @@ def create_app(
     """
     settings = settings or Settings()
     ocr = ocr or create_ocr_provider(settings)
-    llm = llm or create_llm_provider(settings)
-    embeddings = embeddings or create_embedding_provider(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -58,7 +56,6 @@ def create_app(
         app.state.database = Database(settings.database_url) if settings.database_url else None
         app.state.pipeline = None
         app.state.indexer = None
-        app.state.llm, app.state.embeddings = llm, embeddings
         if app.state.database:
             await app.state.database.open()
             database = app.state.database
@@ -69,11 +66,9 @@ def create_app(
                     await consume(conn, "llm_call", 1)
 
             # F06-AC1: every model call goes through the gateway (pseudonymised text only).
-            app.state.gateway = ModelGateway(
-                llm, embeddings, database_directory(database), database_visible(database)
-            )
+            app.state.gateway = create_gateway(settings, database, llm, embeddings)
             app.state.pipeline = Pipeline(database, ocr, Extractor(app.state.gateway, book_retry))
-            app.state.indexer = Indexer(database, embeddings)
+            app.state.indexer = Indexer(database, app.state.gateway)
         try:
             yield
         finally:

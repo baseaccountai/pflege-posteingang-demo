@@ -14,6 +14,7 @@ from app.providers.embeddings.base import EmbeddingUnavailable
 from app.providers.embeddings.fake import FakeEmbeddings
 from app.rag.indexer import Indexer
 from tests.rls.conftest import ADMIN_DSN, WB1_RESIDENT
+from tests.support.gateway import db_gateway
 
 pytestmark = [pytest.mark.db, pytest.mark.anyio]
 
@@ -77,7 +78,7 @@ def quotas():
 
 async def test_an_approved_document_becomes_chunks_with_page_and_metadata(db, seeded, quotas):
     doc = document()
-    await Indexer(db, FakeEmbeddings()).run(NURSE_WB1, doc)
+    await Indexer(db, db_gateway(db, embeddings=FakeEmbeddings())).run(NURSE_WB1, doc)
     assert chunk_rows(doc) == [
         (1, "Arztbrief", WB1_RESIDENT, "arztbrief", "2026-10-20", "fake-embed (Testattrappe)"),
         (1, "Diagnosen", WB1_RESIDENT, "arztbrief", "2026-10-20", "fake-embed (Testattrappe)"),
@@ -89,26 +90,26 @@ async def test_an_approved_document_becomes_chunks_with_page_and_metadata(db, se
 
 async def test_indexing_again_replaces_the_chunks(db, seeded, quotas):
     doc = document()
-    await Indexer(db, FakeEmbeddings()).run(NURSE_WB1, doc)
+    await Indexer(db, db_gateway(db, embeddings=FakeEmbeddings())).run(NURSE_WB1, doc)
     admin("update public.documents set indexing_status = 'failed' where id = %s", [doc])
-    await Indexer(db, FakeEmbeddings()).run(NURSE_WB1, doc)
+    await Indexer(db, db_gateway(db, embeddings=FakeEmbeddings())).run(NURSE_WB1, doc)
     assert len(chunk_rows(doc)) == 3
 
 
 async def test_two_runs_at_the_same_time_do_not_duplicate_chunks(db, seeded, quotas):
     doc = document()
     await asyncio.gather(
-        Indexer(db, FakeEmbeddings()).run(NURSE_WB1, doc),
-        Indexer(db, FakeEmbeddings()).run(NURSE_WB1, doc),
+        Indexer(db, db_gateway(db, embeddings=FakeEmbeddings())).run(NURSE_WB1, doc),
+        Indexer(db, db_gateway(db, embeddings=FakeEmbeddings())).run(NURSE_WB1, doc),
     )
     assert len(chunk_rows(doc)) == 3
 
 
 async def test_an_embedding_failure_marks_failed_and_keeps_the_old_chunks(db, seeded, quotas):
     doc = document()
-    await Indexer(db, FakeEmbeddings()).run(NURSE_WB1, doc)
+    await Indexer(db, db_gateway(db, embeddings=FakeEmbeddings())).run(NURSE_WB1, doc)
     admin("update public.documents set indexing_status = 'pending' where id = %s", [doc])
-    await Indexer(db, FailingEmbeddings()).run(NURSE_WB1, doc)
+    await Indexer(db, db_gateway(db, embeddings=FailingEmbeddings())).run(NURSE_WB1, doc)
     assert indexing_status(doc) == "failed"
     assert len(chunk_rows(doc)) == 3
     assert admin("select status::text from public.documents where id = %s", [doc]) == [
@@ -119,7 +120,7 @@ async def test_an_embedding_failure_marks_failed_and_keeps_the_old_chunks(db, se
 async def test_a_used_up_quota_marks_failed_without_calling_the_model(db, seeded, quotas):
     admin("update public.quota_limits set max_count = 0 where kind = 'embed_chunk'")
     doc, embeddings = document(), FakeEmbeddings()
-    await Indexer(db, embeddings).run(NURSE_WB1, doc)
+    await Indexer(db, db_gateway(db, embeddings=embeddings)).run(NURSE_WB1, doc)
     assert indexing_status(doc) == "failed"
     assert embeddings.calls == [] and chunk_rows(doc) == []
 
@@ -128,7 +129,7 @@ async def test_a_long_document_books_its_chunks_in_steps(db, seeded, quotas):
     # app.consume_quota accepts 1 to 20 per booking; 25 sections are booked in two steps.
     pages = [{"page": 1, "markdown": "\n".join(f"## Abschnitt {i}\nText {i}" for i in range(25))}]
     doc = document(pages=pages)
-    await Indexer(db, FakeEmbeddings()).run(NURSE_WB1, doc)
+    await Indexer(db, db_gateway(db, embeddings=FakeEmbeddings())).run(NURSE_WB1, doc)
     assert len(chunk_rows(doc)) == 25
     assert admin("select count from public.usage_counters where kind = 'embed_chunk'") == [(25,)]
 
@@ -146,7 +147,20 @@ async def test_nothing_happens_for_documents_that_are_not_due(
     db, seeded, quotas, principal, status, indexing
 ):
     doc, embeddings = document(status=status, indexing=indexing), FakeEmbeddings()
-    await Indexer(db, embeddings).run(principal, doc)
+    await Indexer(db, db_gateway(db, embeddings=embeddings)).run(principal, doc)
     assert embeddings.calls == [] and chunk_rows(doc) == []
     if indexing:
         assert indexing_status(doc) == indexing  # unchanged
+
+
+async def test_the_embedding_model_sees_no_resident_name(db, seeded, quotas):
+    # F06-AC1, AC4: the vectors come from pseudonymised text; the stored chunk keeps the
+    # original (it is pseudonymised again before every model call).
+    pages = [{"page": 1, "markdown": "## Medikation\nHr. Muster-Bauer bekommt Ramipril 5 mg."}]
+    embeddings = FakeEmbeddings()
+    doc = document(pages=pages)
+    await Indexer(db, db_gateway(db, embeddings=embeddings)).run(NURSE_WB1, doc)
+    sent = " ".join(text for call in embeddings.calls for text in call)
+    assert "Muster-Bauer" not in sent and "Bewohner_" in sent
+    stored = admin("select content from public.chunks where document_id = %s", [doc])
+    assert "Hr. Muster-Bauer" in stored[0][0]

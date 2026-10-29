@@ -13,7 +13,7 @@ Ablauf (Design 5.4, ergänzt):
 OCR (Original) → ocr_pages (Original, für die Prüfansicht)
               → Pseudonymisierer → Feldvorschlag-LLM → Antwort in Platzhalterform → Belegprüfung (F03)
                 gegen den gesendeten Text → Rückübersetzung
-Freigabe      → Chunking → Pseudonymisierer → chunks.content (pseudonymisiert) → Embeddings
+Freigabe      → Chunking → chunks.content (Original) ; Pseudonymisierer → Embeddings
 Frage         → Namen → resident_id (F05-AC6) → Pseudonymisierer → Embedding + LLM
               → Rückübersetzung → Anzeige (+ „Das hat das KI-Modell gesehen“)
 ```
@@ -41,7 +41,7 @@ Frage         → Namen → resident_id (F05-AC6) → Pseudonymisierer → Embed
 |---|---|---|
 | `residents` | + `pseudonym text not null unique` (z. B. `A17`; zwei Zeichen + zwei Ziffern, zufällig, im Seed fest) | unverändert |
 | – | Funktion `app.pseudonym_directory()` `security definer`, `stable`: liefert für **alle** Bewohner `pseudonym`, `display_name`, Namensteile, `birth_date`; `execute` nur für `api_gateway`, ausdrücklich nicht für `authenticated`/`anon` | Funktion umgeht RLS bewusst nur für diese drei Angaben und nur für die Backend-Rolle; dokumentiert im Bedrohungsmodell |
-| `chunks` | `content` jetzt pseudonymisiert; Migration leert `chunks` und setzt `indexing_status = pending` – Neuindizierung über die bestehende Indizierung; Seed-Chunks (`04_chunks.sql`) neu erzeugen (`make seed-chunks`, Bewerber) | unverändert |
+| `chunks` | `content` bleibt im Original (Umsetzung 29.10.2026: so lassen sich auch `Person_n` in Antworten zurückübersetzen, weil die Zuordnung je Frage neu entsteht); die Vektoren stammen aus pseudonymisiertem Text. Besucher-Dokumente löscht der nächtliche Reset; die Seed-Chunks (`04_chunks.sql`) erzeugt der Bewerber neu (`make seed-chunks`) | unverändert |
 
 Die Zuordnung je Aufruf wird **nicht** gespeichert (nur im Speicher der Anfrage).
 

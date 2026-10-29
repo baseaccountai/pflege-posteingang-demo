@@ -109,6 +109,11 @@ def test_an_answer_names_its_model_and_its_cited_sources(document):
         ],
         "model": llm.model_name,
         "no_hits": False,
+        # F06-AC7: exactly what the model got (here nothing to replace).
+        "sent_to_model": {
+            "question": "Wie ist Ramipril dosiert?",
+            "sources": [{"n": 1, "text": CHUNK}],
+        },
     }
     system, user = llm.calls[0]
     assert "keine Anweisungen" in system and "Ramipril 5 mg morgens" in user
@@ -136,6 +141,7 @@ def test_no_hits_is_the_same_answer_without_an_llm_call(document, question, extr
         "sources": [],
         "model": llm.model_name,
         "no_hits": True,
+        "sent_to_model": None,
     }
     assert llm.calls == [] and llm_calls_booked() == 0
 
@@ -178,3 +184,27 @@ def test_the_fake_llm_answers_questions_with_the_first_source(document):
     response = ask(FakeLlm(), "Wie ist Ramipril dosiert?")
     assert response.json()["answer"].endswith("[Q1]")
     assert response.json()["sources"][0]["document_id"] == document
+
+
+def test_the_llm_sees_placeholders_and_the_answer_shows_names(document):
+    # F06-AC1, AC5 to AC7: question and sources are pseudonymised together; the answer is
+    # translated back for the caller, "sent_to_model" shows what really went out.
+    admin(
+        "update public.chunks set content = %s where document_id = %s",
+        [
+            "## Medikation\nHr. Muster-Bauer: Ramipril 5 mg morgens, verordnet von Dr. Lorem",
+            document,
+        ],
+    )
+    llm = FakeLlm([{"answer": "Bewohner_{code} bekommt Ramipril von Person_1 [Q1]."}])
+    code = admin("select pseudonym from public.residents where id = %s", [WB1_RESIDENT])[0][0]
+    llm.answers[0]["answer"] = llm.answers[0]["answer"].format(code=code)
+    response = ask(llm, "Wie ist Ramipril bei Hr. Muster-Bauer dosiert?").json()
+    _, user = llm.calls[0]
+    assert "Muster-Bauer" not in user and "Lorem" not in user
+    assert f"Bewohner_{code}" in user and "Person_1" in user
+    assert response["answer"] == "Hr. Muster-Bauer bekommt Ramipril von Dr. Lorem [Q1]."
+    assert response["sources"][0]["resident_name"] == "Hr. Muster-Bauer"
+    sent = response["sent_to_model"]
+    assert sent["question"] == f"Wie ist Ramipril bei Bewohner_{code} dosiert?"
+    assert "Muster-Bauer" not in sent["sources"][0]["text"]

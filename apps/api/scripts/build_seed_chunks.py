@@ -6,6 +6,9 @@ model, and committed as SQL. `supabase db reset` and the nightly reset (scripts/
 load every file in supabase/seed/ in name order - after 02_documents.sql, which the chunks
 point to.
 
+The embedding model only gets pseudonymised text (F06-AC4), exactly as the indexer sends
+it; the names come from the LOCAL database (`make db-start`, seed loaded).
+
 Run once by the applicant in their own terminal (reads only MISTRAL_API_KEY from the given
 .env file and never prints it):
 
@@ -21,10 +24,14 @@ import sys
 from pathlib import Path
 
 from app.config import Settings
-from app.providers.embeddings import DIMENSION, create_embedding_provider
+from app.db import Database
+from app.privacy.gateway import create_gateway
+from app.privacy.pseudonymizer import Pseudonymizer
+from app.providers.embeddings import DIMENSION
 from app.rag.chunker import split_pages
 from samples.generate import RESIDENT_IDS, SEED_DOCUMENTS, WARD_OF
 from scripts.provision_db_roles import read_env
+from scripts.reset_demo import LOCAL_ADMIN_DSN
 
 SQL_PATH = Path(__file__).parents[3] / "supabase" / "seed" / "04_chunks.sql"
 
@@ -48,6 +55,15 @@ def seed_chunks() -> list[dict]:
                 }
             )
     return rows
+
+
+def texts_to_embed(rows: list[dict], pseudonymizer: Pseudonymizer) -> list[str]:
+    """Pseudonymised chunk texts, one mapping per document - like the indexer (F06-AC4)."""
+    mappings: dict[str, dict[str, str]] = {}
+    return [
+        pseudonymizer.pseudonymize(row["content"], mappings.setdefault(row["document_id"], {})).text
+        for row in rows
+    ]
 
 
 def _text(value: str | None) -> str:
@@ -83,11 +99,17 @@ async def build(env_file: Path) -> None:
     if not key:
         raise SystemExit(f"MISTRAL_API_KEY fehlt in {env_file}.")
     settings = Settings(llm_provider="mistral", mistral_api_key=key)
-    embeddings = create_embedding_provider(settings)
-    rows = seed_chunks()
-    vectors = await embeddings.embed([row["content"] for row in rows])
-    SQL_PATH.write_text(render_sql(rows, vectors, embeddings.model_name), encoding="utf-8")
-    print(f"{len(rows)} Chunks mit {embeddings.model_name} geschrieben nach {SQL_PATH}")
+    db = Database(LOCAL_ADMIN_DSN, max_size=2)
+    await db.open()
+    try:
+        gateway = create_gateway(settings, db)
+        rows = seed_chunks()
+        vectors = await gateway.embed(texts_to_embed(rows, await gateway.pseudonymizer()))
+    finally:
+        await db.close()
+    model = gateway.embedding_model
+    SQL_PATH.write_text(render_sql(rows, vectors, model), encoding="utf-8")
+    print(f"{len(rows)} Chunks mit {model} (pseudonymisiert eingebettet) nach {SQL_PATH}")
 
 
 if __name__ == "__main__":

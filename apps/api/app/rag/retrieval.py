@@ -6,7 +6,8 @@
 2. A resident that cannot be found - in another ward or not at all - ends here with
    NO_HITS: same answer, no model call, so the answer does not tell whether a person exists
    elsewhere (AC7).
-3. Otherwise the question is embedded (one unit of the embedding quota) and compared with
+3. Otherwise the question is embedded (one unit of the embedding quota) - pseudonymised,
+   the name has done its job as a filter in step 1 (F06-AC5) - and compared with
    the chunks via app.match_chunks: own wards only (RLS), the configured model only, at most
    6 hits above the minimum similarity. Nothing similar enough is NO_HITS as well.
 """
@@ -18,7 +19,7 @@ from datetime import date
 
 from app.auth.principal import Principal
 from app.db import Database
-from app.providers.embeddings.base import EmbeddingProvider
+from app.privacy.gateway import ModelGateway
 from app.quotas import consume
 
 MAX_HITS = 6
@@ -65,7 +66,7 @@ NO_HITS = Retrieval()
 async def retrieve(
     db: Database,
     principal: Principal,
-    embeddings: EmbeddingProvider,
+    gateway: ModelGateway,
     question: str,
     resident_id: str | None,
     min_similarity: float,
@@ -80,7 +81,8 @@ async def retrieve(
 
     async with db.as_principal(principal) as conn:
         await consume(conn, "embed_chunk", 1)
-    (query,) = await embeddings.embed([question])
+    pseudonymizer = await gateway.pseudonymizer()
+    (query,) = await gateway.embed([pseudonymizer.pseudonymize(question).text])
 
     async with db.as_principal(principal) as conn:
         cur = await conn.execute(
@@ -89,7 +91,7 @@ async def retrieve(
             " from app.match_chunks(%s::extensions.vector, %s, %s, %s, %s)",
             [
                 "[" + ",".join(map(str, query)) + "]",
-                embeddings.model_name,
+                gateway.embedding_model,
                 resident,
                 MAX_HITS,
                 min_similarity,

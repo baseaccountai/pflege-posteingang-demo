@@ -13,6 +13,7 @@ from app.providers.embeddings.fake import FakeEmbeddings
 from app.rag.indexer import Indexer
 from app.rag.retrieval import NO_HITS, retrieve
 from tests.rls.conftest import ADMIN_DSN, WB1_RESIDENT, WB2_RESIDENT
+from tests.support.gateway import db_gateway
 
 pytestmark = [pytest.mark.db, pytest.mark.anyio]
 
@@ -56,15 +57,16 @@ async def indexed(db, seeded):
             " 'u', 's', 'approved', 'arztbrief', '2026-10-20', %s, 'pending')",
             [doc, ward, resident, Jsonb([{"page": 1, "markdown": text}])],
         )
-        await Indexer(db, FakeEmbeddings()).run(nurse, doc)
+        await Indexer(db, db_gateway(db)).run(nurse, doc)
     yield
     admin("truncate public.usage_counters")
 
 
 async def ask(db, question, principal=NURSE_WB1, resident_id=None, embeddings=None):
     embeddings = embeddings or FakeEmbeddings()
+    gateway = db_gateway(db, embeddings=embeddings)
     return await retrieve(
-        db, principal, embeddings, question, resident_id, min_similarity=0.1
+        db, principal, gateway, question, resident_id, min_similarity=0.1
     ), embeddings
 
 
@@ -118,3 +120,11 @@ async def test_the_question_counts_against_the_embedding_quota(db, indexed):
     assert admin("select count from public.usage_counters where kind = 'embed_chunk'") == [
         (before + 1,)
     ]
+
+
+async def test_the_question_is_embedded_without_the_name(db, indexed):
+    # F06-AC5: the name still decides the filter, but the model gets only the code.
+    result, embeddings = await ask(db, "Wie ist Ramipril bei Hr. Muster-Bauer dosiert?")
+    assert {hit.resident_name for hit in result.hits} == {"Hr. Muster-Bauer"}
+    (sent,) = embeddings.calls[0]
+    assert "Muster-Bauer" not in sent and "Bewohner_" in sent

@@ -93,3 +93,17 @@ def database_visible(db) -> Callable[[Principal], Awaitable[set[str]]]:
             return {row[0] for row in await cur.fetchall()}
 
     return visible
+
+
+def create_gateway(settings, db, llm=None, embeddings=None) -> ModelGateway:
+    """The gateway with the providers chosen by LLM_PROVIDER (or given ones, in tests).
+    The only place outside app/providers that creates models (architecture test)."""
+    from app.providers.embeddings import create_embedding_provider
+    from app.providers.llm import create_llm_provider
+
+    return ModelGateway(
+        llm or create_llm_provider(settings),
+        embeddings or create_embedding_provider(settings),
+        database_directory(db),
+        database_visible(db),
+    )
