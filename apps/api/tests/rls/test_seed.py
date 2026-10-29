@@ -63,6 +63,21 @@ def test_two_wards_with_three_residents_each(seed: None) -> None:
     }
 
 
+def test_seed_residents_have_fixed_codes(seed: None) -> None:
+    # Fixed codes keep the precomputed seed chunks (F10-AC6) valid after every reset.
+    rows = admin_rows("select display_name, pseudonym from public.residents order by pseudonym")
+    assert rows == [
+        ("Fr. Vorlage", "C91"),
+        ("Hr. Probe", "D15"),
+        ("Fr. Testfeld", "H33"),
+        ("Hr. Muster-Bauer", "K42"),
+        ("Fr. Beispiel", "R07"),
+        ("Hr. Exempel", "W58"),
+    ]
+    # No code starts with the initial of its surname.
+    assert all(code[0] != name.split(" ")[1][0] for name, code in rows)
+
+
 def test_every_resident_has_an_approved_document_with_file_and_text(seed: None) -> None:
     rows = admin_rows(
         "select r.display_name, count(d.id) from public.residents r"
