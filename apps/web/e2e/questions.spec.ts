@@ -20,9 +20,11 @@ async function residentWithLetter() {
   const pdf = readFileSync(sample("arztbrief_muster-bauer.pdf"));
   const [{ doc }] = await admin<{ doc: string }[]>`
     insert into public.documents (ward_id, resident_id, uploaded_by, upload_session, status,
-      doc_type, document_date, ocr_pages, approved_by, approved_by_name, approved_at, indexing_status)
+      doc_type, document_date, ocr_pages, screened_pages, screening_result,
+      approved_by, approved_by_name, approved_at, indexing_status)
     values ('wb1', ${id}, 'seed', 'seed', 'approved', 'arztbrief', '2026-10-20',
-      ${admin.json([{ page: 1, markdown: TEXT }])}, 'seed', 'Pflegekraft WB1', now(), 'failed')
+      ${admin.json([{ page: 1, markdown: TEXT }])}, ${admin.json([{ page: 1, markdown: TEXT }])}, 'clean',
+      'seed', 'Pflegekraft WB1', now(), 'failed')
     returning id::text as doc`;
   await admin`insert into public.document_files (document_id, ward_id, mime, size_bytes, content)
     values (${doc}, 'wb1', 'application/pdf', ${pdf.length}, ${pdf})`;

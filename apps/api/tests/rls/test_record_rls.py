@@ -206,6 +206,8 @@ async def test_who_confirmed_comes_from_the_claims(db, record):
         "document_date = '2020-01-01'",
         "suggestion = '{}'",
         "ocr_pages = '[]'",
+        "screened_pages = '[]'",  # F07: the check result is frozen as well
+        "screening_result = 'suspicious'",
         "approved_by_name = 'Jemand'",
     ],
 )

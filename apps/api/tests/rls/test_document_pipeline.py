@@ -14,6 +14,7 @@ from app.providers.llm.base import LlmUnavailable
 from app.providers.ocr.fake import FakeOcr
 from app.quotas import QuotaExceeded
 from tests.rls.conftest import ADMIN_DSN
+from tests.support.screening import FakeScreener
 
 pytestmark = [pytest.mark.db, pytest.mark.anyio]
 
@@ -84,7 +85,7 @@ class StatusRecordingOcr(FakeOcr):
 async def test_success_runs_ocr_then_extraction_then_ready_for_review(db, seeded):
     doc = new_document()
     ocr, extractor = StatusRecordingOcr(doc), FakeExtractor()
-    await Pipeline(db, ocr, extractor).run(NURSE_WB1, doc)
+    await Pipeline(db, ocr, extractor, screener=FakeScreener()).run(NURSE_WB1, doc)
 
     status, error, attempts, pages, suggestion, model = state(doc)
     assert (status, error, attempts) == ("ready_for_review", None, 1)
@@ -97,11 +98,13 @@ async def test_success_runs_ocr_then_extraction_then_ready_for_review(db, seeded
 
 async def test_ocr_outage_fails_and_the_retry_starts_again_with_ocr(db, seeded):
     doc = new_document()
-    await Pipeline(db, FakeOcr(unavailable=True), FakeExtractor()).run(NURSE_WB1, doc)
+    await Pipeline(db, FakeOcr(unavailable=True), FakeExtractor(), screener=FakeScreener()).run(
+        NURSE_WB1, doc
+    )
     assert state(doc)[:4] == ("failed", "ocr_unavailable", 1, None)
 
     ocr, extractor = FakeOcr(default=READABLE), FakeExtractor()
-    await Pipeline(db, ocr, extractor).run(NURSE_WB1, doc)
+    await Pipeline(db, ocr, extractor, screener=FakeScreener()).run(NURSE_WB1, doc)
     assert state(doc)[:3] == ("ready_for_review", None, 2)
     assert ocr.calls == 1 and len(extractor.calls) == 1
 
@@ -110,21 +113,23 @@ async def test_a_refused_pseudonymization_fails_the_document_with_its_own_code(d
     # F06-AC10: no model call with plain names; the visitor sees why.
     doc = new_document()
     extractor = FakeExtractor(PseudonymizationFailed())
-    await Pipeline(db, FakeOcr(default=READABLE), extractor).run(NURSE_WB1, doc)
+    await Pipeline(db, FakeOcr(default=READABLE), extractor, screener=FakeScreener()).run(
+        NURSE_WB1, doc
+    )
     assert state(doc)[:2] == ("failed", "pseudonymization_failed")
 
 
 async def test_llm_outage_keeps_the_ocr_result_and_the_retry_only_extracts(db, seeded):
     doc = new_document()
-    await Pipeline(db, FakeOcr(default=READABLE), FakeExtractor(LlmUnavailable())).run(
-        NURSE_WB1, doc
-    )
+    await Pipeline(
+        db, FakeOcr(default=READABLE), FakeExtractor(LlmUnavailable()), screener=FakeScreener()
+    ).run(NURSE_WB1, doc)
     status, error, _, pages, _, _ = state(doc)
     assert (status, error) == ("failed", "llm_unavailable")
     assert pages == [{"page": 1, "markdown": READABLE[0]}]
 
     ocr, extractor = FakeOcr(default=READABLE), FakeExtractor()
-    await Pipeline(db, ocr, extractor).run(NURSE_WB1, doc)
+    await Pipeline(db, ocr, extractor, screener=FakeScreener()).run(NURSE_WB1, doc)
     assert state(doc)[0] == "ready_for_review"
     assert ocr.calls == 0  # OCR result reused, no second OCR cost
     assert [s for _, _, s in extractor.calls] == ["extracting"]
@@ -132,9 +137,12 @@ async def test_llm_outage_keeps_the_ocr_result_and_the_retry_only_extracts(db, s
 
 async def test_quota_running_out_during_processing_fails_with_quota_exceeded(db, seeded):
     doc = new_document()
-    await Pipeline(db, FakeOcr(default=READABLE), FakeExtractor(QuotaExceeded("llm_call"))).run(
-        NURSE_WB1, doc
-    )
+    await Pipeline(
+        db,
+        FakeOcr(default=READABLE),
+        FakeExtractor(QuotaExceeded("llm_call")),
+        screener=FakeScreener(),
+    ).run(NURSE_WB1, doc)
     assert state(doc)[:2] == ("failed", "quota_exceeded")
 
 
@@ -145,7 +153,9 @@ async def test_quota_running_out_during_processing_fails_with_quota_exceeded(db,
 async def test_unreadable_text_ends_without_extraction(db, seeded, texts, code):
     doc = new_document()
     extractor = FakeExtractor()
-    await Pipeline(db, FakeOcr(default=texts), extractor).run(NURSE_WB1, doc)
+    await Pipeline(db, FakeOcr(default=texts), extractor, screener=FakeScreener()).run(
+        NURSE_WB1, doc
+    )
     assert state(doc)[:2] == ("unreadable", code)
     assert extractor.calls == []
 
@@ -154,7 +164,7 @@ async def test_unreadable_text_ends_without_extraction(db, seeded, texts, code):
 async def test_documents_past_processing_are_left_alone(db, seeded, status):
     doc = new_document(status=status)
     ocr, extractor = FakeOcr(), FakeExtractor()
-    await Pipeline(db, ocr, extractor).run(NURSE_WB1, doc)
+    await Pipeline(db, ocr, extractor, screener=FakeScreener()).run(NURSE_WB1, doc)
     assert state(doc)[0] == status
     assert ocr.calls == 0 and extractor.calls == []
 
@@ -165,7 +175,9 @@ async def test_a_step_longer_than_the_limit_fails_with_timeout(db, seeded):
             await asyncio.sleep(10)
 
     doc = new_document()
-    await Pipeline(db, HangingOcr(), FakeExtractor(), step_timeout=0.2).run(NURSE_WB1, doc)
+    await Pipeline(
+        db, HangingOcr(), FakeExtractor(), step_timeout=0.2, screener=FakeScreener()
+    ).run(NURSE_WB1, doc)
     assert state(doc)[:2] == ("failed", "timeout")
 
 
@@ -183,7 +195,9 @@ async def test_a_late_ocr_answer_does_not_overwrite_a_timeout(db, seeded):
             return await super().extract(data, mime)
 
     extractor = FakeExtractor()
-    await Pipeline(db, SlowOcr(default=READABLE), extractor).run(NURSE_WB1, doc)
+    await Pipeline(db, SlowOcr(default=READABLE), extractor, screener=FakeScreener()).run(
+        NURSE_WB1, doc
+    )
     assert state(doc)[:2] == ("failed", "timeout")
     assert state(doc)[3] is None and extractor.calls == []
 
@@ -210,14 +224,14 @@ async def test_retry_after_a_crash_before_ocr_starts_with_ocr(db, seeded):
     doc = new_document(status="uploaded", age_minutes=3)
     await mark_stalled(db, NURSE_WB1)
     ocr = FakeOcr(default=READABLE)
-    await Pipeline(db, ocr, FakeExtractor()).run(NURSE_WB1, doc)
+    await Pipeline(db, ocr, FakeExtractor(), screener=FakeScreener()).run(NURSE_WB1, doc)
     assert state(doc)[0] == "ready_for_review" and ocr.calls == 1
 
 
 async def test_another_ward_cannot_process_the_document(db, seeded):
     doc = new_document(ward="wb1")
     ocr = FakeOcr(default=READABLE)
-    await Pipeline(db, ocr, FakeExtractor()).run(NURSE_WB2, doc)
+    await Pipeline(db, ocr, FakeExtractor(), screener=FakeScreener()).run(NURSE_WB2, doc)
     assert state(doc)[0] == "uploaded" and ocr.calls == 0
 
 
@@ -244,7 +258,104 @@ class TypedExtractor(FakeExtractor):
 )
 async def test_a_recognised_type_is_stored_on_the_document(db, seeded, recognised, expected):
     doc = new_document()
-    await Pipeline(db, FakeOcr(default=READABLE), TypedExtractor(recognised)).run(NURSE_WB1, doc)
+    await Pipeline(
+        db, FakeOcr(default=READABLE), TypedExtractor(recognised), screener=FakeScreener()
+    ).run(NURSE_WB1, doc)
     assert admin("select doc_type::text from public.documents where id = %s", [doc]) == [
         (expected,)
     ]
+
+
+# --- F07: the injection check between OCR and field suggestion -------------------------------
+
+
+class StatusRecordingScreener(FakeScreener):
+    async def __call__(self, principal, pages, pdf):
+        self.statuses.append(state(self.doc)[0])
+        return await super().__call__(principal, pages, pdf)
+
+
+async def test_the_check_runs_in_its_own_status_before_the_suggestion(db, seeded):
+    doc = new_document()
+    screener, extractor = StatusRecordingScreener(), FakeExtractor()
+    screener.doc = doc
+    await Pipeline(db, FakeOcr(default=READABLE), extractor, screener=screener).run(NURSE_WB1, doc)
+    assert screener.statuses == ["screening"]
+    assert state(doc)[0] == "ready_for_review"
+    assert admin("select screening_result from public.documents where id = %s", [doc]) == [
+        ("clean",)
+    ]
+
+
+async def test_findings_are_stored_and_only_the_cleaned_text_goes_on(db, seeded):
+    from app.security.screening import EXCLUDED, Finding, Screening
+
+    doc = new_document()
+    cleaned = [{"page": 1, "markdown": f"# Arztbrief\n\n{EXCLUDED}"}]
+    finding = Finding(
+        1, 13, 40, "pattern", "address-de", "addresses_ai", "Hinweis für das KI-System", "Erklärung"
+    )
+    screener = FakeScreener(result=Screening("suspicious", cleaned, [finding]))
+    extractor = FakeExtractor()
+    await Pipeline(db, FakeOcr(default=READABLE), extractor, screener=screener).run(NURSE_WB1, doc)
+    assert extractor.calls[0][1] == cleaned[0]["markdown"]
+    assert admin(
+        "select screening_result, screened_pages from public.documents where id = %s", [doc]
+    ) == [("suspicious", cleaned)]
+    assert admin(
+        "select page, start_offset, layer, rule_id, excerpt from public.injection_findings"
+        " where document_id = %s",
+        [doc],
+    ) == [(1, 13, "pattern", "address-de", "Hinweis für das KI-System")]
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (LlmUnavailable("down"), "screening_unavailable"),
+        (RuntimeError("anything"), "screening_unavailable"),
+        (QuotaExceeded("guard_document"), "quota_exceeded"),
+        (PseudonymizationFailed(), "pseudonymization_failed"),
+    ],
+    ids=["checker-down", "crash", "quota", "plain-name"],
+)
+async def test_without_a_check_nothing_goes_on(db, seeded, error, code):
+    # F07-AC7: fail closed - no suggestion for an unchecked document.
+    doc = new_document()
+    extractor = FakeExtractor()
+    await Pipeline(db, FakeOcr(default=READABLE), extractor, screener=FakeScreener(error)).run(
+        NURSE_WB1, doc
+    )
+    assert state(doc)[:2] == ("failed", code)
+    assert extractor.calls == []
+
+
+async def test_a_retry_after_the_ocr_checks_again(db, seeded):
+    doc = new_document()
+    await Pipeline(
+        db, FakeOcr(default=READABLE), FakeExtractor(), screener=FakeScreener(LlmUnavailable("x"))
+    ).run(NURSE_WB1, doc)
+    ocr, screener, extractor = FakeOcr(default=READABLE), FakeScreener(), FakeExtractor()
+    await Pipeline(db, ocr, extractor, screener=screener).run(NURSE_WB1, doc)
+    assert ocr.calls == 0 and len(screener.calls) == 1 and len(extractor.calls) == 1
+    assert state(doc)[0] == "ready_for_review"
+
+
+async def test_a_pdf_is_handed_to_the_check_for_hidden_text(db, seeded):
+    doc = new_document()
+    admin(
+        "update public.document_files set mime = 'application/pdf', content = %s"
+        " where document_id = %s",
+        [b"%PDF-1.4 fake", doc],
+    )
+    screener = FakeScreener()
+    await Pipeline(db, FakeOcr(default=READABLE), FakeExtractor(), screener=screener).run(
+        NURSE_WB1, doc
+    )
+    assert screener.calls[0][1] == b"%PDF-1.4 fake"
+
+
+async def test_a_document_stuck_in_the_check_is_marked_stalled(db, seeded):
+    doc = new_document(status="screening", age_minutes=6)
+    await mark_stalled(db, NURSE_WB1)
+    assert state(doc)[:2] == ("failed", "timeout")

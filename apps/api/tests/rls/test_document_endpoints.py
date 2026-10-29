@@ -50,6 +50,7 @@ def api(seeded: None, ocr: FakeOcr) -> Iterator[TestClient]:
         oidc_audience=AUDIENCE,
         oidc_roles_claim=ROLES_CLAIM,
         bff_api_secret=BFF_SECRET,
+        llm_provider="fake",  # also the injection checker (F07) is the fake
     )
     app = create_app(settings, verifier=test_verifier(), ocr=ocr, llm=FakeLlm())
     with TestClient(app) as client:

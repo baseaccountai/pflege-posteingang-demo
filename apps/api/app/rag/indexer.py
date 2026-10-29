@@ -6,7 +6,8 @@ the chunk policies check that every chunk belongs to it.
 
 1. Read the document. Only an approved document whose indexing is pending or failed is
    indexed; anything else (foreign ward, not approved, already done) is left alone.
-2. Cut the OCR pages into chunks (rag/chunker.py).
+2. Cut the CHECKED pages into chunks (rag/chunker.py): screened_pages, where suspicious
+   sections are already replaced (F07-AC5) - never the raw OCR pages.
 3. Book the embedding quota BEFORE the paid call (F10-AC10).
 4. Embed all chunks - outside of any transaction, a model call can take seconds. The
    embedding model only gets the pseudonymised text (F06-AC4); the chunk itself is stored
@@ -48,7 +49,7 @@ class Indexer:
     async def _index(self, principal: Principal, document_id: str) -> None:
         async with self.db.as_principal(principal) as conn:
             cur = await conn.execute(
-                "select ward_id, resident_id::text, doc_type::text, document_date, ocr_pages"
+                "select ward_id, resident_id::text, doc_type::text, document_date, screened_pages"
                 " from public.documents where id = %s and status = 'approved'"
                 " and indexing_status in ('pending', 'failed')",
                 [document_id],
@@ -56,8 +57,8 @@ class Indexer:
             document = await cur.fetchone()
         if document is None:
             return  # not visible, not approved or already indexed
-        ward, resident, doc_type, document_date, ocr_pages = document
-        chunks = split_pages([(p["page"], p["markdown"]) for p in ocr_pages or []])
+        ward, resident, doc_type, document_date, screened_pages = document
+        chunks = split_pages([(p["page"], p["markdown"]) for p in screened_pages or []])
 
         # The quota is booked in its own transaction: once paid for, it stays booked.
         async with self.db.as_principal(principal) as conn:

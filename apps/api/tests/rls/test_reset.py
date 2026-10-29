@@ -29,6 +29,7 @@ from tests.support.oidc import (
     bff_assertion,
     test_verifier,
 )
+from tests.support.screening import FakeScreener
 
 pytestmark = [pytest.mark.db, pytest.mark.anyio]
 
@@ -197,7 +198,9 @@ async def test_processing_that_started_before_the_reset_writes_nothing(fresh, db
     async def extractor(principal, document_id, text):
         return Suggestion(data={"doc_type": "arztbrief"}, model="fake-llm")
 
-    task = asyncio.create_task(Pipeline(db, ocr, extractor).run(NURSE_WB1, doc))
+    task = asyncio.create_task(
+        Pipeline(db, ocr, extractor, screener=FakeScreener()).run(NURSE_WB1, doc)
+    )
     await ocr.started.wait()
     await asyncio.to_thread(reset, ADMIN_DSN, SEED_FILES)
     ocr.release.set()

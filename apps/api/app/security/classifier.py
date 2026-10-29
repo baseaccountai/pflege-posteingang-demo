@@ -90,8 +90,10 @@ def _verdicts(raw, count: int) -> list[Verdict]:
 
 
 async def _classify(gateway: ModelGateway, sections: list[str], max_tokens: int) -> list[Verdict]:
+    pseudonymizer, mapping = await gateway.pseudonymizer(), {}  # F06: placeholders only
+    texts = [pseudonymizer.pseudonymize(text, mapping).text for text in sections]
     try:
-        raw = await gateway.classify(SYSTEM_PROMPT, build_prompt(sections), SCHEMA, max_tokens)
+        raw = await gateway.classify(SYSTEM_PROMPT, build_prompt(texts), SCHEMA, max_tokens)
     except LlmInvalidOutput:
         return [UNUSABLE_VERDICT] * len(sections)
     return _verdicts(raw, len(sections))

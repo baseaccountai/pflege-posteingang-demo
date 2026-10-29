@@ -25,6 +25,7 @@ from app.quotas import consume
 from app.rag.indexer import Indexer
 from app.rag.routes import router as questions_router
 from app.residents.routes import router as residents_router
+from app.security.screening import Screener
 
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 MAINTENANCE_MESSAGE = "Demo wird gerade zurückgesetzt – bitte in einer Minute erneut versuchen"
@@ -67,7 +68,18 @@ def create_app(
 
             # F06-AC1: every model call goes through the gateway (pseudonymised text only).
             app.state.gateway = create_gateway(settings, database, llm, embeddings)
-            app.state.pipeline = Pipeline(database, ocr, Extractor(app.state.gateway, book_retry))
+
+            async def book_guard(principal: Principal) -> None:
+                # One injection check of a document, at most 20 000 characters (F07-AC4).
+                async with database.as_principal(principal) as conn:
+                    await consume(conn, "guard_document", 1)
+
+            app.state.pipeline = Pipeline(
+                database,
+                ocr,
+                Extractor(app.state.gateway, book_retry),
+                screener=Screener(app.state.gateway, book_guard),
+            )
             app.state.indexer = Indexer(database, app.state.gateway)
         try:
             yield

@@ -49,6 +49,9 @@ def test_limits_from_the_migration():
         "ocr_page/global": 50,
         "llm_call/global": 100,
         "embed_chunk/global": 500,
+        # F07 injection checks (29.10.2026), also inside the 0.50 EUR (ADR 0003).
+        "guard_document/global": 20,
+        "guard_question/global": 100,
     }
 
 

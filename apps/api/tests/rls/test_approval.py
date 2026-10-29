@@ -69,9 +69,9 @@ def review_document(
     }
     admin(
         "insert into public.documents (id, ward_id, uploaded_by, upload_session, status,"
-        " suggestion, suggestion_model, ocr_pages)"
-        " values (%s, %s, 'u', 's', 'ready_for_review', %s, 'fake', %s)",
-        [doc, ward, Jsonb(suggestion), Jsonb(OCR_PAGES)],
+        " suggestion, suggestion_model, ocr_pages, screened_pages, screening_result)"
+        " values (%s, %s, 'u', 's', 'ready_for_review', %s, 'fake', %s, %s, 'clean')",
+        [doc, ward, Jsonb(suggestion), Jsonb(OCR_PAGES), Jsonb(OCR_PAGES)],
     )
     return doc
 

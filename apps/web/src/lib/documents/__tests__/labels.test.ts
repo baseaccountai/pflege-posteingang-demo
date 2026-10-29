@@ -8,6 +8,7 @@ describe("status labels", () => {
     expect(STATUS_LABELS).toEqual({
       uploaded: "wartet",
       processing: "in Bearbeitung",
+      screening: "Sicherheitsprüfung",
       extracting: "in Bearbeitung",
       ready_for_review: "bereit zur Prüfung",
       approved: "freigegeben",
@@ -18,7 +19,7 @@ describe("status labels", () => {
   });
 
   it("treats only running steps as pending (polling)", () => {
-    expect(["uploaded", "processing", "extracting"].every(isPending)).toBe(true);
+    expect(["uploaded", "processing", "screening", "extracting"].every(isPending)).toBe(true);
     expect(["ready_for_review", "failed", "unreadable", "approved"].some(isPending)).toBe(false);
   });
 });
@@ -29,6 +30,12 @@ describe("errorMessage", () => {
       "Dokument nicht lesbar – bitte neu fotografieren (gerade, hell, ganze Seite)",
     );
     expect(errorMessage("not_care_document")).toBe("Kein Pflegedokument erkannt");
+  });
+
+  it("says when the injection check could not run (F07-AC7)", () => {
+    expect(errorMessage("screening_unavailable")).toBe(
+      "Sicherheitsprüfung gerade nicht möglich – bitte erneut versuchen.",
+    );
   });
 
   it("says why a document was not sent to the AI (F06-AC10)", () => {

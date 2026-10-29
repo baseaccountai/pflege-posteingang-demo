@@ -3,6 +3,7 @@
 export const STATUS_LABELS: Record<string, string> = {
   uploaded: "wartet",
   processing: "in Bearbeitung",
+  screening: "Sicherheitsprüfung", // F07: injection check before any AI reads the text
   extracting: "in Bearbeitung",
   ready_for_review: "bereit zur Prüfung",
   approved: "freigegeben",
@@ -29,11 +30,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   quota_exceeded: DAILY_QUOTA_MESSAGE,
   timeout: "Verarbeitung hat zu lange gedauert – bitte erneut versuchen.",
   pseudonymization_failed: "Aus Datenschutzgründen nicht an die KI gesendet – bitte erneut versuchen.",
+  screening_unavailable: "Sicherheitsprüfung gerade nicht möglich – bitte erneut versuchen.",
 };
 
 /** Running steps: the inbox keeps polling while one of these is shown (F02-AC6). */
 export function isPending(status: string): boolean {
-  return status === "uploaded" || status === "processing" || status === "extracting";
+  return ["uploaded", "processing", "screening", "extracting"].includes(status);
 }
 
 export function errorMessage(code: string | null): string | null {

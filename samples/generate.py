@@ -331,10 +331,13 @@ def seed_sql() -> str:
         ago = f"now() - interval '{doc['approved_days_ago']} days'"
         out.append(
             "insert into public.documents (id, ward_id, resident_id, doc_type, status, ocr_pages,"
+            " screened_pages, screening_result,"
             " document_date, uploaded_by, upload_session, attempts, status_changed_at,"
             " approved_by, approved_by_name, approved_at, indexing_status, created_at)"
             f" values ('{doc['id']}', '{ward}', '{RESIDENT_IDS[doc['resident']]}',"
-            f" '{doc['doc_type']}', 'approved', $json${pages}$json$::jsonb, '{doc['date']}',"
+            f" '{doc['doc_type']}', 'approved', $json${pages}$json$::jsonb,"
+            # Our own letters: no rule matches them (tests/security/test_patterns.py), F07.
+            f" $json${pages}$json$::jsonb, 'clean', '{doc['date']}',"
             f" 'seed:pflege-{ward}', 'seed', 1, {ago}, 'seed:pflege-{ward}',"
             f" '{NURSE_NAMES[ward]}', {ago}, 'pending', {ago} - interval '1 hour');"
         )

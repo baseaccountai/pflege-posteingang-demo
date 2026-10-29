@@ -53,9 +53,16 @@ async def indexed(db, seeded):
         doc = str(uuid.uuid4())
         admin(
             "insert into public.documents (id, ward_id, resident_id, uploaded_by, upload_session,"
-            " status, doc_type, document_date, ocr_pages, indexing_status) values (%s, %s, %s,"
-            " 'u', 's', 'approved', 'arztbrief', '2026-10-20', %s, 'pending')",
-            [doc, ward, resident, Jsonb([{"page": 1, "markdown": text}])],
+            " status, doc_type, document_date, ocr_pages, screened_pages, screening_result,"
+            " indexing_status) values (%s, %s, %s, 'u', 's', 'approved', 'arztbrief',"
+            " '2026-10-20', %s, %s, 'clean', 'pending')",
+            [
+                doc,
+                ward,
+                resident,
+                Jsonb([{"page": 1, "markdown": text}]),
+                Jsonb([{"page": 1, "markdown": text}]),
+            ],
         )
         await Indexer(db, db_gateway(db)).run(nurse, doc)
     yield

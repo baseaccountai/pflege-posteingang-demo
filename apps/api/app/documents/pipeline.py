@@ -1,9 +1,12 @@
 """Background processing of an accepted document as a state machine (F02-AC6 to F02-AC9).
 
-    uploaded -> processing -> extracting -> ready_for_review
+    uploaded -> processing -> screening -> extracting -> ready_for_review
                      \\-> unreadable          (readability check, end state)
-    uploaded | processing | extracting -> failed (error_code)
-    failed -> processing (no OCR result yet) | extracting (OCR result kept)  = retry
+    uploaded | processing | screening | extracting -> failed (error_code)
+    failed -> processing (no OCR result yet) | screening (OCR result kept)  = retry
+
+`screening` is the injection check (F07): the field suggestion only gets the cleaned pages
+it produces. The database refuses `extracting` without it (trigger documents_require_screening).
 
 Every status change is a conditional update ("... where status = <expected>"). If the
 document changed in between - a parallel retry, or the inbox marked it as stalled - the
@@ -29,6 +32,7 @@ from app.privacy.gateway import PseudonymizationFailed
 from app.providers.llm.base import LlmUnavailable
 from app.providers.ocr.base import OcrProvider, OcrUnavailable
 from app.quotas import QuotaExceeded
+from app.security.screening import Screener, Screening
 
 log = logging.getLogger(__name__)
 
@@ -63,11 +67,14 @@ class Pipeline:
         ocr: OcrProvider,
         extractor: Extractor = no_suggestion,
         step_timeout: float = STEP_TIMEOUT_SECONDS,
+        *,
+        screener: Screener,  # required on purpose: there is no pipeline without the check
     ):
         self.db = db
         self.ocr = ocr
         self.extractor = extractor
         self.step_timeout = step_timeout
+        self.screener = screener
 
     async def run(self, principal: Principal, document_id: str) -> None:
         """Processes a new or failed document from the step where it stopped."""
@@ -83,12 +90,16 @@ class Pipeline:
         if status == "uploaded" or (status == "failed" and pages is None):
             pages = await self._ocr_step(principal, document_id, from_status=status)
         elif status == "failed":
-            if not await self._move(principal, document_id, "failed", "extracting", attempt=True):
+            # Every retry after the OCR checks again (F07-AC1); the trigger clears the old result.
+            if not await self._move(principal, document_id, "failed", "screening", attempt=True):
                 return
         else:
             return  # in progress elsewhere or past processing: nothing to do
-        if pages is not None:
-            await self._extraction_step(principal, document_id, joined_text(pages))
+        if pages is None:
+            return
+        screened = await self._screening_step(principal, document_id, pages)
+        if screened is not None:
+            await self._extraction_step(principal, document_id, joined_text(screened))
 
     async def _ocr_step(self, principal: Principal, doc: str, from_status: str) -> list | None:
         if not await self._move(principal, doc, from_status, "processing", attempt=True):
@@ -119,9 +130,71 @@ class Pipeline:
             )
             return None
         pages = [{"page": page.number, "markdown": page.markdown} for page in result.pages]
-        if not await self._move(principal, doc, "processing", "extracting", ocr_pages=pages):
+        if not await self._move(principal, doc, "processing", "screening", ocr_pages=pages):
             return None
         return pages
+
+    async def _screening_step(self, principal: Principal, doc: str, pages: list) -> list | None:
+        """F07: hidden text, rules, checker model. Returns the cleaned pages or None."""
+        async with self.db.as_principal(principal) as conn:
+            cur = await conn.execute(
+                "select content, mime from public.document_files where document_id = %s", [doc]
+            )
+            content, mime = await cur.fetchone()
+        pdf = bytes(content) if mime == "application/pdf" else None
+        try:
+            screening = await asyncio.wait_for(
+                self.screener(principal, pages, pdf), self.step_timeout
+            )
+        except TimeoutError:
+            await self._fail(principal, doc, "screening", "timeout")
+            return None
+        except QuotaExceeded:
+            await self._fail(principal, doc, "screening", "quota_exceeded")
+            return None
+        except PseudonymizationFailed:
+            log.warning("pseudonymization refused for the check of %s", doc)
+            await self._fail(principal, doc, "screening", "pseudonymization_failed")
+            return None
+        except Exception:  # checker unreachable or anything else: never go on unchecked
+            log.exception("injection check failed for %s", doc)
+            await self._fail(principal, doc, "screening", "screening_unavailable")
+            return None
+        if not await self._finish_screening(principal, doc, screening):
+            return None
+        return screening.screened_pages
+
+    async def _finish_screening(self, principal: Principal, doc: str, screening: Screening) -> bool:
+        """Result, cleaned pages and findings in one transaction, then on to extracting."""
+        async with self.db.as_principal(principal) as conn:
+            cur = await conn.execute(
+                "update public.documents set status = 'extracting', status_changed_at = now(),"
+                " screening_result = %s, screened_pages = %s"
+                " where id = %s and status = 'screening' returning ward_id",
+                [screening.result, Jsonb(screening.screened_pages), doc],
+            )
+            row = await cur.fetchone()
+            if row is None:  # changed meanwhile (stalled, parallel retry)
+                return False
+            for f in screening.findings:
+                await conn.execute(
+                    "insert into public.injection_findings (document_id, ward_id, page,"
+                    " start_offset, end_offset, layer, rule_id, category, excerpt, explanation)"
+                    " values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    [
+                        doc,
+                        row[0],
+                        f.page,
+                        f.start,
+                        f.end,
+                        f.layer,
+                        f.rule_id,
+                        f.category,
+                        f.excerpt,
+                        f.explanation,
+                    ],
+                )
+        return True
 
     async def _extraction_step(self, principal: Principal, doc: str, text: str) -> None:
         try:
@@ -219,7 +292,7 @@ async def mark_stalled(db: Database, principal: Principal) -> None:
             update public.documents
             set status = 'failed', error_code = 'timeout', status_changed_at = now()
             where (status = 'uploaded' and status_changed_at < now() - interval '2 minutes')
-               or (status in ('processing', 'extracting')
+               or (status in ('processing', 'screening', 'extracting')
                    and status_changed_at < now() - interval '5 minutes')
             """
         )
