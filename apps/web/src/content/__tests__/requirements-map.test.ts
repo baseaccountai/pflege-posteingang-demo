@@ -61,7 +61,7 @@ describe("requirements map data", () => {
 
   it("has no app link for what is still in Stufe 2", () => {
     const later = REQUIREMENTS.filter((r) => r.status === "stufe2");
-    expect(later.map((r) => r.id).sort()).toEqual(["llm-security", "local-models"]);
+    expect(later.map((r) => r.id).sort()).toEqual(["local-models"]); // F07 live since 29.10.
     for (const entry of later) expect(entry.appHref).toBeUndefined();
   });
 
@@ -71,5 +71,15 @@ describe("requirements map data", () => {
       "https://github.com/x/y/blob/main/infra/docker-compose.yml",
     );
     expect(repoHref("docs/")).toMatch(/^https:\/\/github\.com\/baseaccountai\/pflege-posteingang-demo\/tree\/main\/docs\/$/);
+  });
+});
+
+describe("stage 2 entries", () => {
+  it("shows the prompt-injection protection as live, with the inbox to try it (F07)", () => {
+    const entry = REQUIREMENTS.find((r) => r.id === "llm-security")!;
+    expect(entry.status).toBe("live");
+    expect(entry.appHref).toBe("/posteingang");
+    expect(entry.repoPaths).toContain("apps/api/app/security/");
+    expect(entry.how).toMatch(/fünf Schichten/);
   });
 });

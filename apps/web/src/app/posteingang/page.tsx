@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { ApiStatusBoundary } from "@/components/api-status";
 import { Inbox } from "@/components/inbox";
 import type { InboxDocument } from "@/components/inbox-list";
+import { SampleDownloads } from "@/components/sample-downloads";
 import { getAsCaller } from "@/lib/as-caller";
 import { requireSession } from "@/lib/auth/current";
 
@@ -14,6 +15,7 @@ export default function InboxPage() {
       <Suspense fallback={<p className="text-muted-foreground">Lädt …</p>}>
         <InboxSection />
       </Suspense>
+      <SampleDownloads />
     </main>
   );
 }

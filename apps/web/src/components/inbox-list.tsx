@@ -15,6 +15,7 @@ export type InboxDocument = {
   status: string;
   error_code: string | null;
   created_at: string;
+  screening_result?: string | null; // F07: clean | suspicious | not_screened
 };
 
 const POLL_MS = 3000;
@@ -83,6 +84,9 @@ export function InboxList({
               <span className="text-sm text-muted-foreground">{time(doc.created_at)}</span>
               <span className="font-medium">{doc.doc_type ? DOC_TYPE_LABELS[doc.doc_type] : "Dokument"}</span>
               <span className="rounded-full border px-2 py-0.5 text-xs">{STATUS_LABELS[doc.status] ?? doc.status}</span>
+              {doc.screening_result === "suspicious" && (
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-900">verdächtig</span>
+              )}
               <span className="text-xs text-muted-foreground">{doc.ward_id.toUpperCase()}</span>
               {doc.status === "ready_for_review" && (
                 <Link href={`/posteingang/${doc.id}`} className="ml-auto underline">

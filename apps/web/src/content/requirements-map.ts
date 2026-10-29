@@ -98,9 +98,12 @@ export const REQUIREMENTS: RequirementEntry[] = [
     text: "Sicherheitsrisiken von LLM-Anwendungen",
     level: "wuenschenswert",
     how:
-      "Bedrohungsmodell nach OWASP LLM Top 10; Dokumente gehen nur als markierte Daten in Prompts, " +
-      "Antworten brauchen belegte Quellen. Erkennung von Prompt-Injection folgt in Stufe 2.",
-    repoPaths: ["docs/security/threat-model.md", "apps/api/app/rag/answer.py"],
-    status: "stufe2",
+      "Bedrohungsmodell nach OWASP LLM Top 10; Schutz vor Prompt-Injection in fünf Schichten: versteckte " +
+      "Schrift im PDF, Regeln, Prüfmodell, Dokumente nur als markierte Daten, Ausgabe prüfen. " +
+      "Kein Modell außer der OCR sieht Bewohnernamen (Pseudonymisierung).",
+    appHref: "/posteingang",
+    appLabel: "Posteingang (Musterdokumente mit Angriff)",
+    repoPaths: ["docs/security/threat-model.md", "apps/api/app/security/", "apps/api/app/privacy/"],
+    status: "live",
   },
 ];

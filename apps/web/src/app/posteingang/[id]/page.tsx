@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ApiStatusBoundary } from "@/components/api-status";
+import { AttackFindings, type Finding } from "@/components/attack-findings";
 import { NoAccess } from "@/components/no-access";
 import { ReviewForm } from "@/components/review-form";
 import { getAsCaller } from "@/lib/as-caller";
@@ -49,9 +50,15 @@ async function Review({ params }: Pick<PageProps<"/posteingang/[id]">, "params">
   const residentsResult = await getAsCaller<Resident[]>("/residents");
   if (residentsResult.status === 503) return <ApiStatusBoundary />;
   const residents = residentsResult.data ?? [];
+  // F07-AC6: findings of the injection check, shown above the fields.
+  const details = await getAsCaller<{ screening_result: string | null; findings: Finding[] }>(
+    `/documents/${encodeURIComponent(id)}`,
+  );
+  const findings = details.data?.findings ?? [];
   return (
     <section className="flex flex-col gap-3">
       <h1 className="text-2xl font-semibold">Dokument prüfen</h1>
+      {findings.length > 0 && <AttackFindings findings={findings} />}
       <ReviewForm
         documentId={id}
         model={answer.model}

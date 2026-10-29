@@ -41,6 +41,10 @@ e2e:
 # Regenerates the sample documents in samples/ (reproducible, commit the result)
 samples:
 	cd apps/api && PYTHONPATH=../.. uv run python -m samples.generate ../../samples
+	# F07-AC14: the documents offered for download in the inbox (a test checks they match)
+	cp samples/arztbrief_muster-bauer.pdf samples/arztbrief_muster-bauer_foto.jpg \
+	   samples/medikationsplan_muster-bauer.pdf samples/angriff_versteckt_probe.pdf \
+	   samples/angriff_hinweis_beispiel.pdf apps/web/public/samples/
 
 # Precomputed seed chunks with real Mistral embeddings (F10-AC6); run by the applicant,
 # reads MISTRAL_API_KEY from .env and never prints it

@@ -25,6 +25,20 @@ afterEach(() => {
 });
 
 describe("InboxList", () => {
+  it("marks a document with findings of the injection check as suspicious (F07-AC6)", () => {
+    render(
+      <InboxList
+        documents={[
+          doc({ id: "a", status: "ready_for_review", screening_result: "suspicious" }),
+          doc({ id: "b", status: "ready_for_review", screening_result: "clean" }),
+        ]}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("document-a")).toHaveTextContent("verdächtig");
+    expect(screen.getByTestId("document-b")).not.toHaveTextContent("verdächtig");
+  });
+
   it("shows badge, type, time, message and the review link", () => {
     render(
       <InboxList

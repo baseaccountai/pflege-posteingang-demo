@@ -15,6 +15,9 @@ try {
     on conflict (id) do nothing`;
   // Test database only: quota counters start at zero, so repeated runs never hit a limit.
   await admin`truncate public.usage_counters`;
+  // One run uploads more documents (desktop + mobile) than the injection check's daily
+  // limit of 20 allows; raised for the run, set back in global-teardown.ts (F07).
+  await admin`update public.quota_limits set max_count = 500 where kind = 'guard_document'`;
   for (const resident of prep.residents) {
     await admin`
       insert into public.residents (id, ward_id, display_name)
