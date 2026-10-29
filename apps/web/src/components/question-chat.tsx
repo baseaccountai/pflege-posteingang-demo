@@ -20,7 +20,9 @@ type Source = {
   resident_name: string;
   page: number;
 };
-type Exchange = { question: string; answer: string; sources: Source[]; model: string };
+// F06-AC7: exactly what went to the model - pseudonymised question and source texts.
+type SentToModel = { question: string; sources: { n: number; text: string }[] } | null;
+type Exchange = { question: string; answer: string; sources: Source[]; model: string; sent: SentToModel };
 
 function sourceLabel(source: Source): string {
   const type = (source.doc_type && DOC_TYPE_LABELS[source.doc_type]) || "Dokument";
@@ -59,7 +61,10 @@ export function QuestionChat({
         setProblem(data.message ?? "Die Frage konnte nicht gestellt werden.");
         return;
       }
-      setHistory((before) => [...before, { question: text, answer: data.answer, sources: data.sources, model: data.model }]);
+      setHistory((before) => [
+        ...before,
+        { question: text, answer: data.answer, sources: data.sources, model: data.model, sent: data.sent_to_model ?? null },
+      ]);
       setQuestion("");
     } catch {
       setProblem("Die Frage konnte nicht gestellt werden.");
@@ -90,6 +95,18 @@ export function QuestionChat({
                   </li>
                 ))}
               </ul>
+            )}
+            {exchange.sent && (
+              <details className="rounded-md bg-muted/50 px-3 py-2 text-xs">
+                <summary className="cursor-pointer font-medium">Das hat das KI-Modell gesehen</summary>
+                <p className="mt-2">Namen und Geburtsdaten sind durch Platzhalter ersetzt; zurückübersetzt wird nur hier.</p>
+                <p className="mt-2 font-mono whitespace-pre-line">Frage: {exchange.sent.question}</p>
+                {exchange.sent.sources.map((source) => (
+                  <p key={source.n} className="mt-2 font-mono whitespace-pre-line">
+                    [Q{source.n}] {source.text}
+                  </p>
+                ))}
+              </details>
             )}
             <p className="text-muted-foreground text-xs">Antwort von {modelLabel(exchange.model)} · KI-Antwort, bitte an der Quelle prüfen</p>
           </li>

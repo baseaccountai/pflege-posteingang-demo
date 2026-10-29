@@ -8,18 +8,16 @@ still in it, the call is not made (`PseudonymizationFailed`) - better no answer 
 names at a cloud provider. OCR is the one exception: it needs the original image.
 
 The directory of residents (names and birth dates of the whole home) is read with the
-backend's own role through app.pseudonym_directory() and kept for 60 seconds.
+backend's own role through app.pseudonym_directory() - fresh for every use: a resident
+added a second ago must be replaced as well, and the list has only a few rows.
 """
 
-import time
 from collections.abc import Awaitable, Callable
 
 from app.auth.principal import Principal
 from app.privacy.pseudonymizer import KnownResident, Pseudonymizer
 from app.providers.embeddings.base import EmbeddingProvider
 from app.providers.llm.base import LlmProvider
-
-DIRECTORY_SECONDS = 60
 
 
 class PseudonymizationFailed(Exception):
@@ -38,7 +36,6 @@ class ModelGateway:
         self.embeddings = embeddings
         self._directory = directory
         self._visible = visible
-        self._cached: tuple[float, Pseudonymizer] | None = None
 
     @property
     def llm_model(self) -> str:
@@ -49,10 +46,7 @@ class ModelGateway:
         return self.embeddings.model_name
 
     async def pseudonymizer(self) -> Pseudonymizer:
-        now = time.monotonic()
-        if self._cached is None or now - self._cached[0] > DIRECTORY_SECONDS:
-            self._cached = (now, Pseudonymizer(await self._directory()))
-        return self._cached[1]
+        return Pseudonymizer(await self._directory())
 
     async def visible_residents(self, principal: Principal) -> set[str]:
         """Residents the caller may see (RLS) - only these are translated back (F06-AC8)."""

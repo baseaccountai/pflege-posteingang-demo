@@ -20,6 +20,14 @@ describe("UploadCard", () => {
     expect(screen.getByText("Bitte keine echten Personendaten hochladen.")).toBeInTheDocument();
   });
 
+  it("says which provider sees the original (F06-AC9, AC12)", () => {
+    render(<UploadCard onUploaded={() => {}} />);
+    expect(screen.getByTestId("privacy-notice")).toHaveTextContent(
+      "Die Texterkennung (OCR) läuft öffentlich bei Mistral und sieht das Original; alle weiteren KI-Schritte sehen nur Platzhalter. Im lokalen Betrieb verlässt nichts den Rechner.",
+    );
+    expect(screen.getByTestId("privacy-notice")).toHaveTextContent("Namen ohne Anrede oder Titel");
+  });
+
   it("offers the back camera and a file upload for JPEG, PNG and PDF", () => {
     render(<UploadCard onUploaded={vi.fn()} />);
     const camera = screen.getByLabelText("Foto aufnehmen");

@@ -1,3 +1,4 @@
+import { DataFlowTable } from "@/components/data-flow-table";
 import { repoHref, DEFAULT_REPO_URL } from "@/content/requirements-map";
 
 // F09-AC8: placeholder in Stufe 1; the full project description follows in phase 9.
@@ -25,6 +26,7 @@ export default function ProjectPage() {
           </li>
         ))}
       </ul>
+      <DataFlowTable />
       <p className="text-muted-foreground text-sm">
         Unabhängige Bewerbungsdemo mit erfundenen Musterdaten; alle Daten werden jede Nacht
         zurückgesetzt.

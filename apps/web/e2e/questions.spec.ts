@@ -62,6 +62,15 @@ test("index from the record, then ask about the resident and open the source", a
   const file = await page.request.get((await source.getAttribute("href"))!);
   expect(file.status()).toBe(200);
   expect(file.headers()["content-type"]).toContain("application/pdf");
+
+  // F06-AC5, AC7: asked by name, the model got only the resident's code.
+  await page.getByLabel("Frage").fill(`${QUESTION} Wie bei ${resident.name}?`);
+  await page.getByRole("button", { name: "Fragen" }).click();
+  const second = page.getByTestId("answer-1");
+  await second.getByText("Das hat das KI-Modell gesehen").click();
+  const seen = second.locator("details");
+  await expect(seen).toContainText(/Frage: .*Bewohner_[A-Z]\d{2}/);
+  await expect(seen).not.toContainText(resident.name.split(" ")[1]);
 });
 
 test("after a role switch the conversation is gone and WB1 is not found", async ({ page }) => {

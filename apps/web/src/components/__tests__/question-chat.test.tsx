@@ -17,6 +17,10 @@ const ANSWER = {
   sources: [{ document_id: "d1", doc_type: "arztbrief", document_date: "2026-10-20", resident_name: "Hr. Muster-Bauer", page: 2 }],
   model: "mistral-small-latest",
   no_hits: false,
+  sent_to_model: {
+    question: "Wie ist Ramipril bei Bewohner_K42 dosiert?",
+    sources: [{ n: 1, text: "## Medikation\nBewohner_K42: Ramipril 5 mg morgens" }],
+  },
 };
 
 function json(body: unknown, status = 200) {
@@ -45,6 +49,27 @@ describe("QuestionChat", () => {
     const source = within(answer).getByRole("link", { name: /Arztbrief vom 20.10.2026 · Hr. Muster-Bauer · Seite 2/ });
     expect(source).toHaveAttribute("href", "/api/documents/d1/file");
     expect(source).toHaveAttribute("target", "_blank");
+  });
+
+  it("shows on request exactly what the model saw, with placeholders (F06-AC7)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json(ANSWER)));
+    render(<QuestionChat residents={RESIDENTS} initialResident="" />);
+    ask("Wie ist Ramipril bei Hr. Muster-Bauer dosiert?");
+    const answer = await screen.findByTestId("answer-0");
+    const seen = within(answer).getByText("Das hat das KI-Modell gesehen").closest("details")!;
+    expect(seen).not.toHaveAttribute("open");
+    expect(seen).toHaveTextContent("Frage: Wie ist Ramipril bei Bewohner_K42 dosiert?");
+    expect(seen).toHaveTextContent("[Q1] ## Medikation Bewohner_K42: Ramipril 5 mg morgens");
+    expect(seen).not.toHaveTextContent("Muster-Bauer");
+  });
+
+  it("has no such section when no model was asked", async () => {
+    const noHits = { answer: "Keine Treffer in deinem Wohnbereich.", sources: [], model: "m", no_hits: true, sent_to_model: null };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json(noHits)));
+    render(<QuestionChat residents={RESIDENTS} initialResident="" />);
+    ask("Wer ist Hr. Niemand?");
+    const answer = await screen.findByTestId("answer-0");
+    expect(within(answer).queryByText("Das hat das KI-Modell gesehen")).not.toBeInTheDocument();
   });
 
   it("sends the chosen resident, preselected from the record link", async () => {

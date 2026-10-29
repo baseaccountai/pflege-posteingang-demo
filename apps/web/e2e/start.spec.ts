@@ -43,3 +43,10 @@ test("the app can be installed: manifest and apple touch icon are linked (F11-AC
   expect((await page.request.get(apple!)).headers()["content-type"]).toContain("image/png");
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#115e59");
 });
+
+test("the project page says which AI sees which data (F06-AC11)", async ({ page }) => {
+  await page.goto("/projekt");
+  const table = page.getByRole("table", { name: "Welche KI sieht welche Daten" });
+  await expect(table.getByRole("row", { name: /Texterkennung/ })).toContainText("Original");
+  await expect(table.getByRole("row", { name: /Antwort auf Fragen/ })).toContainText("nur Platzhalter");
+});

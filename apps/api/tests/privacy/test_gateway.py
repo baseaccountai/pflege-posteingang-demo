@@ -83,10 +83,12 @@ async def test_a_plain_name_stops_the_embedding_call(gateway):
     assert gateway.embeddings.calls == []
 
 
-async def test_the_directory_is_loaded_once_and_reused(gateway, loads):
-    first = await gateway.pseudonymizer()
-    second = await gateway.pseudonymizer()
-    assert first is second and loads == [1]
+async def test_the_directory_is_read_fresh_so_a_new_resident_is_protected_at_once(
+    gateway, loads
+):
+    await gateway.pseudonymizer()
+    await gateway.pseudonymizer()
+    assert loads == [1, 1]
 
 
 async def test_the_model_names_come_from_the_providers(gateway):

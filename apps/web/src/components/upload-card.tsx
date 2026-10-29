@@ -8,6 +8,10 @@ import { prepareUpload } from "@/lib/image/downscale";
 export type UploadedDocument = { id: string; status: string };
 
 const UPLOAD_NOTICE = "Bitte keine echten Personendaten hochladen.";
+// F06-AC9, AC12: who sees what, and the limit of the name recognition.
+const PRIVACY_NOTICE =
+  "Die Texterkennung (OCR) läuft öffentlich bei Mistral und sieht das Original; alle weiteren KI-Schritte sehen nur Platzhalter. Im lokalen Betrieb verlässt nichts den Rechner.";
+const PRIVACY_LIMIT = "Erkannt werden Bewohner sowie Namen nach Anrede oder Titel; Namen ohne Anrede oder Titel, die nirgends bekannt sind, bleiben stehen.";
 
 // false in the server HTML and during hydration, true once React runs in the browser.
 const subscribeNever = () => () => {};
@@ -53,6 +57,9 @@ export function UploadCard({
     <section className="flex flex-col gap-3 rounded-lg border p-4" aria-busy={busy}>
       <p className="rounded-md bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">
         {UPLOAD_NOTICE}
+      </p>
+      <p data-testid="privacy-notice" className="text-muted-foreground text-xs">
+        {PRIVACY_NOTICE} {PRIVACY_LIMIT}
       </p>
       {wards && (
         <label className="flex items-center gap-2 text-sm">
