@@ -7,7 +7,7 @@ Zwei Schreibwege, beide mit Eigentümer `audit_owner` (`security definer`):
 1. **Trigger** auf `documents` (Insert, Statuswechsel), `agent_proposals` (Insert, Statuswechsel), `follow_ups`/`diagnoses`/`medication_events` (Insert) schreiben die Zustandsänderungen – atomar mit der Änderung (AC4, AC8).
 2. **`app.log_event(action, outcome, model, document_id, resident_id, details)`** für Modell-, Frage-, Werkzeug- und Blockier-Ereignisse, mit fester Aktionsliste (AC9). Ein Principal kann so nur Ereignisse über sich selbst und nur dieser Arten erzeugen; das Restrisiko (falsche, aber eigene Modell-Ereignisse) ist im Bedrohungsmodell benannt.
 
-Beide Sie liest Akteur, Akteur-Art, Anzeigename, „im Auftrag von“ und Wohnbereich aus `request.jwt.claims` (AC4) und prüft, dass `document_id`/`resident_id` zum Wohnbereich gehören. `authenticated` hat auf die Tabelle **keine** Schreibrechte, nur `execute` auf die Funktion; lesen darf per RLS nur `app.role() = 'pdl'`.
+Beide lesen Akteur, Akteur-Art, Anzeigename, „im Auftrag von“ und Wohnbereich aus `request.jwt.claims` (AC4) und prüfen, dass `document_id`/`resident_id` zum Wohnbereich gehören. `authenticated` hat auf die Tabelle **keine** Schreibrechte, nur `execute` auf die Funktion; lesen darf per RLS nur `app.role() = 'pdl'`.
 
 Im Backend ruft der Helfer `audit.log(principal, …)` `app.log_event` in einer eigenen kurzen Transaktion nach dem Modellaufruf auf (OCR und LLM laufen bewusst außerhalb von DB-Transaktionen, F02). Schlägt das fehl, wird die Antwort nicht ausgeliefert; eine Blockierung bleibt in jedem Fall bestehen (AC8).
 
