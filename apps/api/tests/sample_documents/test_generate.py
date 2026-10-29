@@ -132,3 +132,42 @@ def test_the_seed_record_of_muster_bauer_is_older_than_the_plan():
 def test_committed_seed_sql_is_up_to_date():
     committed = generate.SEED_SQL_PATH.read_text(encoding="utf-8")
     assert committed == generate.seed_sql(), "run `make samples`"
+
+
+# --- F07-AC12: two documents with a prompt injection ----------------------------------------
+
+
+def operations(path):
+    """(operator, operands) of the first page's content stream."""
+    from pypdf.generic import ContentStream
+
+    page = PdfReader(path).pages[0]
+    return [
+        (op.decode(), operands)
+        for operands, op in ContentStream(page.get_contents(), None).operations
+    ]
+
+
+def test_the_hidden_attack_is_in_the_text_layer_but_white_and_tiny(output):
+    path = output / "angriff_versteckt_probe.pdf"
+    assert generate.HIDDEN_ATTACK in pdf_text(path).replace("\n", " ")
+    ops = operations(path)
+    # The attack is drawn right after switching to white and a 1 pt font.
+    draw = next(i for i, (op, args) in enumerate(ops) if op == "Tj" and "Ignoriere" in str(args[0]))
+    before = ops[:draw]
+    fill = next(args for op, args in reversed(before) if op in ("rg", "g"))
+    size = next(args[1] for op, args in reversed(before) if op == "Tf")
+    assert all(float(c) == 1.0 for c in fill) and float(size) < 3
+
+
+def test_the_visible_attack_is_an_ordinary_paragraph(output):
+    path = output / "angriff_hinweis_beispiel.pdf"
+    text = pdf_text(path)
+    assert "Hinweis für das KI-System" in text
+    assert (output / "ocr" / "angriff_hinweis_beispiel.pdf.md").read_text().count("KI-System") == 1
+
+
+def test_the_ocr_of_the_hidden_attack_has_only_the_visible_letter(output):
+    # A photo or a renderer does not see white 1 pt text; the PDF check must find it.
+    ocr = (output / "ocr" / "angriff_versteckt_probe.pdf.md").read_text()
+    assert "Ignoriere" not in ocr and "Hr. Probe" in ocr
