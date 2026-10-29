@@ -17,6 +17,7 @@ from app.db import Database
 from app.documents.pipeline import Pipeline
 from app.documents.routes import router as documents_router
 from app.extraction.service import Extractor
+from app.privacy.gateway import ModelGateway, database_directory, database_visible
 from app.providers.embeddings import EmbeddingProvider, create_embedding_provider
 from app.providers.llm import LlmProvider, create_llm_provider
 from app.providers.ocr import OcrProvider, create_ocr_provider
@@ -67,7 +68,11 @@ def create_app(
                 async with database.as_principal(principal) as conn:
                     await consume(conn, "llm_call", 1)
 
-            app.state.pipeline = Pipeline(database, ocr, Extractor(llm, book_retry))
+            # F06-AC1: every model call goes through the gateway (pseudonymised text only).
+            app.state.gateway = ModelGateway(
+                llm, embeddings, database_directory(database), database_visible(database)
+            )
+            app.state.pipeline = Pipeline(database, ocr, Extractor(app.state.gateway, book_retry))
             app.state.indexer = Indexer(database, embeddings)
         try:
             yield

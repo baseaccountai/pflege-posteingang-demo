@@ -9,6 +9,7 @@ import pytest
 
 from app.auth.principal import Principal
 from app.documents.pipeline import Pipeline, Suggestion, mark_stalled
+from app.privacy.gateway import PseudonymizationFailed
 from app.providers.llm.base import LlmUnavailable
 from app.providers.ocr.fake import FakeOcr
 from app.quotas import QuotaExceeded
@@ -103,6 +104,14 @@ async def test_ocr_outage_fails_and_the_retry_starts_again_with_ocr(db, seeded):
     await Pipeline(db, ocr, extractor).run(NURSE_WB1, doc)
     assert state(doc)[:3] == ("ready_for_review", None, 2)
     assert ocr.calls == 1 and len(extractor.calls) == 1
+
+
+async def test_a_refused_pseudonymization_fails_the_document_with_its_own_code(db, seeded):
+    # F06-AC10: no model call with plain names; the visitor sees why.
+    doc = new_document()
+    extractor = FakeExtractor(PseudonymizationFailed())
+    await Pipeline(db, FakeOcr(default=READABLE), extractor).run(NURSE_WB1, doc)
+    assert state(doc)[:2] == ("failed", "pseudonymization_failed")
 
 
 async def test_llm_outage_keeps_the_ocr_result_and_the_retry_only_extracts(db, seeded):

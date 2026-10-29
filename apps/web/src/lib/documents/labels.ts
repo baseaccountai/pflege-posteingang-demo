@@ -28,6 +28,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   llm_unavailable: "KI-Vorschlag gerade nicht erreichbar – bitte erneut versuchen.",
   quota_exceeded: DAILY_QUOTA_MESSAGE,
   timeout: "Verarbeitung hat zu lange gedauert – bitte erneut versuchen.",
+  pseudonymization_failed: "Aus Datenschutzgründen nicht an die KI gesendet – bitte erneut versuchen.",
 };
 
 /** Running steps: the inbox keeps polling while one of these is shown (F02-AC6). */

@@ -40,12 +40,15 @@ ACADEMIC = r"(?:(?:Prof\.|Dr\.|med\.)\s*)"
 ADDRESS_OR_TITLE = rf"(?:(?:Herrn?|Frau|Hr\.|Fr\.)\s*{ACADEMIC}*|(?:Prof\.|Dr\.)\s*{ACADEMIC}*)"
 OTHER_PERSON = re.compile(ADDRESS_OR_TITLE + NAME + NO_WORD_AFTER)
 CONTACT = [
-    ("E-MAIL", re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")),
+    # Each pattern may only start at the beginning of a word: otherwise a long word without
+    # spaces would be scanned again from every position (slow, could stall the API).
+    ("E-MAIL", re.compile(r"(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)+")),
     ("VERSICHERTENNR", re.compile(r"\b[A-Z]\d{9}\b")),
     (
         "ADRESSE",
         re.compile(
-            r"[A-ZÄÖÜ][\wäöüß-]*(?:straße|strasse|str\.|weg|platz|allee|gasse|ring)\s+\d+\s?[a-z]?\b"
+            r"(?<![\w-])[A-ZÄÖÜ][\wäöüß-]*(?:straße|strasse|str\.|weg|platz|allee|gasse|ring)"
+            r"\s+\d+\s?[a-z]?\b"
         ),
     ),
     ("TELEFON", re.compile(r"(?<![\w+])(?:\+49[\s()/-]*|0)\d[\d\s()/-]{4,}\d")),

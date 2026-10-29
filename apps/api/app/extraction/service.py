@@ -10,6 +10,10 @@
    value itself must occur in its source (a medication: name and strength). Otherwise the
    value is kept only as `proposed`, marked "not found" and not prefilled (AC3). This stops
    invented doses: "Ramipril 50 mg" with the real source "Ramipril 5 mg" is not prefilled.
+4. Pseudonymisation (F06): the model only gets the text with placeholders ("Bewohner_K42",
+   "Person_1"). Its answer is brought into the same placeholder form and checked against
+   exactly the text it was given (step 3); only then are the placeholders translated back
+   for the review screen - residents only if the caller may see them.
 """
 
 import re
@@ -21,7 +25,9 @@ from pydantic import ValidationError
 from app.auth.principal import Principal
 from app.documents.pipeline import Suggestion
 from app.extraction.schema import SCHEMA, DocumentSuggestion
-from app.providers.llm.base import LlmInvalidOutput, LlmProvider
+from app.privacy.gateway import ModelGateway
+from app.privacy.pseudonymizer import Pseudonymizer
+from app.providers.llm.base import LlmInvalidOutput
 
 MAX_INPUT_CHARS = 20_000
 MAX_OUTPUT_TOKENS = 1500
@@ -173,26 +179,47 @@ class Checker:
         }
 
 
+def map_strings(value, convert: Callable[[str], str]):
+    """Applies `convert` to every string inside nested dicts and lists."""
+    if isinstance(value, str):
+        return convert(value)
+    if isinstance(value, dict):
+        return {key: map_strings(item, convert) for key, item in value.items()}
+    if isinstance(value, list):
+        return [map_strings(item, convert) for item in value]
+    return value
+
+
 class Extractor:
     """Pipeline step `extracting` (F02): (principal, document id, OCR text) -> Suggestion."""
 
-    def __init__(self, llm: LlmProvider, book_retry: Callable[[Principal], Awaitable[None]]):
-        self.llm = llm
+    def __init__(self, gateway: ModelGateway, book_retry: Callable[[Principal], Awaitable[None]]):
+        self.gateway = gateway
         self.book_retry = book_retry  # books one more llm_call (raises QuotaExceeded)
 
-    async def _ask(self, user: str) -> DocumentSuggestion | None:
+    async def _ask(
+        self, user: str, pseudonymizer: Pseudonymizer, mapping: dict[str, str]
+    ) -> DocumentSuggestion | None:
         try:
-            raw = await self.llm.structured(SYSTEM_PROMPT, user, SCHEMA, MAX_OUTPUT_TOKENS)
+            raw = await self.gateway.structured(SYSTEM_PROMPT, user, SCHEMA, MAX_OUTPUT_TOKENS)
+            # Same placeholder form as the text the model saw (a model may still write a name).
+            raw = map_strings(raw, lambda s: pseudonymizer.pseudonymize(s, mapping).text)
             return DocumentSuggestion.model_validate(raw)
         except (LlmInvalidOutput, ValidationError):
             return None
 
     async def __call__(self, principal: Principal, document_id: str, text: str) -> Suggestion:
-        user = f"<<<DOKUMENT\n{text[:MAX_INPUT_CHARS]}\nDOKUMENT>>>"
-        answer = await self._ask(user)
+        pseudonymizer = await self.gateway.pseudonymizer()
+        sent = pseudonymizer.pseudonymize(text[:MAX_INPUT_CHARS])
+        user = f"<<<DOKUMENT\n{sent.text}\nDOKUMENT>>>"
+        model = self.gateway.llm_model
+        answer = await self._ask(user, pseudonymizer, sent.mapping)
         if answer is None:
             await self.book_retry(principal)  # the first call was booked at the upload
-            answer = await self._ask(user)
+            answer = await self._ask(user, pseudonymizer, sent.mapping)
         if answer is None:
-            return Suggestion(data=None, model=self.llm.model_name)
-        return Suggestion(data=Checker(text).suggestion(answer), model=self.llm.model_name)
+            return Suggestion(data=None, model=model)
+        checked = Checker(sent.text).suggestion(answer)
+        visible = await self.gateway.visible_residents(principal)
+        restored = map_strings(checked, lambda s: pseudonymizer.restore(s, sent.mapping, visible))
+        return Suggestion(data=restored, model=model)

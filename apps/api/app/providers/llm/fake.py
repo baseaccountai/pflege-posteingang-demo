@@ -9,7 +9,7 @@ F05) is answered with the first text line of source Q1 and cites it.
 import re
 
 DATE = re.compile(r"\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b")
-PERSON = re.compile(r"\b(?:Hr|Fr)\. [\w-]+")
+PERSON = re.compile(r"\b(?:Hr|Fr)\. [\w-]+|\bBewohner_[A-Z]\d{2}\b")  # name or its code (F06)
 SLOTS = ("morgens", "mittags", "abends", "nachts")
 
 

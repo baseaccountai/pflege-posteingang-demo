@@ -96,3 +96,17 @@ def test_unknown_placeholders_stay_visible(p):
 )
 def test_finds_names_or_birth_dates_left_in_outgoing_text(p, text, leak):
     assert p.leaks(text) is leak
+
+
+@pytest.mark.parametrize(
+    "token",
+    ["A" * 20_000, "a" * 20_000, "1" * 20_000, "Aa-" * 7_000],
+    ids=["upper", "lower", "digits", "hyphens"],
+)
+def test_a_long_word_without_spaces_is_handled_in_linear_time(p, token):
+    # A document could carry such a word to slow the API down (regex backtracking).
+    import time
+
+    start = time.perf_counter()
+    p.pseudonymize(token)
+    assert time.perf_counter() - start < 0.5

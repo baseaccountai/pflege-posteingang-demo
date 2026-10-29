@@ -11,7 +11,8 @@ Ablauf (Design 5.4, ergänzt):
 
 ```
 OCR (Original) → ocr_pages (Original, für die Prüfansicht)
-              → Pseudonymisierer → Feldvorschlag-LLM → Rückübersetzung → Belegprüfung (F03)
+              → Pseudonymisierer → Feldvorschlag-LLM → Antwort in Platzhalterform → Belegprüfung (F03)
+                gegen den gesendeten Text → Rückübersetzung
 Freigabe      → Chunking → Pseudonymisierer → chunks.content (pseudonymisiert) → Embeddings
 Frage         → Namen → resident_id (F05-AC6) → Pseudonymisierer → Embedding + LLM
               → Rückübersetzung → Anzeige (+ „Das hat das KI-Modell gesehen“)
@@ -20,6 +21,8 @@ Frage         → Namen → resident_id (F05-AC6) → Pseudonymisierer → Embed
 **Eine Tür zu den Modellen (AC1):** Die Anbieter-Schnittstellen `LlmProvider` und `EmbeddingProvider` werden nur noch über `app/privacy/gateway.py` (`ModelGateway`) aufgerufen; ein Architekturtest prüft per Import-Analyse, dass außer dem Gateway kein Modul die Anbieter direkt nutzt. Das Gateway führt die Prüfung AC10 (kein bekannter Name, kein Geburtsdatum mehr im ausgehenden Text) vor jedem Aufruf aus.
 
 **Ersetzungsreihenfolge:** längste Treffer zuerst (Vorname + Nachname vor Nachname), Wortgrenzen beachten, Bindestrich-Namen ganz („Muster-Bauer“). Geburtsdaten in `TT.MM.JJJJ`, `T.M.JJ`, `JJJJ-MM-TT`, „12. März 1938“. Versichertennummer: Buchstabe + 9 Ziffern. Kontaktdaten bekommen nummerierte Platzhalter (`[TELEFON_1]`, `[E-MAIL_1]`, `[VERSICHERTENNR_1]`, `[ADRESSE_1]`). Telefon: Ziffernfolgen ab 6 Ziffern mit `+49`/`0`-Präfix, Leerzeichen, `/`, `-`. Adresse: `<Wort>(straße|str.|weg|platz|allee|gasse) <Nr>`.
+
+**Belegprüfung (Umsetzung 29.10.2026):** Die wörtlichen Belege (F03-AC3) werden gegen genau den pseudonymisierten Text geprüft, den das Modell bekam; die Modellantwort wird dafür mit derselben Zuordnung in Platzhalterform gebracht. Erst danach wird zurückübersetzt. Würde man erst zurückübersetzen und gegen das Original prüfen, scheiterte die Prüfung an Schreibvarianten („Herrn Muster-Bauer“ vs. „Hr. Muster-Bauer“). Fehlerfall: `documents.error_code = pseudonymization_failed`.
 
 ## Komponenten
 

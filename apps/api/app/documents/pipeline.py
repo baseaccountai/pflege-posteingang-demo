@@ -25,6 +25,7 @@ from app.auth.principal import Principal
 from app.db import Database
 from app.documents.readability import check_readability
 from app.extraction.schema import DocType
+from app.privacy.gateway import PseudonymizationFailed
 from app.providers.llm.base import LlmUnavailable
 from app.providers.ocr.base import OcrProvider, OcrUnavailable
 from app.quotas import QuotaExceeded
@@ -136,6 +137,11 @@ class Pipeline:
         except LlmUnavailable as error:
             log.warning("LLM unavailable for %s: %s", doc, error)
             await self._fail(principal, doc, "extracting", "llm_unavailable")
+            return
+        except PseudonymizationFailed:
+            # F06-AC10: a plain name was still in the text - nothing was sent.
+            log.warning("pseudonymization refused for %s", doc)
+            await self._fail(principal, doc, "extracting", "pseudonymization_failed")
             return
         except Exception:
             log.exception("extraction step crashed for %s", doc)

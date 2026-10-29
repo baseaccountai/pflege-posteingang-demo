@@ -1,10 +1,15 @@
 """F03-AC1, AC2, AC3: field suggestion from OCR text, one retry, every value needs a
 verbatim source in the document."""
 
+from datetime import date
+
 import pytest
 
 from app.auth.principal import Principal
 from app.extraction.service import MAX_INPUT_CHARS, Extractor
+from app.privacy.gateway import ModelGateway, PseudonymizationFailed
+from app.privacy.pseudonymizer import KnownResident
+from app.providers.embeddings.fake import FakeEmbeddings
 from app.providers.llm.base import LlmInvalidOutput, LlmUnavailable
 from app.providers.llm.fake import FakeLlm
 from app.quotas import QuotaExceeded
@@ -59,8 +64,24 @@ class Quota:
             raise self.error
 
 
-async def extract(llm: FakeLlm, quota: Quota | None = None, text: str = TEXT):
-    return await Extractor(llm, quota or Quota())(NURSE, "doc-1", text)
+RESIDENTS = [
+    KnownResident("r-mb", "K42", "Hr. Muster-Bauer", date(1941, 4, 3)),
+    KnownResident("r-tf", "H33", "Fr. Testfeld", date(1938, 9, 12)),
+]
+
+
+def gateway(llm, visible=frozenset({"r-mb", "r-tf"}), residents=RESIDENTS) -> ModelGateway:
+    async def directory():
+        return residents
+
+    async def visible_ids(principal):
+        return set(visible)
+
+    return ModelGateway(llm, FakeEmbeddings(), directory, visible_ids)
+
+
+async def extract(llm: FakeLlm, quota: Quota | None = None, text: str = TEXT, **options):
+    return await Extractor(gateway(llm, **options), quota or Quota())(NURSE, "doc-1", text)
 
 
 async def test_a_valid_answer_becomes_a_suggestion_with_found_sources():
@@ -244,3 +265,41 @@ async def test_the_answer_is_limited_to_1500_tokens():
     llm = FakeLlm([answer()])
     await extract(llm)
     assert llm.max_tokens == [1500]
+
+
+async def test_the_llm_sees_no_resident_name_or_birth_date():
+    # F06-AC1, AC2: the sample letter names Hr. Muster-Bauer with his birth date.
+    llm = FakeLlm()
+    data = (await extract(llm)).data
+    _, user = llm.calls[0]
+    assert "Muster-Bauer" not in user and "03.04.1941" not in user
+    assert "Bewohner_K42" in user and "Geburtsdatum_K42" in user
+    # F06-AC6: the suggestion shows the real name again, with its source found.
+    assert data["resident_name"]["value"] == "Hr. Muster-Bauer"
+    assert data["resident_name"]["evidence_found"] is True
+    assert "Hr. Muster-Bauer" in data["resident_name"]["evidence"]
+
+
+async def test_doctors_are_sent_as_placeholders_and_shown_by_name():
+    llm = FakeLlm()
+    await extract(llm)
+    _, user = llm.calls[0]
+    assert "Dr. med. Lorem" not in user and "Person_1" in user
+
+
+async def test_a_resident_the_caller_cannot_see_stays_a_code():
+    # F06-AC8: only residents visible through RLS are translated back.
+    data = (await extract(FakeLlm(), visible=frozenset())).data
+    assert data["resident_name"]["value"] == "Bewohner_K42"
+
+
+async def test_a_call_refused_by_the_gateway_is_passed_on():
+    # F06-AC10: the pipeline turns it into failed/pseudonymization_failed.
+    gw = gateway(FakeLlm([answer()]))
+
+    async def refuse(*args):
+        raise PseudonymizationFailed()
+
+    gw.structured = refuse
+    with pytest.raises(PseudonymizationFailed):
+        await Extractor(gw, Quota())(NURSE, "doc-1", TEXT)

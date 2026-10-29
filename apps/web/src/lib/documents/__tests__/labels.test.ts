@@ -31,6 +31,12 @@ describe("errorMessage", () => {
     expect(errorMessage("not_care_document")).toBe("Kein Pflegedokument erkannt");
   });
 
+  it("says why a document was not sent to the AI (F06-AC10)", () => {
+    expect(errorMessage("pseudonymization_failed")).toBe(
+      "Aus Datenschutzgründen nicht an die KI gesendet – bitte erneut versuchen.",
+    );
+  });
+
   it("has a message for every processing error (AC8)", () => {
     for (const code of ["ocr_unavailable", "llm_unavailable", "quota_exceeded", "timeout"]) {
       expect(errorMessage(code)).toMatch(/\S{10}/);
