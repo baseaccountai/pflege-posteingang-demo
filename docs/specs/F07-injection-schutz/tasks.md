@@ -3,7 +3,7 @@
 Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
 
 - [x] **1. Präparierte Musterdokumente** — `F07-AC12` · `samples/generate.py` erweitern (weiße/winzige Textebene; sichtbarer „Hinweis für das KI-System“); Test: Text liegt in der PDF-Textebene, ist aber weiß bzw. < 3 pt · Commit `feat(samples): add two documents with prompt injection`
-- [ ] **2. Versteckten Text erkennen** — `F07-AC2` · Tests mit beiden Musterdokumenten, normalem Arztbrief (kein Befund) und Tr3-OCR-Ebene · Commit `feat(api): detect hidden text in PDFs`
+- [x] **2. Versteckten Text erkennen** — `F07-AC2` · Tests mit beiden Musterdokumenten, normalem Arztbrief (kein Befund) und Tr3-OCR-Ebene · Commit `feat(api): detect hidden text in PDFs`
 - [ ] **3. Muster + Korpus-Trennung** — `F07-AC3`, `F07-AC13` · YAML-Regeln, Abschnittsbildung, Trennungstest · Commit
 - [ ] **4. Klassifikator** — `F07-AC4` · Fake-Klassifikator für Tests und E2E; Mistral-Anbieter über das Gateway (F06); Kontingent `guard_call` (Migration) · Commit
 - [ ] **5. Pipeline-Schritt + Ausschluss** — `F07-AC1`, `F07-AC5`, `F07-AC7`, `F07-AC11` · Migration (Status `screening`, `screening_result`, `screened_pages`, Check-Constraint, `injection_findings`) + RLS-Tests; F02-Neuversuch angepasst; F03/F05 lesen `screened_pages`; Integrationstests · Commit `feat(api): screen documents before extraction`
