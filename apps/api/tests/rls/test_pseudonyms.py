@@ -6,6 +6,7 @@ import psycopg
 import pytest
 
 from app.auth.principal import Principal
+from app.privacy.gateway import database_directory, database_visible
 from tests.rls.conftest import ADMIN_DSN, WB1_RESIDENT, WB2_RESIDENT
 
 pytestmark = [pytest.mark.db, pytest.mark.anyio]
@@ -64,3 +65,9 @@ def test_the_backend_role_may_call_no_other_app_function(seeded: None) -> None:
             )
         ]
     assert callable_functions == ["pseudonym_directory"]
+
+
+async def test_the_gateway_loads_all_residents_but_restores_only_visible_ones(db) -> None:
+    directory = await database_directory(db)()
+    assert {r.resident_id for r in directory} == {WB1_RESIDENT, WB2_RESIDENT}
+    assert await database_visible(db)(NURSE_WB1) == {WB1_RESIDENT}
