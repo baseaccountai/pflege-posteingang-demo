@@ -122,3 +122,21 @@ def test_an_approved_document_keeps_its_check_result(seeded):
     )
     with pytest.raises(psycopg.errors.CheckViolation):
         admin("update public.documents set screening_result = 'suspicious' where id = %s", [doc])
+
+
+@pytest.mark.parametrize(
+    ("start", "target"),
+    [
+        ("screening", "approved"),
+        ("screening", "ready_for_review"),
+        ("processing", "ready_for_review"),
+        ("uploaded", "screening"),
+        ("ready_for_review", "processing"),
+        ("approved", "screening"),
+    ],
+)
+async def test_the_application_cannot_skip_steps_of_the_state_machine(db, seeded, start, target):
+    # Codex review phase 6: a programming error must not jump over the check.
+    doc = document(start, screened=start not in ("uploaded", "processing", "screening"))
+    with pytest.raises(psycopg.errors.CheckViolation):
+        await move(db, doc, target, resident_id=WB1_RESIDENT)

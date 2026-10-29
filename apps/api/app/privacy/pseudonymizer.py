@@ -38,7 +38,9 @@ NO_WORD_AFTER = r"(?![\w-])"
 # A form of address and/or academic titles ("Frau Dr. med.", "Prof. Dr.", "Herrn"), then the name.
 ACADEMIC = r"(?:(?:Prof\.|Dr\.|med\.)\s*)"
 ADDRESS_OR_TITLE = rf"(?:(?:Herrn?|Frau|Hr\.|Fr\.)\s*{ACADEMIC}*|(?:Prof\.|Dr\.)\s*{ACADEMIC}*)"
-OTHER_PERSON = re.compile(ADDRESS_OR_TITLE + NAME + NO_WORD_AFTER)
+# First name(s) and surname: up to three words on the same line ("Frau Anna Meier"). German
+# nouns are capitalised too, so a following noun may be swallowed - privacy before wording.
+OTHER_PERSON = re.compile(ADDRESS_OR_TITLE + NAME + r"(?:[ \t]+" + NAME + r"){0,2}" + NO_WORD_AFTER)
 CONTACT = [
     # Each pattern may only start at the beginning of a word: otherwise a long word without
     # spaces would be scanned again from every position (slow, could stall the API).

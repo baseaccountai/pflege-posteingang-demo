@@ -105,24 +105,26 @@ class Screener:
                     self._finding(part, "pattern", rule.id, rule.category, rule.explanation)
                 )
 
-        # Layer 2: the checker model, in bundles of at most DOCUMENT_MAX_CHARS.
+        # Layer 2: the checker model, in bundles of at most DOCUMENT_MAX_CHARS. A section
+        # longer than that is checked in pieces; one suspicious piece excludes the section.
+        flagged: dict[int, object] = {}
         for bundle in self._bundles(parts):
             await self.book_guard(principal)
-            texts = [parts[i].text[:DOCUMENT_MAX_CHARS] for i in bundle]
-            verdicts = await classify_document(self.gateway, texts)
-            for i, verdict in zip(bundle, verdicts, strict=True):
-                if verdict.injection:
-                    suspicious.add(i)
-                    reason = verdict.reason or CLASSIFIER_EXPLANATION
-                    findings.append(
-                        self._finding(
-                            parts[i],
-                            "classifier",
-                            "classifier",
-                            verdict.category or "injection",
-                            reason,
-                        )
-                    )
+            verdicts = await classify_document(self.gateway, [text for _, text in bundle])
+            for (i, _), verdict in zip(bundle, verdicts, strict=True):
+                if verdict.injection and i not in flagged:
+                    flagged[i] = verdict
+        for i, verdict in sorted(flagged.items()):
+            suspicious.add(i)
+            findings.append(
+                self._finding(
+                    parts[i],
+                    "classifier",
+                    "classifier",
+                    verdict.category or "injection",
+                    verdict.reason or CLASSIFIER_EXPLANATION,
+                )
+            )
 
         return Screening(
             result="suspicious" if findings else "clean",
@@ -144,18 +146,21 @@ class Screener:
         )
 
     @staticmethod
-    def _bundles(parts: list[_Part]) -> list[list[int]]:
-        """Consecutive parts up to DOCUMENT_MAX_CHARS together. A longer single part is cut
-        for the checker (its first DOCUMENT_MAX_CHARS); sections that long do not occur in
-        letters, and the rules see it whole."""
+    def _bundles(parts: list[_Part]) -> list[list[tuple[int, str]]]:
+        """(part index, text) pieces, consecutive ones together up to DOCUMENT_MAX_CHARS per
+        call. A part longer than that becomes several pieces, so it is checked to its end."""
+        pieces = [
+            (i, part.text[start : start + DOCUMENT_MAX_CHARS])
+            for i, part in enumerate(parts)
+            for start in range(0, max(len(part.text), 1), DOCUMENT_MAX_CHARS)
+        ]
         bundles, current, size = [], [], 0
-        for i, part in enumerate(parts):
-            length = min(len(part.text), DOCUMENT_MAX_CHARS)
-            if current and size + length > DOCUMENT_MAX_CHARS:
+        for i, text in pieces:
+            if current and size + len(text) > DOCUMENT_MAX_CHARS:
                 bundles.append(current)
                 current, size = [], 0
-            current.append(i)
-            size += length
+            current.append((i, text))
+            size += len(text)
         if current:
             bundles.append(current)
         return bundles

@@ -26,6 +26,8 @@ failed ──Neuversuch──▶ processing (keine OCR) | screening (OCR vorhand
 
 **Schicht 5 – Ausgabe prüfen (AC10):** `app/security/output.py`: verwirft Antworten mit `http(s)://`, `www.`, Markdown-Links/-Bildern, HTML-Tags; Agent-Werkzeugaufrufe nur aus der erlaubten Liste (F08). Zitatprüfung (F05-AC8a) bleibt.
 
+**Nach dem Codex-Review Phase 6 (29.10.2026):** Für die Anwendungsrolle `authenticated` erlaubt ein zweiter Trigger (`documents_allowed_transition`) nur die Übergänge des Zustandsautomaten, z. B. kein `screening → approved`. Ein Abschnitt über 20 000 Zeichen wird in Teilen geprüft; ein verdächtiger Teil schließt den ganzen Abschnitt aus. Nicht umgesetzt (Vertrauensannahme des Datenmodells: das Backend ist vertrauenswürdig, RLS schützt vor Programmierfehlern, nicht vor einem kompromittierten Backend): Herkunftsnachweis für `screening_result` und für Chunk-Inhalte.
+
 ## Komponenten
 
 | Komponente | Ort | Verantwortung |

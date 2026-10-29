@@ -54,6 +54,8 @@ def test_birth_dates_of_residents_become_a_placeholder_of_that_resident(p, writt
         ("Rückruf an Frau Lindner-Sommer", "Rückruf an Person_1"),
         ("Termin bei Frau Dr. med. Lorem", "Termin bei Person_1"),
         ("Herrn Prof. Dr. Ipsum anrufen", "Person_1 anrufen"),
+        ("Rückruf an Frau Anna Meier, Tochter", "Rückruf an Person_1, Tochter"),
+        ("Sohn: Herr Karl-Heinz Weber", "Sohn: Person_1"),
         ("Tel. 0345 123456-7, Fax +49 (345) 765 4321", "Tel. [TELEFON_1], Fax [TELEFON_2]"),
         ("Mail: praxis.ipsum@example.org", "Mail: [E-MAIL_1]"),
         ("Versichertennr. A123456789", "Versichertennr. [VERSICHERTENNR_1]"),

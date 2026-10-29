@@ -125,7 +125,10 @@ async def answer_with_sources(
         text = ""  # no usable answer -> no evidence
     if unsafe_output(str(text)):  # F07-AC10: links, images, HTML are never shown
         text = ""
-    checked = check_answer(str(text), sent_hits)
+    # Into placeholder form first: a name the model writes in plain text is then shown only
+    # if the caller may see that resident (restore below), like every placeholder.
+    text = pseudonymizer.pseudonymize(str(text), mapping).text
+    checked = check_answer(text, sent_hits)
     visible = await gateway.visible_residents(principal)
     by_chunk = {hit.chunk_id: hit for hit in hits}
     return Answered(

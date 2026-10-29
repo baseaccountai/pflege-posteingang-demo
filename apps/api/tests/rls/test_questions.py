@@ -266,3 +266,13 @@ def test_ordinary_questions_about_many_residents_are_not_refused(document, quest
     # AI itself are refused for questions.
     response = ask(FakeLlm([{"answer": "Ramipril 5 mg morgens [Q1]."}]), question)
     assert response.status_code == 200
+
+
+def test_a_foreign_name_in_the_answer_is_never_shown(document):
+    # Codex review phase 6: even if a model writes a resident of another ward in plain
+    # text, the caller sees only that resident's code (F06-AC8).
+    llm = FakeLlm([{"answer": "Ramipril 5 mg [Q1], wie bei Fr. Testfeld (geb. 12.09.1938)."}])
+    admin("update public.residents set birth_date = '1938-09-12' where display_name = 'Fr. Testfeld'")
+    answer = ask(llm, "Wie ist Ramipril dosiert?").json()["answer"]
+    assert "Testfeld" not in answer and "12.09.1938" not in answer
+    assert "Bewohner_" in answer
