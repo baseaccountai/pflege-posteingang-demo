@@ -1,0 +1,47 @@
+# Layer 1 of the prompt-injection protection (F07-AC3): text that tries to give the AI
+# orders. Written from general knowledge of injection attacks (OWASP LLM01, Greshake et al.
+# 2023) - NOT from the test corpus (apps/api/tests/security/corpus/, F07-AC13).
+# Matching ignores case. Keep rules aimed at orders to an AI, not at medical wording:
+# "Ramipril auf 10 mg erhöhen" in a doctor's letter is normal.
+
+[[rule]]
+id = "ignore-de"
+category = "ignore_instructions"
+lang = "de"
+pattern = '''\b(ignorier\w*|vergiss|missachte)\s+(du\s+)?(alle\s+|sämtliche\s+)?(bisherigen|vorherigen|vorigen|obigen|früheren)?\s*(anweisungen|regeln|instruktionen|vorgaben|befehle)\b'''
+explanation = "Fordert die KI auf, ihre Regeln zu vergessen."
+
+[[rule]]
+id = "ignore-en"
+category = "ignore_instructions"
+lang = "en"
+pattern = '''\b(ignore|disregard|forget)\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier|your)\s+(instructions|rules|prompts?|directions)\b'''
+explanation = "Asks the AI to drop its instructions."
+
+[[rule]]
+id = "role-de"
+category = "role_override"
+lang = "de"
+pattern = '''\bdu\s+bist\s+(jetzt|nun|ab\s+sofort|ab\s+jetzt)\s+(ein|eine|der|die|im|in)\b|\b(wartungs|entwickler|admin|debug|test)-?modus\b'''
+explanation = "Gibt der KI eine neue Rolle oder einen angeblichen Sondermodus."
+
+[[rule]]
+id = "role-en"
+category = "role_override"
+lang = "en"
+pattern = '''\byou\s+are\s+now\b|\b(developer|maintenance|admin|debug|god|dan)\s+mode\b|\bfrom\s+now\s+on\s+you\b'''
+explanation = "Gives the AI a new role or a supposed special mode."
+
+[[rule]]
+id = "address-de"
+category = "addresses_ai"
+lang = "de"
+pattern = '''\b(hinweis|anweisung|nachricht|information|mitteilung)\s+(für|an)\s+(das|die|den)\s+(ki|ki-system|ki-modell|sprachmodell|assistenten|chatbot|system)\b|\bsystem-?prompt\b'''
+explanation = "Spricht das KI-System direkt an - ein Arztbrief richtet sich an Menschen."
+
+[[rule]]
+id = "address-en"
+category = "addresses_ai"
+lang = "en"
+pattern = '''\b(note|message|instructions?)\s+(to|for)\s+(the\s+)?(ai|assistant|language\s+model|llm|chatbot)\b|\bsystem\s+prompt\b'''
+explanation = "Addresses the AI system directly."

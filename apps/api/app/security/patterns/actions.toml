@@ -1,0 +1,66 @@
+# Layer 1 (F07-AC3): orders that would leak data, change medication or misuse the agent.
+# Written from the attack goals in the threat model (docs/security/threat-model.md), not
+# from the test corpus (F07-AC13).
+
+[[rule]]
+id = "exfiltration-de"
+category = "exfiltration"
+lang = "de"
+pattern = '''\b(liste|gib|nenne|zeige|sende|schicke|übermittle|exportiere)\b[^.\n]{0,40}\b(alle|sämtliche|jede[nrs]?)\b[^.\n]{0,40}\b(bewohner\w*|patient\w*|diagnosen|medikation\w*|daten|akten)\b'''
+explanation = "Verlangt Daten vieler Personen - typischer Versuch, Daten abfließen zu lassen."
+
+[[rule]]
+id = "exfiltration-en"
+category = "exfiltration"
+lang = "en"
+pattern = '''\b(list|show|print|reveal|send|export|dump)\b[^.\n]{0,40}\ball\b[^.\n]{0,40}\b(residents|patients|records|data|diagnoses|medications)\b'''
+explanation = "Asks for the data of many people."
+
+[[rule]]
+id = "dose-de"
+category = "dose_manipulation"
+lang = "de"
+pattern = '''\b(setze|ändere|erhöhe|verdopple|übernimm)\b[^.\n]{0,80}\b(bei\s+allen|für\s+alle|ohne\s+(rückfrage|prüfung|freigabe|bestätigung)|als\s+neue\s+medikation)\b'''
+explanation = "Will Medikation an der Prüfung durch Menschen vorbei ändern."
+
+[[rule]]
+id = "dose-en"
+category = "dose_manipulation"
+lang = "en"
+pattern = '''\b(set|change|increase|double)\b[^.\n]{0,60}\b(for\s+all|without\s+(review|approval|confirmation|checking))\b'''
+explanation = "Wants to change medication without human review."
+
+[[rule]]
+id = "tool-de"
+category = "tool_abuse"
+lang = "de"
+pattern = '''\b(lege|erstelle)\s+keine\s+wiedervorlage|\b(lösche|entferne|vernichte)\b[^.\n]{0,40}\b(akte|einträge|daten|dokumente|wiedervorlagen|protokoll)\b'''
+explanation = "Will Werkzeuge des Agenten missbrauchen oder Spuren löschen."
+
+[[rule]]
+id = "tool-en"
+category = "tool_abuse"
+lang = "en"
+pattern = '''\b(delete|remove|erase|wipe)\b[^.\n]{0,40}\b(records?|entries|data|documents|logs?)\b|\bwithout\s+(asking|confirmation|approval)\b'''
+explanation = "Wants to misuse the agent's tools or remove traces."
+
+[[rule]]
+id = "outbound-markdown"
+category = "outbound_link"
+lang = "any"
+pattern = '''!\[[^\]]*\]\([^)]*\)|\[[^\]]+\]\(\s*https?://'''
+explanation = "Bild oder Link in Markdown - kann Daten über eine Adresse nach außen senden."
+
+[[rule]]
+id = "outbound-html"
+category = "outbound_link"
+lang = "any"
+pattern = '''<\s*(img|script|iframe|a|object|embed)\b'''
+explanation = "HTML-Element, das Inhalte von außen lädt oder Code ausführt."
+
+[[rule]]
+id = "outbound-query"
+category = "outbound_link"
+lang = "any"
+pattern = '''https?://\S+\?\S*='''
+explanation = "Adresse mit Parametern - typisch, um Daten an einen fremden Server zu hängen."

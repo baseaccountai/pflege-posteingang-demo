@@ -16,7 +16,7 @@ failed ──Neuversuch──▶ processing (keine OCR) | screening (OCR vorhand
 
 **Schicht 1 – Dokument prüfen:**
 - *Versteckter Text (AC2):* `pypdf` geht die Inhaltsströme jeder Seite durch und verfolgt Füllfarbe (`rg`, `g`, `k`) und Textgröße (Textmatrix × Schriftgröße). Text mit Füllfarbe ≥ 0,95 Helligkeit oder effektiver Größe < 3 pt wird gesammelt. Taucht dieser Text auch im OCR-Ergebnis auf, wird dort derselbe Abschnitt markiert; sonst steht er als eigener Befund (Seite, Wortlaut). Unsichtbarer Text mit Rendermodus 3 (OCR-Ebene gescannter PDFs) wird normal geprüft, nicht automatisch als verdächtig gewertet.
-- *Muster (AC3):* Regeldateien in `apps/api/app/security/patterns/*.yaml` (id, Kategorie, Sprache, regulärer Ausdruck, Erklärung). Kategorien: `role_override`, `ignore_instructions`, `addresses_ai`, `exfiltration`, `dose_manipulation`, `tool_abuse`, `outbound_link`.
+- *Muster (AC3):* Regeldateien in `apps/api/app/security/patterns/*.toml` (id, Kategorie, Sprache, regulärer Ausdruck, Erklärung). Kategorien: `role_override`, `ignore_instructions`, `addresses_ai`, `exfiltration`, `dose_manipulation`, `tool_abuse`, `outbound_link`.
 
 **Schicht 2 – Klassifikator (AC4):** Ein Aufruf je Dokument (alle Abschnitte nummeriert in einem Prompt, Ausgabe JSON `[{section, injection, category, reason}]`) bzw. je Frage. Modell `GUARD_MODEL` (Standard `ministral-8b-latest`), Aufruf über das Gateway aus F06 (also pseudonymisiert). Zählt gegen das neue Kontingent `guard_call` (Standard 200/Tag, je Dokument 1, je Frage/Auftrag 1) und mit `max_tokens` 400 in die Kostenschätzung von F10 (`costs.py`, Preis des Guard-Modells; ADR 0003 ergänzen) – die Tagesobergrenze von F10 gilt für die Summe. Ungültiges JSON oder fehlende Abschnitte → alle betroffenen Abschnitte verdächtig.
 
@@ -32,7 +32,7 @@ failed ──Neuversuch──▶ processing (keine OCR) | screening (OCR vorhand
 |---|---|---|
 | Prüfdienst | `apps/api/app/security/screening.py` | Abschnitte bilden, Schicht 1 + 2 ausführen, Befunde speichern |
 | Versteckter Text | `apps/api/app/security/hidden_text.py` | PDF-Inhaltsströme auswerten (AC2) |
-| Muster | `apps/api/app/security/patterns/` | YAML-Regeln (AC3), getrennt vom Korpus (AC13) |
+| Muster | `apps/api/app/security/patterns/` | TOML-Regeln (AC3), getrennt vom Korpus (AC13) |
 | Klassifikator | `apps/api/app/security/classifier.py` | Prompt, JSON-Auswertung, Fehler = verdächtig |
 | Begrenzer, Ausgabe | `app/security/delimiters.py`, `app/security/output.py` | Schicht 3 und 5 |
 | Pipeline | `app/documents/pipeline.py` | neuer Schritt, Ausschluss verdächtiger Abschnitte |
