@@ -1,6 +1,6 @@
 # F07 – Prompt-Injection-Schutz + Testdokumente: Anforderungen
 
-Status: Entwurf 28.10.2026 · Stufe: 2 · Bildschirme: 2 (Posteingang), 5 (Angriff erkannt), 4 (Fragen) · Datenmodell: [../datenmodell.md](../datenmodell.md)
+Status: freigegeben 29.10.2026 (im Chat) · Stufe: 2 · Bildschirme: 2 (Posteingang), 5 (Angriff erkannt), 4 (Fragen) · Datenmodell: [../datenmodell.md](../datenmodell.md)
 
 ## Einführung
 

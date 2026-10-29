@@ -48,14 +48,14 @@ Leitfaden ist ein Rundgang von fünf Minuten: (1) präpariertes Dokument → „
 | F03 | Felder vorschlagen & freigeben | Muss | 1 | freigegeben |
 | F04 | Bewohnerakte mit Herkunft | Muss | 1 | freigegeben |
 | F05 | Fragen an Dokumente (RAG) mit Quellen | Muss | 1 | freigegeben |
-| F06 | Pseudonymisierung vor dem LLM | Muss | 2 | Entwurf |
-| F07 | Prompt-Injection-Schutz + Testdokument | Muss | 2 | Entwurf |
-| F08 | Agenten-Rechte + bestätigte Aktionen | Muss | 2 | Entwurf |
+| F06 | Pseudonymisierung vor dem LLM | Muss | 2 | freigegeben 29.10.2026 |
+| F07 | Prompt-Injection-Schutz + Testdokument | Muss | 2 | freigegeben 29.10.2026 |
+| F08 | Agenten-Rechte + bestätigte Aktionen | Muss | 2 | freigegeben 29.10.2026 |
 | F09 | Anforderungs-Landkarte | Muss | 1 | freigegeben |
 | F10 | Musterdaten, nächtlicher Reset, Upload-Hinweis | Muss | 1 | freigegeben |
 | F11 | Docker Compose lokal + CI/CD | Muss | 1 | freigegeben |
-| F12 | Protokoll für PDL | Sollte | 2 | Entwurf |
-| F13 | Automatische Sicherheitstests mit Bericht | Sollte | 2 | Entwurf |
+| F12 | Protokoll für PDL | Sollte | 2 | freigegeben 29.10.2026 |
+| F13 | Automatische Sicherheitstests mit Bericht | Sollte | 2 | freigegeben 29.10.2026 |
 | F14 | Modellvergleich Cloud vs. lokal | Kann | – | offen |
 
 Status-Werte: `offen` · `Entwurf` · `freigegeben` · `in Umsetzung` · `fertig`

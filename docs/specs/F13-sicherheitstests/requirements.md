@@ -1,6 +1,6 @@
 # F13 – Automatische Sicherheitstests mit Bericht: Anforderungen
 
-Status: Entwurf 28.10.2026 · Stufe: 2 · Bildschirme: – (Bericht verlinkt von Landkarte und `/projekt`)
+Status: freigegeben 29.10.2026 (im Chat) · Stufe: 2 · Bildschirme: – (Bericht verlinkt von Landkarte und `/projekt`)
 
 ## Einführung
 

@@ -1,6 +1,6 @@
 # F06 – Pseudonymisierung vor dem LLM: Anforderungen
 
-Status: Entwurf 28.10.2026 · Stufe: 2 · Bildschirme: 2 (Posteingang), 4 (Fragen) · Datenmodell: [../datenmodell.md](../datenmodell.md)
+Status: freigegeben 29.10.2026 (im Chat) · Stufe: 2 · Bildschirme: 2 (Posteingang), 4 (Fragen) · Datenmodell: [../datenmodell.md](../datenmodell.md)
 
 ## Einführung
 
@@ -16,7 +16,7 @@ Außer der OCR soll kein Cloud-Modell die Namen und Geburtsdaten der Bewohner so
 | ID | Kriterium |
 |---|---|
 | F06-AC1 | Das System soll vor **jedem** Aufruf eines Chat- oder Embedding-Modells (Feldvorschlag F03, Indizierung und Frage F05, Agent F08, Klassifikator F07) den Text durch den Pseudonymisierer leiten; es gibt im Code genau eine Stelle, über die solche Aufrufe laufen. |
-| F06-AC2 | Der Pseudonymisierer soll ersetzen: Namen **aller** Bewohner der Einrichtung (Nachname, Vorname + Nachname, mit Anrede wie „Hr.“, „Frau“, „Herrn“; Groß-/Kleinschreibung egal) durch `Bewohner_<Code>`; deren Geburtsdaten (alle gängigen Schreibweisen) durch `Geburtsdatum_<Code>` desselben Bewohners (andere Datumsangaben bleiben, sie sind fachlich nötig); weitere Personennamen nach Anrede oder Titel („Dr. med. Sommer“, „Frau Lindner“) durch `Person_<n>`; Telefonnummern, E-Mail-Adressen, Krankenversichertennummern und Straße + Hausnummer durch `[TELEFON]`, `[E-MAIL]`, `[VERSICHERTENNR]`, `[ADRESSE]`. |
+| F06-AC2 | Der Pseudonymisierer soll ersetzen: Namen **aller** Bewohner der Einrichtung (Nachname mit Anrede wie „Hr.“, „Frau“, „Herrn“ in beliebiger Schreibweise; ohne Anrede, wenn großgeschrieben – das Datenmodell kennt keine Vornamen) durch `Bewohner_<Code>`; deren Geburtsdaten (alle gängigen Schreibweisen) durch `Geburtsdatum_<Code>` desselben Bewohners (andere Datumsangaben bleiben, sie sind fachlich nötig); weitere Personennamen nach Anrede oder Titel („Dr. med. Sommer“, „Frau Lindner“) durch `Person_<n>`; Telefonnummern, E-Mail-Adressen, Krankenversichertennummern und Straße + Hausnummer durch `[TELEFON]`, `[E-MAIL]`, `[VERSICHERTENNR]`, `[ADRESSE]`. |
 | F06-AC3 | Jeder Platzhalter soll innerhalb eines Aufrufs genau einen Originalwert bezeichnen. Der Code `Bewohner_<Code>` soll pro Bewohner dauerhaft gleich sein (Spalte `residents.pseudonym`, zufällig vergeben, z. B. `A17`) und keinen Rückschluss auf Name, Zimmer oder Wohnbereich erlauben; `Person_<n>` gilt je Dokument bzw. je Frage. |
 | F06-AC4 | Chunks (F05) sollen pseudonymisiert gespeichert und eingebettet werden; der Bezug zum Bewohner läuft ausschließlich über `resident_id` (Metadaten), nicht über Namen im Text. |
 | F06-AC5 | WENN eine Frage einen Bewohnernamen enthält, DANN soll das System den Namen wie bisher auf die Bewohner-ID auflösen (F05-AC6) und an Embedding-Modell und LLM nur die pseudonymisierte Frage geben. |

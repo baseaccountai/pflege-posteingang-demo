@@ -2,7 +2,7 @@
 
 Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
 
-- [ ] **1. Pseudonymisierer und Regeln** — `F06-AC2`, `F06-AC3`, `F06-AC6` · Tabellentests (Anreden, Titel, Bindestrich, Datumsformate, Telefon, Versichertennr., Adresse, Rückübersetzung) → rot → grün · Commit `feat(api): add pseudonymizer`
+- [x] **1. Pseudonymisierer und Regeln** — `F06-AC2`, `F06-AC3`, `F06-AC6` · Tabellentests (Anreden, Titel, Bindestrich, Datumsformate, Telefon, Versichertennr., Adresse, Rückübersetzung) → rot → grün · Commit `feat(api): add pseudonymizer`
 - [ ] **2. Migration `residents.pseudonym` + `app.pseudonym_directory()`** — `F06-AC3`, `F06-AC8` · RLS-Tests (nur die drei Angaben, nur `authenticated`, kein `anon`) · Seed mit festen Codes · Commit `feat(db): add resident pseudonyms`
 - [ ] **3. Gateway als einzige Tür** — `F06-AC1`, `F06-AC10` · Architekturtest (kein direkter Anbieter-Import außerhalb des Gateways) + Abbruchtest · Commit `feat(api): route all model calls through the privacy gateway`
 - [ ] **4. Feldvorschlag (F03) über das Gateway** — `F06-AC6` · Integrationstest: Fake-LLM sieht keinen Klarnamen, Belege werden nach Rückübersetzung geprüft, Bewohner-Zuordnung (F03) unverändert · Commit

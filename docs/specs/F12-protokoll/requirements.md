@@ -1,6 +1,6 @@
 # F12 – Protokoll für die Pflegedienstleitung: Anforderungen
 
-Status: Entwurf 28.10.2026 · Stufe: 2 · Bildschirm: Protokoll (neu, nur PDL) · Datenmodell: [../datenmodell.md](../datenmodell.md)
+Status: freigegeben 29.10.2026 (im Chat) · Stufe: 2 · Bildschirm: Protokoll (neu, nur PDL) · Datenmodell: [../datenmodell.md](../datenmodell.md)
 
 ## Einführung
 

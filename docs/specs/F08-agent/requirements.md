@@ -1,6 +1,6 @@
 # F08 – Agenten-Rechte + bestätigte Aktionen: Anforderungen
 
-Status: Entwurf 28.10.2026 · Stufe: 2 · Bildschirme: 4 (Fragen), 7 (Bewohnerakte), 8 (Kein Zugriff) · Datenmodell: [../datenmodell.md](../datenmodell.md)
+Status: freigegeben 29.10.2026 (im Chat) · Stufe: 2 · Bildschirme: 4 (Fragen), 7 (Bewohnerakte), 8 (Kein Zugriff) · Datenmodell: [../datenmodell.md](../datenmodell.md)
 
 ## Einführung
 
