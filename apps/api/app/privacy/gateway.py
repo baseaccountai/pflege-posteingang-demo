@@ -31,9 +31,11 @@ class ModelGateway:
         embeddings: EmbeddingProvider,
         directory: Callable[[], Awaitable[list[KnownResident]]],
         visible: Callable[[Principal], Awaitable[set[str]]],
+        guard: LlmProvider | None = None,
     ):
         self.llm = llm
         self.embeddings = embeddings
+        self.guard = guard or llm  # injection checker (F07); a smaller model in production
         self._directory = directory
         self._visible = visible
 
@@ -55,6 +57,15 @@ class ModelGateway:
     async def structured(self, system: str, user: str, schema: dict, max_tokens: int) -> dict:
         await self._refuse_plain_names(system, user)
         return await self.llm.structured(system, user, schema, max_tokens)
+
+    @property
+    def guard_model(self) -> str:
+        return self.guard.model_name
+
+    async def classify(self, system: str, user: str, schema: dict, max_tokens: int) -> dict:
+        """The injection checker (F07-AC4): the same door, the same check for plain names."""
+        await self._refuse_plain_names(system, user)
+        return await self.guard.structured(system, user, schema, max_tokens)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         await self._refuse_plain_names(*texts)
@@ -89,7 +100,7 @@ def database_visible(db) -> Callable[[Principal], Awaitable[set[str]]]:
     return visible
 
 
-def create_gateway(settings, db, llm=None, embeddings=None) -> ModelGateway:
+def create_gateway(settings, db, llm=None, embeddings=None, guard=None) -> ModelGateway:
     """The gateway with the providers chosen by LLM_PROVIDER (or given ones, in tests).
     The only place outside app/providers that creates models (architecture test)."""
     from app.providers.embeddings import create_embedding_provider
@@ -100,4 +111,8 @@ def create_gateway(settings, db, llm=None, embeddings=None) -> ModelGateway:
         embeddings or create_embedding_provider(settings),
         database_directory(db),
         database_visible(db),
+        guard
+        or create_llm_provider(
+            settings.model_copy(update={"mistral_chat_model": settings.guard_model})
+        ),
     )

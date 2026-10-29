@@ -23,12 +23,34 @@ def test_a_question_call_is_counted_with_six_chunks_of_800_tokens() -> None:
     assert call.output_tokens == 600
 
 
-def test_the_daily_maximum_adds_ocr_llm_and_embeddings() -> None:
-    limits = {"ocr_page": 10, "llm_call": 10, "embed_chunk": 10}
+def test_guard_calls_are_counted_with_prompt_schema_and_their_input_limit() -> None:
+    # F07-AC4: a document check covers at most 20 000 characters (longer documents: more
+    # calls), a question at most 500; counted at the prices of the more expensive chat model.
+    from app.security import classifier as c
+
+    document = len(c.SYSTEM_PROMPT) + len(json.dumps(c.SCHEMA)) + c.DOCUMENT_MAX_CHARS
+    question = len(c.SYSTEM_PROMPT) + len(json.dumps(c.SCHEMA)) + c.QUESTION_MAX_CHARS
+    assert (c.DOCUMENT_MAX_CHARS, c.QUESTION_MAX_CHARS) == (20_000, 500)
+    assert costs.guard_document_call().input_tokens >= math.ceil(document / costs.CHARS_PER_TOKEN)
+    assert costs.guard_question_call().input_tokens >= math.ceil(question / costs.CHARS_PER_TOKEN)
+    assert costs.guard_document_call().output_tokens == c.DOCUMENT_MAX_TOKENS
+    assert costs.guard_question_call().output_tokens == c.QUESTION_MAX_TOKENS
+
+
+def test_the_daily_maximum_adds_ocr_llm_guard_and_embeddings() -> None:
+    limits = {
+        "ocr_page": 10,
+        "llm_call": 10,
+        "guard_document": 10,
+        "guard_question": 10,
+        "embed_chunk": 10,
+    }
     worst = max(costs.extraction_call().eur, costs.question_call().eur)
     expected = (
         10 * costs.OCR_EUR_PER_PAGE
         + 10 * worst
+        + 10 * costs.guard_document_call().eur
+        + 10 * costs.guard_question_call().eur
         + 10 * costs.CHUNK_MAX_TOKENS * costs.EMBED_EUR_PER_TOKEN
     )
     assert costs.daily_maximum_eur(limits) == pytest.approx(expected)

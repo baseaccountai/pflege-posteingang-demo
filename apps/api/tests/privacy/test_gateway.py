@@ -83,9 +83,7 @@ async def test_a_plain_name_stops_the_embedding_call(gateway):
     assert gateway.embeddings.calls == []
 
 
-async def test_the_directory_is_read_fresh_so_a_new_resident_is_protected_at_once(
-    gateway, loads
-):
+async def test_the_directory_is_read_fresh_so_a_new_resident_is_protected_at_once(gateway, loads):
     await gateway.pseudonymizer()
     await gateway.pseudonymizer()
     assert loads == [1, 1]

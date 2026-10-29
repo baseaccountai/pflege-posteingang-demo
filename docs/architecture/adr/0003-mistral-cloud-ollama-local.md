@@ -27,7 +27,7 @@ Umschalten **nur per Konfiguration** (`LLM_PROVIDER`, `OCR_PROVIDER`). Öffentli
 + Lokaler Modus: kein Cloud-Modell sieht identifizierende Daten.
 − Im Cloud-Modus sieht Mistral OCR Rohdaten (im Bedrohungsmodell und in der App offen benannt).
 
-## Kosten (F10-AC11, Stand 28.10.2026)
+## Kosten (F10-AC11, Stand 29.10.2026)
 
 Öffentliche Listenpreise, aus Drittquellen recherchiert und teils widersprüchlich – gerechnet wird mit dem **höchsten** gefundenen Wert, US-Dollar als Euro gezählt (1 $ < 1 €). **Vor der Bewerbung mit der Preisseite im Mistral-Konto abgleichen.**
 
@@ -42,7 +42,9 @@ Umschalten **nur per Konfiguration** (`LLM_PROVIDER`, `OCR_PROVIDER`). Öffentli
 | OCR | 50 Seiten | 0,200 € |
 | LLM | 100 Aufrufe × teuerster Aufruf (Feldvorschlag: ≤ 7753 Tokens Eingabe bei 3 Zeichen/Token, ≤ 1500 Ausgabe = 0,00206 €) | 0,206 € |
 | Embeddings | 500 Chunks × 800 Tokens | 0,040 € |
-| **Summe** | | **0,446 € ≤ 0,50 €** |
+| Injection-Prüfung Dokument (F07, ab 29.10.) | 20 Aufrufe × (≤ 7 650 Ein- + 400 Ausgabe-Tokens), zu Preisen von Mistral Small | 0,028 € |
+| Injection-Prüfung Frage (F07, ab 29.10.) | 100 Aufrufe × (≤ 1 150 Ein- + 100 Ausgabe-Tokens) | 0,023 € |
+| **Summe** | | **0,497 € ≤ 0,50 €** |
 
 **Grenze der Rechnung (Entscheidung Bewerber 28.10.2026, Codex-Review Phase 3 #3):** Die Eingabe ist in Zeichen begrenzt, die Tokenzahl ist mit 3 Zeichen/Token *geschätzt* – realistisch für deutschen Text, aber keine harte Obergrenze (ein Byte-BPE-Tokenizer kann bis zu 1 Token je Byte erzeugen; im theoretisch schlimmsten Fall ≈ 0,80 €/Tag). Bewusst so belassen; harte Grenze nach oben ist das Monatslimit im Mistral-Konto. Derzeit läuft die Demo im **kostenlosen Kontingent** von Mistral (Probe 27.10.2026), es fallen keine Kosten an.
 

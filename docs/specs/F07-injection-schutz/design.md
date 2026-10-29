@@ -18,7 +18,7 @@ failed ──Neuversuch──▶ processing (keine OCR) | screening (OCR vorhand
 - *Versteckter Text (AC2):* `pypdf` geht die Inhaltsströme jeder Seite durch und verfolgt Füllfarbe (`rg`, `g`, `k`) und Textgröße (Textmatrix × Schriftgröße). Text mit Füllfarbe ≥ 0,95 Helligkeit oder effektiver Größe < 3 pt wird gesammelt. Taucht dieser Text auch im OCR-Ergebnis auf, wird dort derselbe Abschnitt markiert; sonst steht er als eigener Befund (Seite, Wortlaut). Unsichtbarer Text mit Rendermodus 3 (OCR-Ebene gescannter PDFs) wird normal geprüft, nicht automatisch als verdächtig gewertet.
 - *Muster (AC3):* Regeldateien in `apps/api/app/security/patterns/*.toml` (id, Kategorie, Sprache, regulärer Ausdruck, Erklärung). Kategorien: `role_override`, `ignore_instructions`, `addresses_ai`, `exfiltration`, `dose_manipulation`, `tool_abuse`, `outbound_link`.
 
-**Schicht 2 – Klassifikator (AC4):** Ein Aufruf je Dokument (alle Abschnitte nummeriert in einem Prompt, Ausgabe JSON `[{section, injection, category, reason}]`) bzw. je Frage. Modell `GUARD_MODEL` (Standard `ministral-8b-latest`), Aufruf über das Gateway aus F06 (also pseudonymisiert). Zählt gegen das neue Kontingent `guard_call` (Standard 200/Tag, je Dokument 1, je Frage/Auftrag 1) und mit `max_tokens` 400 in die Kostenschätzung von F10 (`costs.py`, Preis des Guard-Modells; ADR 0003 ergänzen) – die Tagesobergrenze von F10 gilt für die Summe. Ungültiges JSON oder fehlende Abschnitte → alle betroffenen Abschnitte verdächtig.
+**Schicht 2 – Klassifikator (AC4):** Ein Aufruf je Dokument (alle Abschnitte nummeriert in einem Prompt, Ausgabe JSON `[{section, injection, category, reason}]`) bzw. je Frage. Modell `GUARD_MODEL` (Standard `ministral-8b-latest`), Aufruf über das Gateway aus F06 (also pseudonymisiert). Zwei Kontingente (Umsetzung 29.10.2026, damit die Tagesobergrenze von F10 hält): `guard_document` (20/Tag; ein Aufruf prüft höchstens 20 000 Zeichen, längere Dokumente brauchen mehrere Aufrufe; Antwort ≤ 400 Tokens) und `guard_question` (100/Tag; Frage oder Agent-Auftrag ≤ 500 Zeichen; Antwort ≤ 100 Tokens). Kosten in `costs.py` zu den Preisen von Mistral Small (sichere Obergrenze), ADR 0003. Antwortform kompakt: `checked` (Anzahl geprüfter Abschnitte) und `flagged` (nur verdächtige); stimmt `checked` nicht, gelten alle Abschnitte als verdächtig. Ungültiges JSON oder fehlende Abschnitte → alle betroffenen Abschnitte verdächtig.
 
 **Schicht 3 – Prompt-Aufbau (AC8):** Die Begrenzer-Logik aus `rag/answer.py` (`_defuse`) wandert nach `app/security/delimiters.py` und wird von F03, F05, F07-Klassifikator und F08 genutzt.
 
@@ -45,7 +45,7 @@ failed ──Neuversuch──▶ processing (keine OCR) | screening (OCR vorhand
 |---|---|---|
 | `documents` | `status` + Wert `screening`; + `screening_result text` (`clean` \| `suspicious`, null bis geprüft), + `screened_pages jsonb`; Check-Constraint siehe oben | unverändert |
 | `injection_findings` | `id`, `document_id`, `ward_id`, `page`, `start_offset`, `end_offset`, `layer` (`hidden_text` \| `pattern` \| `classifier`), `rule_id`, `category`, `excerpt` (≤ 500 Zeichen), `created_at`; zusammengesetzter FK `(document_id, ward_id)` | select/insert eigener WB; kein update/delete für `authenticated`; Reset löscht |
-| `quota_limits` | + Zeile `guard_call`, `global`, 200 | – |
+| `quota_limits` | + `guard_document` (`global`, 20), `guard_question` (`global`, 100) | – |
 
 ## Schnittstellen (API)
 

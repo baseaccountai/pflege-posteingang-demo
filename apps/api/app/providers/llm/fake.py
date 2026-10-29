@@ -100,6 +100,8 @@ class FakeLlm:
             return answer
         if "answer" in schema.get("properties", {}):
             return answer_question(user)
+        if "flagged" in schema.get("properties", {}):
+            return judge_sections(user)
         document = user.split("<<<DOKUMENT", 1)[-1].rsplit("DOKUMENT>>>", 1)[0]
         return read_document(document)
 
@@ -113,3 +115,20 @@ def answer_question(user: str) -> dict:
     lines = [line.strip() for line in (match.group(1) if match else "").splitlines()]
     text = next((line for line in lines if line and not line.startswith("#")), "")
     return {"answer": f"{text} [Q1]" if text else "Dazu steht nichts in den Quellen."}
+
+
+SECTION = re.compile(r'<abschnitt nr="(\d+)">\n(.*?)\n</abschnitt>', re.S)
+# The fake injection checker (F07): obvious orders to an AI, nothing more.
+ORDERS = re.compile(r"ki-system|ignorier|wartungsmodus|vorrang vor allen regeln", re.I)
+
+
+def judge_sections(user: str) -> dict:
+    sections = SECTION.findall(user)
+    return {
+        "checked": len(sections),
+        "flagged": [
+            {"section": int(n), "category": "fake", "reason": "Anweisung an die KI"}
+            for n, text in sections
+            if ORDERS.search(text)
+        ],
+    }

@@ -13,6 +13,7 @@ Everything is counted on the safe side:
 - 3 characters per token (German text needs more tokens than English) - an estimate,
   not a hard bound (accepted, ADR 0003; the monthly limit in the Mistral account is),
 - every LLM call is counted as the more expensive kind (field extraction or question),
+- an injection check (F07) is counted at the chat model's prices, though its model is smaller,
 - a retry is a call of its own (it is booked against the quota, too).
 """
 
@@ -72,11 +73,36 @@ def question_call() -> CallCost:
     )
 
 
+def _guard_call(input_chars: int, output_tokens: int) -> CallCost:
+    from app.security.classifier import SCHEMA as GUARD_SCHEMA
+    from app.security.classifier import SYSTEM_PROMPT as GUARD_PROMPT
+
+    markers = 2000  # <abschnitt nr="n"> around every section, generously
+    chars = len(GUARD_PROMPT) + len(json.dumps(GUARD_SCHEMA)) + input_chars + markers
+    return CallCost(math.ceil(chars / CHARS_PER_TOKEN), output_tokens)
+
+
+def guard_document_call() -> CallCost:
+    """Injection check of a document (F07-AC4): at most 20 000 characters per call."""
+    from app.security.classifier import DOCUMENT_MAX_CHARS, DOCUMENT_MAX_TOKENS
+
+    return _guard_call(DOCUMENT_MAX_CHARS, DOCUMENT_MAX_TOKENS)
+
+
+def guard_question_call() -> CallCost:
+    """Injection check of a question or an agent task (F07-AC9): at most 500 characters."""
+    from app.security.classifier import QUESTION_MAX_CHARS, QUESTION_MAX_TOKENS
+
+    return _guard_call(QUESTION_MAX_CHARS, QUESTION_MAX_TOKENS)
+
+
 def daily_maximum_eur(limits: dict[str, int]) -> float:
     """Cost of one day with every global quota used up (`limits` from quota_limits)."""
     worst_call = max(extraction_call().eur, question_call().eur)
     return (
         limits["ocr_page"] * OCR_EUR_PER_PAGE
         + limits["llm_call"] * worst_call
+        + limits.get("guard_document", 0) * guard_document_call().eur
+        + limits.get("guard_question", 0) * guard_question_call().eur
         + limits["embed_chunk"] * CHUNK_MAX_TOKENS * EMBED_EUR_PER_TOKEN
     )

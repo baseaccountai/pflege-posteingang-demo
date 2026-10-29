@@ -15,5 +15,11 @@ def test_the_daily_limits_cost_at_most_50_cent() -> None:
             "select kind, max_count from public.quota_limits where scope = 'global'"
         ).fetchall()
     limits = dict(rows)
-    assert set(limits) == {"ocr_page", "llm_call", "embed_chunk"}
+    assert set(limits) == {
+        "ocr_page",
+        "llm_call",
+        "guard_document",
+        "guard_question",
+        "embed_chunk",
+    }
     assert costs.daily_maximum_eur(limits) <= costs.DAILY_BUDGET_EUR == 0.50

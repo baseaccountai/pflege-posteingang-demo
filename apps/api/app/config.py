@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     mistral_ocr_model: str = "mistral-ocr-latest"
     mistral_chat_model: str = "mistral-small-latest"
     mistral_embed_model: str = "mistral-embed"
+    # Injection checker (F07-AC4): a small, cheap model; with Ollama the chat model is used.
+    guard_model: str = "ministral-8b-latest"
     ollama_base_url: str = "http://localhost:11434"
     ollama_chat_model: str = "qwen3:8b"
     # Must give 1024-dimensional vectors like mistral-embed (column chunks.embedding).

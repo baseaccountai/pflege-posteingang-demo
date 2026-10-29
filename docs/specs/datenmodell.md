@@ -77,7 +77,7 @@ Schema `bff` ist nicht in den von Supabase veröffentlichten Schemata.
 | `chunks` | `content` pseudonymisiert (Neuindizierung) | F06 |
 | `documents` | `status` + `screening`; + `screening_result` (`clean` \| `suspicious`), + `screened_pages jsonb` (bereinigte Seiten, einzige Quelle für Feldvorschlag und Indizierung) | F07 |
 | `injection_findings` | Befunde je Dokument (Schicht, Seite, Regel, Auszug ≤ 500 Zeichen); eigener WB, nur einfügen | F07 |
-| `quota_limits` | + `guard_call` (global, 200/Tag, in der Kostenschätzung F10 enthalten) | F07 |
+| `quota_limits` | + `guard_document` (20/Tag), `guard_question` (100/Tag), in der Kostenschätzung F10 enthalten | F07 |
 | `agent_proposals` | Vorschläge des Agenten (15 min gültig); Agent fügt ein, Mensch entscheidet | F08 |
 | `follow_ups` | + `proposal_id unique` | F08 |
 | Policies | `app.actor_type() = 'agent'`: nur Lesen + bestätigte Wiedervorlage + Vorschlag | F08 |
