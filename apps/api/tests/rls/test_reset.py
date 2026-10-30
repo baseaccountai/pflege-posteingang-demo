@@ -99,6 +99,15 @@ def test_reset_removes_visitor_data_and_restores_the_seed(fresh) -> None:  # AC5
     assert admin(COUNTS)[0] == fresh
 
 
+def test_reset_empties_the_audit_log(fresh) -> None:  # F12-AC5: the one way to remove events
+    admin(
+        "insert into public.audit_events (action, outcome, actor_type, actor_sub, actor_name)"
+        " values ('question', 'ok', 'human', 'u-wb1', 'Pflegekraft WB1')"
+    )
+    reset(ADMIN_DSN, SEED_FILES)
+    assert admin("select count(*) from public.audit_events") == [(0,)]
+
+
 def test_reset_keeps_the_quota_counters_of_the_day(fresh) -> None:  # AC6
     admin(
         "insert into public.usage_counters (period, kind, subject, count)"

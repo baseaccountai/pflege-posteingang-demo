@@ -1,4 +1,5 @@
-// F11-AC4: the four areas in fixed order, the current one marked.
+// F11-AC4: the four areas in fixed order, the current one marked. F12-AC6: the audit log
+// only for the PDL.
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -17,7 +18,15 @@ describe("AppNav", () => {
       ["Bewohner", "/bewohner"],
       ["Fragen", "/fragen"],
     ]);
+    expect(screen.queryByRole("link", { name: "Protokoll" })).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Hauptnavigation" })).toBeInTheDocument();
+  });
+
+  it("adds the audit log for the PDL only", () => {
+    pathname.current = "/protokoll";
+    render(<AppNav showAuditLog />);
+    expect(screen.getAllByRole("link").at(-1)).toHaveTextContent("Protokoll");
+    expect(screen.getByRole("link", { name: "Protokoll" })).toHaveAttribute("aria-current", "page");
   });
 
   it.each([

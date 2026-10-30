@@ -42,6 +42,7 @@ VISITOR_TABLES = [
     "public.residents",
     "public.wards",
     "bff.sessions",
+    "public.audit_events",  # F12: the log of the demo day goes with the data it describes
 ]
 LOCAL_ADMIN_DSN = "postgresql://postgres:postgres@127.0.0.1:56322/postgres"
 

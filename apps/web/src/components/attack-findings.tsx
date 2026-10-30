@@ -10,7 +10,7 @@ export type Finding = {
   explanation: string;
 };
 
-const LAYER_LABELS: Record<Finding["layer"], string> = {
+export const LAYER_LABELS: Record<Finding["layer"], string> = {
   hidden_text: "Versteckter Text",
   pattern: "Regel",
   classifier: "Prüfmodell",

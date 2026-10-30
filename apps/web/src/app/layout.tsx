@@ -67,5 +67,5 @@ async function SessionHeader() {
 /** The main navigation only for a signed-in user (the areas need a session). */
 async function SessionNav() {
   const state = await currentSession();
-  return state.kind === "active" ? <AppNav /> : null;
+  return state.kind === "active" ? <AppNav showAuditLog={state.session.appRole === "pdl"} /> : null;
 }
