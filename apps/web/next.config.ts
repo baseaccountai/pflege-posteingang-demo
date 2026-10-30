@@ -21,6 +21,15 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // The original next to the review form is framed by this app's own page (F03-AC4);
+        // nobody else may frame it. Comes after the entry above, so these values win.
+        source: "/api/documents/:id/file",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+        ],
+      },
+      {
         // The static offline page: no scripts at all, its own inline styles only.
         source: "/offline.html",
         headers: [

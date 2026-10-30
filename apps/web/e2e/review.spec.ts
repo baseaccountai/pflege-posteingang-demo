@@ -96,6 +96,10 @@ test("the original is shown next to the fields (AC4)", async ({ page }) => {
   expect(response.headers()["content-type"]).toBe("application/pdf");
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
   await expect(page.getByTitle("Originaldokument")).toBeAttached();
+  // The page frames the file, so it must allow this app's own pages - and only them.
+  // (Headless Chromium shows no blocked-frame error, so the headers are what is checked.)
+  expect(response.headers()["x-frame-options"]).toBe("SAMEORIGIN");
+  expect(response.headers()["content-security-policy"]).toBe("frame-ancestors 'self'");
 });
 
 test("rejecting a document writes nothing into the record (AC10)", async ({ page }) => {
