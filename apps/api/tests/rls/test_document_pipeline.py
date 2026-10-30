@@ -58,6 +58,8 @@ def state(doc_id: str) -> tuple:
 
 
 class FakeExtractor:
+    model_name = "fake-llm"
+
     def __init__(self, error: Exception | None = None):
         self.error = error
         self.calls: list[tuple[str, str, str]] = []  # (document, text, status at call time)

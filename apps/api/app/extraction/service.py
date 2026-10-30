@@ -198,6 +198,10 @@ class Extractor:
         self.gateway = gateway
         self.book_retry = book_retry  # books one more llm_call (raises QuotaExceeded)
 
+    @property
+    def model_name(self) -> str:
+        return self.gateway.llm_model
+
     async def _ask(
         self, user: str, pseudonymizer: Pseudonymizer, mapping: dict[str, str]
     ) -> DocumentSuggestion | None:

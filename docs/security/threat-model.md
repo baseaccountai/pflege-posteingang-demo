@@ -41,3 +41,10 @@ Stand: 25.10.2026 · Orientierung: **OWASP Top 10 für LLM-Anwendungen (2025)** 
 
 - Cloud-OCR sieht Rohdaten; nur der lokale Modus vermeidet das.
 - Kein Filter erkennt Prompt-Injection zuverlässig; Ziel ist begrenzte Wirkung, nicht perfekte Erkennung.
+- Protokoll (F12): Akteur und Wohnbereich setzt die Datenbank aus den Claims, Zusatzangaben
+  sind nur Kennungen. Das Backend kann aber falsche, eigene Modell-Ereignisse schreiben, und
+  der Modellname ist freier Text aus seiner Konfiguration – das Protokoll vertraut dem Backend
+  so weit, wie es die Datenbank ohnehin tut.
+- Protokoll (F12-AC8): Fällt die Datenbank beim Schreiben eines Ereignisses aus, wird ein
+  Ergebnis nicht ausgeliefert; eine Blockierung bleibt bestehen, ihr Ereignis kann dann aber
+  fehlen (bewusste Entscheidung: Sperren vor Vollständigkeit des Protokolls).

@@ -58,6 +58,7 @@ class Hit:
 @dataclass(frozen=True)
 class Retrieval:
     hits: list[Hit] = field(default_factory=list)
+    embedded: bool = False  # the question went to the embedding model (named in the log, F12)
 
 
 NO_HITS = Retrieval()
@@ -99,12 +100,13 @@ async def retrieve(
         )
         rows = await cur.fetchall()
     if not rows:
-        return NO_HITS
+        return Retrieval(embedded=True)
     return Retrieval(
+        embedded=True,
         hits=[
             Hit(chunk, doc, res, visible.get(res, ""), dtype, ddate, page, heading, text, sim)
             for chunk, doc, res, dtype, ddate, page, heading, text, sim in rows
-        ]
+        ],
     )
 
 

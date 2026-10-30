@@ -8,6 +8,8 @@ import pytest
 from app import audit
 from app.documents.pipeline import Pipeline
 from app.privacy.gateway import PseudonymizationFailed
+from app.providers.embeddings.fake import FakeEmbeddings
+from app.providers.llm.base import LlmUnavailable
 from app.providers.llm.fake import FakeLlm
 from app.providers.ocr.fake import FakeOcr
 from app.quotas import QuotaExceeded
@@ -23,7 +25,9 @@ pytestmark = pytest.mark.db
 
 COLUMNS = "action, outcome, actor_type, model, details"
 FINDING_DETAILS = {"layer": "pattern", "rule_id": "address-de", "pages": [1]}
-OCR_DOWN = ("ocr", "error", {"error_code": "ocr_unavailable"})
+OCR_DOWN = ("ocr", "error", "fake-ocr", {"error_code": "ocr_unavailable"})
+CHECK_DOWN = ("screening", "error", "fake-guard", {"error_code": "screening_unavailable"})
+SUGGESTION_DOWN = ("extraction", "error", "fake-llm", {"error_code": "llm_unavailable"})
 
 
 def admin(sql: str, params: list | None = None) -> list[tuple]:
@@ -102,21 +106,24 @@ async def test_each_finding_is_a_blocked_event_with_layer_and_rule(db, seeded):
     ("reader", "extractor", "screener", "expected"),
     [
         (FakeOcr(unavailable=True), None, None, OCR_DOWN),
+        (None, None, FakeScreener(LlmUnavailable("down")), CHECK_DOWN),
+        (None, FakeExtractor(LlmUnavailable("down")), None, SUGGESTION_DOWN),
+        # No model call happened in these: no model is named.
         (None, FakeExtractor(PseudonymizationFailed()), None,
-         ("blocked", "blocked", {"error_code": "pseudonymization_failed"})),
+         ("blocked", "blocked", None, {"error_code": "pseudonymization_failed"})),
         (None, None, FakeScreener(QuotaExceeded("guard_document")),
-         ("quota_exhausted", "blocked", {"error_code": "guard_document"})),
+         ("quota_exhausted", "blocked", None, {"error_code": "guard_document"})),
         (None, FakeExtractor(QuotaExceeded("llm_call")), None,
-         ("quota_exhausted", "blocked", {"error_code": "llm_call"})),
+         ("quota_exhausted", "blocked", None, {"error_code": "llm_call"})),
     ],
-    ids=["ocr-down", "plain-name", "guard-quota", "llm-quota"],
+    ids=["ocr-down", "check-down", "suggestion-down", "plain-name", "guard-quota", "llm-quota"],
 )  # fmt: skip
 async def test_failures_blocks_and_quotas_are_logged(
     db, seeded, reader, extractor, screener, expected
 ):
     doc = new_document()
     await run(db, doc, reader, extractor, screener)
-    assert [(a, o, d) for a, o, _, _, d in logged(doc)][-1] == expected
+    assert [(a, o, m, d) for a, o, _, m, d in logged(doc)][-1] == expected
 
 
 @pytest.mark.anyio
@@ -146,10 +153,20 @@ def test_an_answered_question_is_logged_without_its_text(document):  # noqa: F81
     assert "Ramipril" not in everything and "Muster-Bauer" not in everything  # F12-AC3
 
 
-def test_a_question_without_hits_is_logged_without_a_model(document):  # noqa: F811
+def test_a_question_without_hits_names_the_embedding_model(document):  # noqa: F811
+    # Codex review F12: the search embedded the question, so a model was involved.
     start = last_id()
     ask(FakeLlm(), "Wann ist der nächste Friseurtermin?")
-    assert since(start) == [("question", "ok", "human", None, {})]
+    assert since(start) == [("question", "ok", "human", FakeEmbeddings.model_name, {})]
+
+
+def test_a_failed_answer_names_the_model_that_failed(document):  # noqa: F811
+    start = last_id()
+    llm = FakeLlm([LlmUnavailable("down")])
+    ask(llm, "Wie ist Ramipril dosiert?")
+    assert since(start) == [
+        ("question", "error", "human", llm.model_name, {"error_code": "llm_unavailable"})
+    ]
 
 
 def test_a_foreign_resident_filter_logs_like_any_question(document):  # noqa: F811

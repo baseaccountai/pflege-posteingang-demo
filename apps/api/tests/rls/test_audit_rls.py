@@ -180,11 +180,30 @@ async def test_log_event_refuses_state_changes_and_unknown_actions(db, action):
         {"question": "Wie ist Ramipril dosiert?"},  # F12-AC3: no texts
         {"rule_id": "x" * 101},
         {"rule_id": {"nested": "Hr. Muster-Bauer"}},
+        # Codex review F12: an allowed key must not carry a name, a text or a token either.
+        {"rule_id": "Hr. Muster-Bauer"},
+        {"error_code": "wie ist ramipril dosiert"},
+        {"tool": "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1In0"},
+        {"layer": "anything"},
+        {"proposal_id": "not-a-uuid"},
+        {"pages": ["1"]},
     ],
+    ids=["text-key", "long", "nested", "name", "sentence", "token", "layer", "proposal", "pages"],
 )
 async def test_log_event_refuses_details_that_could_carry_content(db, details):
     with pytest.raises(psycopg.errors.InvalidParameterValue):
         await log_event(db, NURSE_WB1, "question", **details)
+
+
+async def test_log_event_takes_identifiers(db):
+    doc = document()
+    proposal = "0b0c7f9e-0d6e-4c1e-9d3a-6f1f2b1c0e11"
+    await log_event(
+        db, NURSE_WB1, "blocked", "blocked", "ministral-8b-latest", doc,
+        layer="hidden_text", rule_id="ignore-de", error_code="llm_call", tool="read_record",
+        proposal_id=proposal, pages=[1, 2],
+    )  # fmt: skip
+    assert events(doc)[-1][10]["proposal_id"] == proposal
 
 
 async def test_log_event_refuses_an_unknown_outcome(db):

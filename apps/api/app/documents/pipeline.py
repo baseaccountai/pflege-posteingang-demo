@@ -116,15 +116,21 @@ class Pipeline:
         try:
             result = await asyncio.wait_for(self.ocr.extract(content, mime), self.step_timeout)
         except TimeoutError:
-            await self._step_failed(principal, doc, "ocr", "processing", "timeout")
+            await self._step_failed(
+                principal, doc, "ocr", self.ocr.model_name, "processing", "timeout"
+            )
             return None
         except OcrUnavailable as error:
             log.warning("OCR unavailable for %s: %s", doc, error)
-            await self._step_failed(principal, doc, "ocr", "processing", "ocr_unavailable")
+            await self._step_failed(
+                principal, doc, "ocr", self.ocr.model_name, "processing", "ocr_unavailable"
+            )
             return None
         except Exception:
             log.exception("OCR step crashed for %s", doc)
-            await self._step_failed(principal, doc, "ocr", "processing", "ocr_unavailable")
+            await self._step_failed(
+                principal, doc, "ocr", self.ocr.model_name, "processing", "ocr_unavailable"
+            )
             return None
         numbers = [page.number for page in result.pages]
         if not await self._audit(principal, doc, "ocr", model=self.ocr.model_name, pages=numbers):
@@ -155,7 +161,9 @@ class Pipeline:
                 self.screener(principal, pages, pdf), self.step_timeout
             )
         except TimeoutError:
-            await self._step_failed(principal, doc, "screening", "screening", "timeout")
+            await self._step_failed(
+                principal, doc, "screening", self.screener.model_name, "screening", "timeout"
+            )
             return None
         except QuotaExceeded as exceeded:
             await self._quota_exhausted(principal, doc, "screening", exceeded)
@@ -167,8 +175,9 @@ class Pipeline:
         except Exception:  # checker unreachable or anything else: never go on unchecked
             log.exception("injection check failed for %s", doc)
             await self._step_failed(
-                principal, doc, "screening", "screening", "screening_unavailable"
-            )
+                principal, doc, "screening", self.screener.model_name, "screening",
+                "screening_unavailable",
+            )  # fmt: skip
             return None
         if not await self._log_screening(principal, doc, screening):
             await self._fail(principal, doc, "screening", "screening_unavailable")
@@ -230,14 +239,23 @@ class Pipeline:
                 self.extractor(principal, doc, text), self.step_timeout
             )
         except TimeoutError:
-            await self._step_failed(principal, doc, "extraction", "extracting", "timeout")
+            await self._step_failed(
+                principal, doc, "extraction", self._extraction_model, "extracting", "timeout"
+            )
             return
         except QuotaExceeded as exceeded:
             await self._quota_exhausted(principal, doc, "extracting", exceeded)
             return
         except LlmUnavailable as error:
             log.warning("LLM unavailable for %s: %s", doc, error)
-            await self._step_failed(principal, doc, "extraction", "extracting", "llm_unavailable")
+            await self._step_failed(
+                principal,
+                doc,
+                "extraction",
+                self._extraction_model,
+                "extracting",
+                "llm_unavailable",
+            )
             return
         except PseudonymizationFailed:
             # F06-AC10: a plain name was still in the text - nothing was sent.
@@ -246,7 +264,14 @@ class Pipeline:
             return
         except Exception:
             log.exception("extraction step crashed for %s", doc)
-            await self._step_failed(principal, doc, "extraction", "extracting", "llm_unavailable")
+            await self._step_failed(
+                principal,
+                doc,
+                "extraction",
+                self._extraction_model,
+                "extracting",
+                "llm_unavailable",
+            )
             return
         if not await self._audit(principal, doc, "extraction", model=suggestion.model):
             await self._fail(principal, doc, "extracting", "llm_unavailable")
@@ -270,9 +295,14 @@ class Pipeline:
             return False
         return True
 
-    async def _step_failed(self, principal, doc, action, from_status, code) -> None:
+    @property
+    def _extraction_model(self) -> str | None:
+        # The default `no_suggestion` calls no model and has no name.
+        return getattr(self.extractor, "model_name", None)
+
+    async def _step_failed(self, principal, doc, action, model, from_status, code) -> None:
         # The document fails either way; a missing event does not change that.
-        await self._audit(principal, doc, action, "error", error_code=code)
+        await self._audit(principal, doc, action, "error", model=model, error_code=code)
         await self._fail(principal, doc, from_status, code)
 
     async def _quota_exhausted(self, principal, doc, from_status, exceeded: QuotaExceeded) -> None:

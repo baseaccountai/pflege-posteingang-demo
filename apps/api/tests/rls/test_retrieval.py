@@ -117,7 +117,7 @@ async def test_foreign_and_unknown_residents_look_exactly_like_no_hits(
 
 async def test_nothing_similar_enough_is_no_hits(db, indexed):
     result, embeddings = await ask(db, "Wann ist der nächste Friseurtermin?")
-    assert result == NO_HITS
+    assert result.hits == [] and result.embedded  # searched, so the log names the model
     assert embeddings.calls == [["Wann ist der nächste Friseurtermin?"]]
 
 

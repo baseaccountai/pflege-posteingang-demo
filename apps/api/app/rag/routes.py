@@ -95,8 +95,8 @@ async def ask_question(request: Request, principal: Caller, body: Question):
         await note("blocked", "blocked", error_code="pseudonymization_failed")  # F06-AC10
         return reply(REFUSED_ANSWER)
 
-    async def unavailable(code: str) -> dict:
-        await note("question", "error", error_code=code)
+    async def unavailable(code: str, model: str) -> dict:
+        await note("question", "error", model=model, error_code=code)
         return reply(UNAVAILABLE_ANSWER)
 
     async def delivered(response: dict, model: str | None) -> dict | JSONResponse:
@@ -116,7 +116,9 @@ async def ask_question(request: Request, principal: Caller, body: Question):
     except QuotaExceeded as exceeded:
         return await quota_refused(db, principal, exceeded)
     except LlmUnavailable:
-        await note("question", "error", error_code="screening_unavailable")
+        await note(
+            "question", "error", model=gateway.guard_model, error_code="screening_unavailable"
+        )
         return error(503, "screening_unavailable", SCREENING_DOWN)  # fail closed
     except PseudonymizationFailed:
         return await refused()
@@ -130,20 +132,21 @@ async def ask_question(request: Request, principal: Caller, body: Question):
         )
         if not found.hits:
             # no LLM call (AC7)
-            return await delivered(reply(NO_HITS_ANSWER, no_hits=True), model=None)
+            model = gateway.embedding_model if found.embedded else None
+            return await delivered(reply(NO_HITS_ANSWER, no_hits=True), model)
         async with db.as_principal(principal) as conn:
             await consume(conn, "llm_call", 1)
     except QuotaExceeded as exceeded:
         return await quota_refused(db, principal, exceeded)
     except EmbeddingUnavailable:
-        return await unavailable("embedding_unavailable")
+        return await unavailable("embedding_unavailable", gateway.embedding_model)
     except PseudonymizationFailed:
         return await refused()
 
     try:
         answered = await answer_with_sources(gateway, principal, body.question, found.hits)
     except LlmUnavailable:
-        return await unavailable("llm_unavailable")
+        return await unavailable("llm_unavailable", gateway.llm_model)
     except PseudonymizationFailed:
         return await refused()
     return await delivered(
