@@ -9,6 +9,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.audit.routes import router as audit_router
 from app.auth.dependencies import current_principal
 from app.auth.principal import Principal
 from app.auth.tokens import TokenVerifier
@@ -108,6 +109,7 @@ def create_app(
     app.include_router(documents_router)
     app.include_router(residents_router)
     app.include_router(questions_router)
+    app.include_router(audit_router)
     # The BFF assertion check reads its secret through this dependency.
     app.dependency_overrides[get_settings] = lambda: settings
 
