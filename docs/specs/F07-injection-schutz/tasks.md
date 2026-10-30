@@ -10,4 +10,4 @@ Jede Aufgabe: Test → Fehlschlag zeigen → Code → grün → Commit.
 - [x] **6. Begrenzer gemeinsam, Ausgabe prüfen, Fragen prüfen** — `F07-AC8`, `F07-AC9`, `F07-AC10` · Commit
 - [x] **7. Oberfläche „Angriff erkannt“ + Musterdokumente zum Ausprobieren** — `F07-AC6`, `F07-AC14` · Vitest + Playwright (beide Musterdokumente) · Landkarte: „Sicherheitsrisiken von LLM-Anwendungen“ auf live · Commit `feat(web): show detected prompt injection`
 - [ ] **8. Realtest** — beide Musterdokumente gegen echtes Mistral (OCR + Klassifikator) hochladen: Befunde und Ausschluss prüfen; ein normaler Arztbrief bleibt `clean`; Ergebnis notieren
-- [ ] **Protokoll-Ereignis `blocked` (`F07-AC11`)** — kommt mit F12 Aufgabe 2 (Ereignisse schreiben); laut Codex-Review Phase 6 noch offen.
+- [x] **Protokoll-Ereignis `blocked` (`F07-AC11`)** — umgesetzt mit F12 Aufgabe 2 (Commit 972d6ae): je Befund und blockierter Frage ein Ereignis mit Schicht und Regel-ID.
