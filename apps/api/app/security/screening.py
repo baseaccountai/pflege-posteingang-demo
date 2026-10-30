@@ -67,6 +67,10 @@ class Screener:
         self.gateway = gateway
         self.book_guard = book_guard  # books one guard_document call (raises QuotaExceeded)
 
+    @property
+    def model_name(self) -> str:
+        return self.gateway.guard_model
+
     async def __call__(self, principal, pages: list[dict], pdf: bytes | None) -> Screening:
         parts = [
             _Part(page["page"], s.start, s.end, page["markdown"][s.start : s.end])

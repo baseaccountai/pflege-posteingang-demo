@@ -5,6 +5,7 @@ OCR or LLM call. Quotas and the new rows are one transaction as the caller: if a
 used up, nothing is stored and nothing is booked (F02-AC5, F10-AC10).
 """
 
+import logging
 import uuid
 from typing import Annotated
 
@@ -12,6 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from fastapi.responses import JSONResponse, Response
 from psycopg.rows import dict_row
 
+from app import audit
 from app.auth.bff import bff_session
 from app.auth.dependencies import current_principal
 from app.auth.principal import Principal
@@ -34,6 +36,7 @@ from app.extraction.resident_match import suggest_resident
 from app.quotas import QuotaExceeded, consume
 from app.rag.indexer import Indexer
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents")
 
 NOT_FOUND = HTTPException(status_code=404, detail="Nicht gefunden")
@@ -54,7 +57,18 @@ def error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error_code": code, "message": message})
 
 
-def quota_error(exceeded: QuotaExceeded) -> JSONResponse:
+async def quota_refused(
+    db: Database, principal: Principal, exceeded: QuotaExceeded, document_id: str | None = None
+) -> JSONResponse:
+    """429 for a used-up quota, with its event for the audit log (F12-AC1). The refusal
+    stands even if the event cannot be written."""
+    try:
+        await audit.log(
+            db, principal, "quota_exhausted", "blocked",
+            document_id=document_id, error_code=exceeded.kind,
+        )  # fmt: skip
+    except audit.AuditFailed:
+        log.exception("audit event quota_exhausted could not be written")
     if exceeded.kind == "upload":
         return error(429, "session_upload_limit", SESSION_LIMIT)
     return error(429, "daily_quota", DAILY_QUOTA)
@@ -117,7 +131,7 @@ async def upload_document(
                 [document_id, ward_id, checked.mime, checked.size_bytes, file],
             )
     except QuotaExceeded as exceeded:
-        return quota_error(exceeded)
+        return await quota_refused(database(request), principal, exceeded)
 
     background.add_task(pipeline(request).run, principal, document_id)
     return {"id": document_id, "status": "uploaded"}
@@ -210,7 +224,7 @@ async def retry_document(
                 await consume(conn, "ocr_page", pages)
             await consume(conn, "llm_call", 1)
     except QuotaExceeded as exceeded:
-        return quota_error(exceeded)
+        return await quota_refused(database(request), principal, exceeded, document_id)
 
     background.add_task(pipeline(request).run, principal, document_id)
     return {"id": document_id, "status": "failed"}

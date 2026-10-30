@@ -21,6 +21,10 @@ class MistralOcr:
         self.model = model
         self.timeout = timeout
 
+    @property
+    def model_name(self) -> str:
+        return self.model
+
     async def extract(self, data: bytes, mime: str) -> OcrResult:
         if not self.api_key:
             raise OcrUnavailable("MISTRAL_API_KEY is not set")

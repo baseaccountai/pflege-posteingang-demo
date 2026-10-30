@@ -39,6 +39,8 @@ def image_print(data: bytes) -> tuple[tuple[int, int], int]:
 
 
 class FakeOcr:
+    model_name = "fake-ocr"
+
     def __init__(
         self,
         by_sha256: dict[str, list[str]] | None = None,

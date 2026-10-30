@@ -4,6 +4,8 @@ from app.providers.ocr.base import OcrResult, OcrUnavailable
 
 
 class DoclingOcr:
+    model_name = "docling"
+
     def __init__(self, base_url: str):
         self.base_url = base_url
 

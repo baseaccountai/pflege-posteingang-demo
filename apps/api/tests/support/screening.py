@@ -5,6 +5,8 @@ from app.security.screening import Screening
 
 
 class FakeScreener:
+    model_name = "fake-guard"
+
     def __init__(
         self, error: Exception | None = None, result: Screening | None = None, status=None
     ):

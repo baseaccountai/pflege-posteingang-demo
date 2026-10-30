@@ -14,6 +14,9 @@ update matches no row and this run stops without overwriting anything.
 
 All database access runs as the uploading user (RLS applies); OCR and extraction run
 outside any transaction, so no database connection is held for minutes.
+
+Every model step writes its event for the audit log after the call (F12, app/audit.py).
+If that event cannot be written, the step's result is not used: the document fails.
 """
 
 import asyncio
@@ -24,6 +27,7 @@ from typing import get_args
 
 from psycopg.types.json import Jsonb
 
+from app import audit
 from app.auth.principal import Principal
 from app.db import Database
 from app.documents.readability import check_readability
@@ -112,14 +116,18 @@ class Pipeline:
         try:
             result = await asyncio.wait_for(self.ocr.extract(content, mime), self.step_timeout)
         except TimeoutError:
-            await self._fail(principal, doc, "processing", "timeout")
+            await self._step_failed(principal, doc, "ocr", "processing", "timeout")
             return None
         except OcrUnavailable as error:
             log.warning("OCR unavailable for %s: %s", doc, error)
-            await self._fail(principal, doc, "processing", "ocr_unavailable")
+            await self._step_failed(principal, doc, "ocr", "processing", "ocr_unavailable")
             return None
         except Exception:
             log.exception("OCR step crashed for %s", doc)
+            await self._step_failed(principal, doc, "ocr", "processing", "ocr_unavailable")
+            return None
+        numbers = [page.number for page in result.pages]
+        if not await self._audit(principal, doc, "ocr", model=self.ocr.model_name, pages=numbers):
             await self._fail(principal, doc, "processing", "ocr_unavailable")
             return None
 
@@ -147,22 +155,42 @@ class Pipeline:
                 self.screener(principal, pages, pdf), self.step_timeout
             )
         except TimeoutError:
-            await self._fail(principal, doc, "screening", "timeout")
+            await self._step_failed(principal, doc, "screening", "screening", "timeout")
             return None
-        except QuotaExceeded:
-            await self._fail(principal, doc, "screening", "quota_exceeded")
+        except QuotaExceeded as exceeded:
+            await self._quota_exhausted(principal, doc, "screening", exceeded)
             return None
         except PseudonymizationFailed:
             log.warning("pseudonymization refused for the check of %s", doc)
-            await self._fail(principal, doc, "screening", "pseudonymization_failed")
+            await self._pseudonymization_refused(principal, doc, "screening")
             return None
         except Exception:  # checker unreachable or anything else: never go on unchecked
             log.exception("injection check failed for %s", doc)
+            await self._step_failed(
+                principal, doc, "screening", "screening", "screening_unavailable"
+            )
+            return None
+        if not await self._log_screening(principal, doc, screening):
             await self._fail(principal, doc, "screening", "screening_unavailable")
             return None
         if not await self._finish_screening(principal, doc, screening):
             return None
         return screening.screened_pages
+
+    async def _log_screening(self, principal: Principal, doc: str, screening: Screening) -> bool:
+        """The check, then one `blocked` event per finding: layer and rule, no text (F07-AC11)."""
+        outcome = "blocked" if screening.findings else "ok"
+        if not await self._audit(
+            principal, doc, "screening", outcome, model=self.screener.model_name
+        ):
+            return False
+        for f in screening.findings:
+            if not await self._audit(
+                principal, doc, "blocked", "blocked", layer=f.layer, rule_id=f.rule_id,
+                pages=[f.page],
+            ):  # fmt: skip
+                return False
+        return True
 
     async def _finish_screening(self, principal: Principal, doc: str, screening: Screening) -> bool:
         """Result, cleaned pages and findings in one transaction, then on to extracting."""
@@ -202,22 +230,25 @@ class Pipeline:
                 self.extractor(principal, doc, text), self.step_timeout
             )
         except TimeoutError:
-            await self._fail(principal, doc, "extracting", "timeout")
+            await self._step_failed(principal, doc, "extraction", "extracting", "timeout")
             return
-        except QuotaExceeded:
-            await self._fail(principal, doc, "extracting", "quota_exceeded")
+        except QuotaExceeded as exceeded:
+            await self._quota_exhausted(principal, doc, "extracting", exceeded)
             return
         except LlmUnavailable as error:
             log.warning("LLM unavailable for %s: %s", doc, error)
-            await self._fail(principal, doc, "extracting", "llm_unavailable")
+            await self._step_failed(principal, doc, "extraction", "extracting", "llm_unavailable")
             return
         except PseudonymizationFailed:
             # F06-AC10: a plain name was still in the text - nothing was sent.
             log.warning("pseudonymization refused for %s", doc)
-            await self._fail(principal, doc, "extracting", "pseudonymization_failed")
+            await self._pseudonymization_refused(principal, doc, "extracting")
             return
         except Exception:
             log.exception("extraction step crashed for %s", doc)
+            await self._step_failed(principal, doc, "extraction", "extracting", "llm_unavailable")
+            return
+        if not await self._audit(principal, doc, "extraction", model=suggestion.model):
             await self._fail(principal, doc, "extracting", "llm_unavailable")
             return
         await self._move(principal, doc, "extracting", "ready_for_review", suggestion=suggestion)
@@ -229,6 +260,29 @@ class Pipeline:
         field = (suggestion.data or {}).get("doc_type") if suggestion else None
         value = field.get("value") if isinstance(field, dict) else None
         return value if value in get_args(DocType) else None
+
+    async def _audit(self, principal: Principal, doc: str, action: str, outcome="ok", **kw) -> bool:
+        """Writes one event; False if that failed (the caller then drops the result)."""
+        try:
+            await audit.log(self.db, principal, action, outcome, document_id=doc, **kw)
+        except audit.AuditFailed:
+            log.exception("audit event %s for %s could not be written", action, doc)
+            return False
+        return True
+
+    async def _step_failed(self, principal, doc, action, from_status, code) -> None:
+        # The document fails either way; a missing event does not change that.
+        await self._audit(principal, doc, action, "error", error_code=code)
+        await self._fail(principal, doc, from_status, code)
+
+    async def _quota_exhausted(self, principal, doc, from_status, exceeded: QuotaExceeded) -> None:
+        await self._audit(principal, doc, "quota_exhausted", "blocked", error_code=exceeded.kind)
+        await self._fail(principal, doc, from_status, "quota_exceeded")
+
+    async def _pseudonymization_refused(self, principal, doc, from_status) -> None:
+        code = "pseudonymization_failed"
+        await self._audit(principal, doc, "blocked", "blocked", error_code=code)
+        await self._fail(principal, doc, from_status, code)
 
     async def _fail(self, principal: Principal, doc: str, from_status: str, code: str) -> None:
         await self._move(principal, doc, from_status, "failed", error_code=code)

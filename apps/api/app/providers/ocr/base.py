@@ -24,4 +24,6 @@ class OcrResult:
 
 
 class OcrProvider(Protocol):
+    model_name: str  # named in the audit log (F12-AC2)
+
     async def extract(self, data: bytes, mime: str) -> OcrResult: ...
