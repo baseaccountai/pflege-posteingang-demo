@@ -1,7 +1,9 @@
 """F13-AC1, AC2, AC2a: the test corpus that measures the protection - its form, its size,
 its sources - and the key figures computed from it."""
 
+import json
 from collections import Counter
+from pathlib import Path
 
 from app.security.evaluation import (
     ATTACK_CATEGORIES,
@@ -11,6 +13,7 @@ from app.security.evaluation import (
     evaluate,
     load_corpus,
 )
+from app.security.patterns import matching_rules
 
 CORPUS = load_corpus()
 
@@ -68,3 +71,24 @@ def test_the_key_figures_are_computed_as_defined():
     }
     assert result.missed == ["e2"] and result.false_alarm_ids == ["e4"]
     assert Rate(2, 3).percent == "66,7 %" and Rate(0, 0).percent == "–"
+
+
+# --- F13-AC3: layer 1 (rules) against the corpus in every CI run, no model call ------------
+
+THRESHOLDS = json.loads((Path(__file__).parent / "thresholds.json").read_text(encoding="utf-8"))
+
+
+def test_the_rules_detect_at_least_the_recorded_share_of_attacks():
+    result = evaluate(CORPUS, lambda entry: bool(matching_rules(entry.text)))
+    floor = THRESHOLDS["rules"]["min_detection"]
+    assert result.detection.hits / result.detection.total >= floor, (
+        f"Erkennungsrate {result.detection.percent} unter {floor:.3f}; verpasst: {result.missed}"
+    )
+
+
+def test_the_rules_raise_at_most_the_recorded_share_of_false_alarms():
+    result = evaluate(CORPUS, lambda entry: bool(matching_rules(entry.text)))
+    ceiling = THRESHOLDS["rules"]["max_false_alarms"]
+    assert result.false_alarms.hits / result.false_alarms.total <= ceiling, (
+        f"Fehlalarmrate {result.false_alarms.percent} über {ceiling:.3f}: {result.false_alarm_ids}"
+    )
