@@ -38,6 +38,7 @@ VISITOR_TABLES = [
     "public.medications",
     "public.diagnoses",
     "public.follow_ups",
+    "public.agent_proposals",  # F08
     "public.documents",
     "public.residents",
     "public.wards",

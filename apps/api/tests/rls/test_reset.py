@@ -108,6 +108,16 @@ def test_reset_empties_the_audit_log(fresh) -> None:  # F12-AC5: the one way to 
     assert admin("select count(*) from public.audit_events") == [(0,)]
 
 
+def test_reset_removes_the_agents_proposals(fresh) -> None:  # F08: visitor data, too
+    admin(
+        "insert into public.agent_proposals (ward_id, resident_id, title, created_for)"
+        " values ('wb1', %s, 'Kontrolle', 'u-wb1')",
+        [WB1_RESIDENT],
+    )
+    reset(ADMIN_DSN, SEED_FILES)
+    assert admin("select count(*) from public.agent_proposals") == [(0,)]
+
+
 def test_reset_keeps_the_quota_counters_of_the_day(fresh) -> None:  # AC6
     admin(
         "insert into public.usage_counters (period, kind, subject, count)"
