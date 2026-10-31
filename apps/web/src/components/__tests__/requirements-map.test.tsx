@@ -22,14 +22,15 @@ describe("RequirementsMap", () => {
   it("links into the app where the requirement can be seen", () => {
     render(<RequirementsMap />);
     const rag = screen.getByTestId("requirement-rag-agents");
-    expect(within(rag).getByRole("link", { name: "In der App: Fragen" })).toHaveAttribute("href", "/fragen");
+    expect(within(rag).getByRole("link", { name: "In der App: Fragen und Agent" })).toHaveAttribute("href", "/fragen");
   });
 
-  it("marks the part of a live requirement that is still to come (F09-AC4)", () => {
+  it("shows the agent as done, with its code (F08)", () => {
     render(<RequirementsMap />);
     const rag = screen.getByTestId("requirement-rag-agents");
-    expect(rag).toHaveTextContent("Agent mit eigenen Rechten: in Arbeit (Stufe 2)");
-    expect(within(rag).getByRole("link", { name: "In der App: Fragen" })).toBeInTheDocument();
+    expect(rag).not.toHaveTextContent("in Arbeit");
+    expect(rag).toHaveTextContent("bestätigt");
+    expect(within(rag).getByRole("link", { name: "apps/api/app/agent/" })).toBeInTheDocument();
   });
 
   it("links into the repository on GitHub", () => {

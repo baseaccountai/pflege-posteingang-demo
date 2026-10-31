@@ -39,3 +39,10 @@ const DATE_TIME = new Intl.DateTimeFormat("de-DE", {
 export function formatDateTime(isoTimestamp: string): string {
   return DATE_TIME.format(new Date(isoTimestamp));
 }
+
+const TIME = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+
+/** A point in time → "00:15" in Berlin (how long an agent's proposal is valid, F08-AC5). */
+export function formatTime(isoTimestamp: string): string {
+  return TIME.format(new Date(isoTimestamp));
+}

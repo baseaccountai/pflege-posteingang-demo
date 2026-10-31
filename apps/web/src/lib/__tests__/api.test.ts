@@ -8,6 +8,7 @@ import {
   ApiUnavailable,
   READ_TIMEOUT_MS,
   SessionEnded,
+  apiAgentTokenWay,
   apiGet,
   apiReady,
   apiFile,
@@ -180,6 +181,15 @@ describe("apiSend", () => {
     });
   });
 
+  // F08: "model not reachable" is the API's own answer with its message, not a sleeping API.
+  it("passes a 503 of the API with its own error code and message through", async () => {
+    const body = { error_code: "llm_unavailable", message: "Das KI-Modell ist gerade nicht erreichbar" };
+    expect(await apiSend("/x", caller, { method: "POST" }, { env, fetch: answer(503, body) })).toEqual({
+      status: 503,
+      data: body,
+    });
+  });
+
   it.each([502, 503, 504])("throws ApiUnavailable on %i without maintenance", async (status) => {
     await expect(apiSend("/x", caller, { method: "POST" }, { env, fetch: answer(status, {}) })).rejects.toBeInstanceOf(
       ApiUnavailable,
@@ -276,5 +286,24 @@ describe("apiSendForSession", () => {
     await expect(
       apiSendForSession("/questions", caller, { method: "POST" }, isActive, { env, fetch: answer() }),
     ).rejects.toBeInstanceOf(SessionEnded);
+  });
+});
+
+describe("apiAgentTokenWay", () => {
+  const env = { API_BASE_URL: "http://api.test" };
+  const health = (body: unknown) => vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }));
+
+  // F08-AC2: /projekt names the way the API really uses, read from its public health check.
+  it("reads the way of the agent token from /health", async () => {
+    const fetch = health({ status: "ok", agent_token: "exchange" });
+    expect(await apiAgentTokenWay({ env, fetch })).toBe("exchange");
+    expect(fetch.mock.calls[0][0]).toBe("http://api.test/health");
+    expect(await apiAgentTokenWay({ env, fetch: health({ agent_token: "self_signed" }) })).toBe("self_signed");
+    expect(await apiAgentTokenWay({ env, fetch: health({ agent_token: "off" }) })).toBe("off");
+  });
+
+  it("is unknown when the API does not answer or answers something else", async () => {
+    expect(await apiAgentTokenWay({ env, fetch: vi.fn().mockRejectedValue(new TypeError("down")) })).toBeNull();
+    expect(await apiAgentTokenWay({ env, fetch: health({ agent_token: "magic" }) })).toBeNull();
   });
 });

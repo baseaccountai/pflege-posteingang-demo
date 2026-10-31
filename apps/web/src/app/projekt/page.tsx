@@ -1,6 +1,10 @@
+import { connection } from "next/server";
+
+import { AgentTokenWay } from "@/components/agent-token-way";
 import { DataFlowTable } from "@/components/data-flow-table";
 import { SecurityReportLink } from "@/components/requirements-map";
 import { repoHref, DEFAULT_REPO_URL } from "@/content/requirements-map";
+import { apiAgentTokenWay } from "@/lib/api";
 
 // F09-AC8: placeholder in Stufe 1; the full project description follows in phase 9.
 const LINKS = [
@@ -9,7 +13,9 @@ const LINKS = [
   { name: "Repository", href: process.env.NEXT_PUBLIC_REPO_URL || DEFAULT_REPO_URL, note: "der gesamte Code" },
 ];
 
-export default function ProjectPage() {
+export default async function ProjectPage() {
+  await connection(); // the way is read at request time from the API (F08-AC2)
+  const agentTokenWay = await apiAgentTokenWay();
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-10">
       <h1 className="text-2xl font-semibold">Über das Projekt</h1>
@@ -31,6 +37,7 @@ export default function ProjectPage() {
         Gemessene Erkennungs- und Fehlalarmrate des Schutzes vor Prompt-Injection:{" "}
         <SecurityReportLink />
       </p>
+      <AgentTokenWay way={agentTokenWay} />
       <DataFlowTable />
       <p className="text-muted-foreground text-sm">
         Unabhängige Bewerbungsdemo mit erfundenen Musterdaten; alle Daten werden jede Nacht

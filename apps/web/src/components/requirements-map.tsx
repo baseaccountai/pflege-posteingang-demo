@@ -43,11 +43,6 @@ export function RequirementsMap() {
                   </Link>
                 )
               )}
-              {entry.stage2Part && (
-                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900">
-                  {entry.stage2Part}: in Arbeit (Stufe 2)
-                </span>
-              )}
               {entry.showsSecurityReport && <SecurityReportLink />}
               {entry.repoPaths.map((repoPath) => (
                 <a

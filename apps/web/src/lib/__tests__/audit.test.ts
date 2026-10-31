@@ -43,6 +43,17 @@ describe("describeEvent", () => {
     expect(describeEvent(agent).actor).toBe("KI-Agent im Auftrag von Pflegekraft WB1");
   });
 
+  it("names the agent's proposals, decisions and tools (F08)", () => {
+    const agent = { ...EVENT, actor_type: "agent" as const, outcome: "ok" as const };
+    expect(describeEvent({ ...agent, action: "agent_proposal", details: {} }).action).toBe("Vorschlag des Agenten");
+    expect(describeEvent({ ...EVENT, action: "proposal_confirmed", details: {} }).action).toBe("Vorschlag bestätigt");
+    expect(describeEvent({ ...EVENT, action: "proposal_dismissed", details: {} }).action).toBe("Vorschlag verworfen");
+    expect(describeEvent({ ...agent, action: "agent_tool", details: { tool: "medikation_abgleichen" } })).toMatchObject({
+      action: "Agent-Werkzeug",
+      details: ["Werkzeug: Medikationsabgleich"],
+    });
+  });
+
   it("translates states and record entries, and keeps unknown values readable", () => {
     const change = { ...EVENT, action: "status_change", outcome: "error" as const, details: { status: "failed", error_code: "llm_unavailable" } };
     expect(describeEvent(change)).toMatchObject({

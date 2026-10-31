@@ -4,6 +4,7 @@
 import { LAYER_LABELS } from "@/components/attack-findings";
 
 import { STATUS_LABELS } from "./documents/labels";
+import { toolLabel } from "./agent";
 
 export type AuditEvent = {
   id: number;
@@ -36,6 +37,9 @@ const ACTION_LABELS: Record<string, string> = {
   question: "Frage",
   agent_task: "Agent-Auftrag",
   agent_tool: "Agent-Werkzeug",
+  agent_proposal: "Vorschlag des Agenten",
+  proposal_confirmed: "Vorschlag bestätigt",
+  proposal_dismissed: "Vorschlag verworfen",
   blocked: "Blockiert",
   quota_exhausted: "Kontingent erschöpft",
 };
@@ -51,7 +55,7 @@ const ENTRY_LABELS: Record<string, string> = {
 const DETAIL_LABELS: Record<string, [string, (value: unknown) => string]> = {
   layer: ["Schicht", (v) => LAYER_LABELS[v as keyof typeof LAYER_LABELS] ?? String(v)],
   rule_id: ["Regel", String],
-  tool: ["Werkzeug", String],
+  tool: ["Werkzeug", (v) => toolLabel(String(v))],
   error_code: ["Fehlercode", String],
   proposal_id: ["Vorschlag", String],
   pages: ["Seiten", (v) => (Array.isArray(v) ? v.join(", ") : String(v))],

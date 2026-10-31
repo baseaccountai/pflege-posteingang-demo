@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from "node:crypto";
 import path from "node:path";
 
 // Fixed values for the end-to-end tests: test OIDC server (mock-oauth2-server) and the
@@ -36,6 +37,12 @@ export const DB_PREP = {
 /** Environment of the FastAPI app: same test IdP, its access tokens carry aud "default". */
 export const SAMPLES_DIR = path.resolve(__dirname, "../../../../samples");
 
+// F08 in the fallback way (the mock IdP has no token exchange): the API signs the agent's
+// token with this key - generated per test run, never stored.
+const AGENT_SIGNING_KEY = generateKeyPairSync("ec", { namedCurve: "P-256" })
+  .privateKey.export({ type: "pkcs8", format: "pem" })
+  .toString();
+
 export const API_ENV = {
   E2E_DB_PREP: JSON.stringify(DB_PREP),
   // OCR stand-in that "reads" the files in samples/ (F02, no Mistral key in tests).
@@ -49,6 +56,9 @@ export const API_ENV = {
   OIDC_AUDIENCE: "default",
   OIDC_ROLES_CLAIM: "roles",
   BFF_API_SECRET,
+  AGENT_TOKEN_MODE: "self_signed",
+  AGENT_ID: "e2e-agent",
+  AGENT_SIGNING_KEY,
 };
 
 /** Environment of `next start` during the tests (F01-AC19: IdP only via configuration). */

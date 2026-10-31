@@ -123,7 +123,11 @@ export async function apiSend(
   const response = await callApi(path, caller, init, deps);
   if (response.status === 401) throw new ApiUnauthorized("API rejected token or assertion");
   const data = await response.json().catch(() => null);
-  if (response.status === 503 && data?.error_code === "maintenance") return { status: 503, data };
+  // A 503 with the API's own error code (reset, model or agent not reachable) carries a
+  // message for the user; only a 503 without one means the API itself is not up yet.
+  if (response.status === 503 && typeof data?.error_code === "string" && typeof data?.message === "string") {
+    return { status: 503, data };
+  }
   if (UNAVAILABLE.has(response.status)) throw new ApiUnavailable(`API answered ${response.status} for ${path}`);
   if (response.status >= 500) throw new Error(`API answered ${response.status} for ${path}`);
   return { status: response.status, data };
@@ -158,6 +162,26 @@ export async function apiReady(deps: Deps = {}): Promise<boolean> {
     return response.ok;
   } catch {
     return false;
+  }
+}
+
+export type AgentTokenWay = "exchange" | "self_signed" | "off";
+const AGENT_TOKEN_WAYS: AgentTokenWay[] = ["exchange", "self_signed", "off"];
+
+/**
+ * Which way the API gets the agent's token (F08-AC2), from its public health check - so
+ * /projekt names the way really in use. null: the API does not answer (yet).
+ */
+export async function apiAgentTokenWay(deps: Deps = {}): Promise<AgentTokenWay | null> {
+  try {
+    const response = await (deps.fetch ?? fetch)(new URL("/health", apiBase(deps)).toString(), {
+      cache: "no-store",
+      signal: readSignal(deps),
+    });
+    const way = (await response.json())?.agent_token;
+    return AGENT_TOKEN_WAYS.includes(way) ? way : null;
+  } catch {
+    return null;
   }
 }
 
