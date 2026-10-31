@@ -4,8 +4,6 @@ the proposals. The agent's steps are logged as the agent, the nurse's check as t
 
 import psycopg
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
 from fastapi.testclient import TestClient
 
 from app.agent.runner import FOREIGN_ANSWER
@@ -18,6 +16,7 @@ from app.providers.ocr.fake import FakeOcr
 from tests.rls.conftest import ADMIN_DSN, GATEWAY_DSN, WB1_RESIDENT
 from tests.rls.test_record_rls import record  # noqa: F401 (fixture)
 from tests.support.oidc import (
+    AGENT_SIGNING_KEY,
     AUDIENCE,
     BFF_SECRET,
     ISSUER,
@@ -29,15 +28,6 @@ from tests.support.oidc import (
 
 pytestmark = pytest.mark.db
 
-SIGNING_KEY = (
-    ec.generate_private_key(ec.SECP256R1())
-    .private_bytes(
-        serialization.Encoding.PEM,
-        serialization.PrivateFormat.PKCS8,
-        serialization.NoEncryption(),
-    )
-    .decode()
-)  # test-only key, generated per run
 AGENT_ID = "agent-test"
 
 
@@ -66,7 +56,7 @@ def client(llm: FakeLlm, with_agent: bool = True) -> TestClient:
         llm_provider="fake",
         agent_token_mode="self_signed",
         agent_id=AGENT_ID if with_agent else "",
-        agent_signing_key=SIGNING_KEY,
+        agent_signing_key=AGENT_SIGNING_KEY,
     )
     app = create_app(
         settings, verifier=test_verifier(), ocr=FakeOcr(), llm=llm, embeddings=FakeEmbeddings()

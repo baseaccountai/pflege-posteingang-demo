@@ -125,12 +125,15 @@ def create_app(
     app.dependency_overrides[get_settings] = lambda: settings
 
     @app.get("/health")
-    def health() -> dict[str, str]:
-        # Exposes which providers are active so the demo can show "cloud vs. local".
+    def health(request: Request) -> dict[str, str]:
+        # Exposes which providers are active so the demo can show "cloud vs. local", and
+        # which way the agent gets its token (F08-AC2: named openly on /projekt).
+        agent_ready = getattr(request.app.state, "agent_tokens", None) is not None
         return {
             "status": "ok",
             "llm_provider": settings.llm_provider,
             "ocr_provider": settings.ocr_provider,
+            "agent_token": settings.agent_token_mode if agent_ready else "off",
         }
 
     @app.get("/health/ready")

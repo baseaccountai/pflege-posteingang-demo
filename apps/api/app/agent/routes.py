@@ -16,7 +16,7 @@ import uuid
 from typing import Annotated
 
 import psycopg
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app import audit
@@ -215,7 +215,7 @@ async def confirm_proposal(request: Request, caller: Caller, proposal_id: str):
     return {"follow_up_id": follow_up}
 
 
-@router.post("/agent/proposals/{proposal_id}/dismiss", status_code=204)
+@router.post("/agent/proposals/{proposal_id}/dismiss")
 async def dismiss_proposal(request: Request, caller: Caller, proposal_id: str):
     db = database(request)
     proposal_id = _proposal_id(proposal_id)
@@ -230,4 +230,4 @@ async def dismiss_proposal(request: Request, caller: Caller, proposal_id: str):
         )
         if await cur.fetchone() is None:
             return error(409, "proposal_decided", DECIDED)
-    return Response(status_code=204)
+    return {"ok": True}

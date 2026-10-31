@@ -8,7 +8,7 @@ F05) is answered with the first text line of source Q1 and cites it.
 
 import re
 
-from app.providers.llm.base import ChatTurn, Message
+from app.providers.llm.base import ChatTurn, Message, ToolCall
 
 DATE = re.compile(r"\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b")
 PERSON = re.compile(r"\b(?:Hr|Fr)\. [\w-]+|\bBewohner_[A-Z]\d{2}\b")  # name or its code (F06)
@@ -108,7 +108,7 @@ class FakeLlm:
             if isinstance(turn, Exception):
                 raise turn
             return turn
-        return ChatTurn(content="Ich habe den Auftrag gelesen, aber kein Werkzeug gebraucht.")
+        return agent_turn(messages)
 
     async def structured(self, system: str, user: str, schema: dict, max_tokens: int) -> dict:
         self.calls.append((system, user))
@@ -152,3 +152,61 @@ def judge_sections(user: str) -> dict:
             if ORDERS.search(text)
         ],
     }
+
+
+# --- the agent without a script (F08, e2e): one tool step chosen by simple rules -----------
+
+RESIDENT_LINE = re.compile(r"Bewohner_(\w+) \(bewohner_id ([\w-]+)\)")
+CHOSEN = re.compile(r"Ausgewählter Bewohner: Bewohner_\w+ \(bewohner_id ([\w-]+)\)")
+CANNOT = re.compile(r"\b(?:änder|lösch|send|schick)", re.I)
+TOOL_WORDS = {
+    "dokumente_durchsuchen": "die Dokumente durchsucht",
+    "bewohnerakte_lesen": "die Bewohnerakte gelesen",
+    "medikation_abgleichen": "die Medikation abgeglichen",
+    "wiedervorlagen_auflisten": "die Wiedervorlagen aufgelistet",
+}
+NOTHING = "Dazu gibt es in deinem Wohnbereich nichts – der Agent hat dieselben Rechte wie du."
+
+
+def agent_turn(messages: list[Message]) -> ChatTurn:
+    """First turn: a tool by the words of the task; after a tool result: a short answer."""
+    last = messages[-1]
+    if last["role"] == "tool":
+        return ChatTurn(content=_after_tool(last["name"], last["content"]))
+    user = messages[1]["content"] if len(messages) > 1 else ""
+    text = user.rsplit("Auftrag:", 1)[-1].strip()
+    if CANNOT.search(text):
+        return ChatTurn(
+            content="Das kann ich nicht: Ich darf nichts in der Akte ändern, löschen oder senden. "
+            "Ich kann aber eine Wiedervorlage „Dosis mit Hausarzt klären“ vorschlagen."
+        )
+    resident = _resident(user, text)
+    if resident and "wiedervorlage" in text.casefold():
+        title = text.split(":", 1)[1].strip() if ":" in text else "Kontrolle laut Auftrag"
+        call = ToolCall(
+            "fake_1", "wiedervorlage_vorschlagen", {"bewohner_id": resident, "titel": title}
+        )
+    elif resident:
+        call = ToolCall("fake_1", "bewohnerakte_lesen", {"bewohner_id": resident})
+    else:
+        call = ToolCall("fake_1", "wiedervorlagen_auflisten", {})
+    return ChatTurn(content="", tool_calls=[call])
+
+
+def _resident(user: str, text: str) -> str | None:
+    """The chosen resident, else the first own resident whose placeholder is in the task."""
+    chosen = CHOSEN.search(user)
+    if chosen:
+        return chosen.group(1)
+    ids = dict(RESIDENT_LINE.findall(user.split("Auftrag:", 1)[0]))
+    return next((ids[code] for code in re.findall(r"Bewohner_(\w+)", text) if code in ids), None)
+
+
+def _after_tool(tool: str, content: str) -> str:
+    if content == "nicht erlaubt":
+        return "Das Werkzeug war nicht erlaubt."
+    if tool == "wiedervorlage_vorschlagen" and '"gefunden": true' in content:
+        return "Ich habe eine Wiedervorlage vorgeschlagen – bitte bestätigen oder verwerfen."
+    if '"gefunden": false' in content or re.search(r'": \[\]', content):
+        return NOTHING
+    return f"Ich habe {TOOL_WORDS.get(tool, 'ein Werkzeug genutzt')} (Testattrappe)."

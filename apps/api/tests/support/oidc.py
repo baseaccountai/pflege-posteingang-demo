@@ -6,6 +6,7 @@ import json
 import time
 
 import jwt
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 
@@ -18,6 +19,14 @@ BFF_SECRET = "test-bff-secret-" + "x" * 48  # 64 bytes
 
 RSA_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 EC_KEY = ec.generate_private_key(ec.SECP256R1())
+# The API's own key for the agent token in the fallback way (F08-AC2), per test run.
+AGENT_SIGNING_KEY = (
+    ec.generate_private_key(ec.SECP256R1())
+    .private_bytes(
+        serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
+    )
+    .decode()
+)
 
 
 def _jwk(public_key, kid: str, algorithm) -> dict:

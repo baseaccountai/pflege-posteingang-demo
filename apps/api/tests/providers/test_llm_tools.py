@@ -172,6 +172,93 @@ async def test_the_fake_plays_its_script_and_records_what_it_saw():
     assert llm.max_tokens == [100, 100]
 
 
-async def test_the_fake_without_script_answers_without_tools():
-    turn = await FakeLlm().chat_with_tools(MESSAGES[:2], TOOLS, 100)
-    assert turn.tool_calls == [] and turn.content
+def task(text: str, chosen: bool = False) -> list[dict]:
+    """The first two messages as the runner writes them (residents, chosen one, task)."""
+    user = "Bewohner in deinem Wohnbereich:\nBewohner_K42 (bewohner_id r1)"
+    if chosen:
+        user += "\n\nAusgewählter Bewohner: Bewohner_K42 (bewohner_id r1)"
+    return [
+        {"role": "system", "content": "System"},
+        {"role": "user", "content": f"{user}\n\nAuftrag: {text}"},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("text", "chosen", "expected"),
+    [
+        (
+            "Wiedervorlage: Blutdruck messen für Bewohner_K42",
+            False,
+            ToolCall(
+                "fake_1",
+                "wiedervorlage_vorschlagen",
+                {"bewohner_id": "r1", "titel": "Blutdruck messen für Bewohner_K42"},
+            ),
+        ),
+        (
+            "Lege eine Wiedervorlage an",
+            True,
+            ToolCall(
+                "fake_1",
+                "wiedervorlage_vorschlagen",
+                {"bewohner_id": "r1", "titel": "Kontrolle laut Auftrag"},
+            ),
+        ),
+        (
+            "Was steht in der Akte?",
+            True,
+            ToolCall("fake_1", "bewohnerakte_lesen", {"bewohner_id": "r1"}),
+        ),
+        (
+            "Akte von Bewohner_K42?",
+            False,
+            ToolCall("fake_1", "bewohnerakte_lesen", {"bewohner_id": "r1"}),
+        ),
+        ("Was ist offen?", False, ToolCall("fake_1", "wiedervorlagen_auflisten", {})),
+    ],
+)
+async def test_the_fake_agent_picks_a_tool_by_simple_rules(text, chosen, expected):
+    turn = await FakeLlm().chat_with_tools(task(text, chosen), TOOLS, 100)
+    assert turn.tool_calls == [expected]
+
+
+async def test_the_fake_agent_refuses_what_it_cannot_do_and_offers_a_proposal():
+    turn = await FakeLlm().chat_with_tools(task("Ändere die Dosis von Ramipril", True), TOOLS, 100)
+    assert turn.tool_calls == []
+    assert "kann ich nicht" in turn.content and "Dosis mit Hausarzt klären" in turn.content
+
+
+@pytest.mark.parametrize(
+    ("tool", "content", "answer"),
+    [
+        (
+            "wiedervorlage_vorschlagen",
+            '<werkzeugergebnis>{"gefunden": true}</werkzeugergebnis>',
+            "vorgeschlagen",
+        ),
+        (
+            "bewohnerakte_lesen",
+            '<werkzeugergebnis>{"gefunden": false}</werkzeugergebnis>',
+            "dieselben Rechte wie du",
+        ),
+        (
+            "wiedervorlagen_auflisten",
+            '<werkzeugergebnis>{"wiedervorlagen": []}</werkzeugergebnis>',
+            "dieselben Rechte wie du",
+        ),
+        (
+            "bewohnerakte_lesen",
+            '<werkzeugergebnis>{"gefunden": true}</werkzeugergebnis>',
+            "Bewohnerakte gelesen",
+        ),
+        ("medikation_aendern", "nicht erlaubt", "nicht erlaubt"),
+    ],
+)
+async def test_the_fake_agent_answers_after_one_tool_step(tool, content, answer):
+    messages = task("x") + [
+        {"role": "assistant", "content": "", "tool_calls": [ToolCall("fake_1", tool, {})]},
+        {"role": "tool", "tool_call_id": "fake_1", "name": tool, "content": content},
+    ]
+    turn = await FakeLlm().chat_with_tools(messages, TOOLS, 100)
+    assert turn.tool_calls == [] and answer in turn.content
+    assert "<" not in turn.content  # no markup in the answer (F07-AC10)

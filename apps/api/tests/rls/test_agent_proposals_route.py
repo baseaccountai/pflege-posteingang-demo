@@ -80,7 +80,7 @@ def test_a_confirmed_proposal_without_follow_up_can_be_saved_again(ward):  # noq
 def test_dismissing_writes_nothing_into_the_record(ward):  # noqa: F811
     pid = proposal()
     response = post(f"/agent/proposals/{pid}/dismiss")
-    assert response.status_code == 204
+    assert response.status_code == 200 and response.json() == {"ok": True}
     assert status_of(pid) == "dismissed"
     assert admin("select count(*) from public.follow_ups where proposal_id = %s", [pid]) == [(0,)]
     for action in ("confirm", "dismiss"):
