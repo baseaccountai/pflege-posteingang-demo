@@ -1,7 +1,7 @@
 {
-  "_note": "F13-AC3: first measurement 31.10.2026 on corpus d523c9c, rules only (layer 1): 17/142 attacks detected (12.0 %), 0/62 false alarms. Raise or lower only with a reason in the commit; never fit the rules to the corpus.",
+  "_note": "F13-AC3, rules only (layer 1). First measurement 31.10.2026 (d523c9c): 17/142 (12.0 %), 0/62 false alarms. 31.10.2026, after removing 8 deepset entries with political or vulgar content (review F13; corpus selection only, no rule changed): 17/134 detected (12.7 %), 0/62 false alarms. Adding an attack the rules miss lowers the rate as well - then record the new value here with a reason; never fit the rules to the corpus.",
   "rules": {
-    "min_detection": 0.119,
+    "min_detection": 0.126,
     "max_false_alarms": 0.0
   }
 }
