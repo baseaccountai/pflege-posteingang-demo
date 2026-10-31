@@ -26,7 +26,7 @@ Stand: 31.10.2026 · Orientierung: **OWASP Top 10 für LLM-Anwendungen (2025)** 
 
 | Risiko | Relevanz in der Demo | Maßnahme | Feature | Status |
 |---|---|---|---|---|
-| LLM01 Prompt Injection (direkt/indirekt) | hoch – präparierte Dokumente | fünf Schichten (Design 5.5a) | F07, F13 | umgesetzt für Dokumente und Fragen (Rechte und Bestätigung für den Agenten folgen mit F08); gemessen: Regeln allein 12,7 % Erkennung bei 0 % Fehlalarm (CI-Schwelle `apps/api/tests/security/thresholds.json`), Prüfmodell im Bericht `docs/security/reports/` (folgt mit `make security-report`); Tests `apps/api/tests/security/` (Korpus, Szenarien mit den präparierten PDFs) |
+| LLM01 Prompt Injection (direkt/indirekt) | hoch – präparierte Dokumente | fünf Schichten (Design 5.5a) | F07, F13 | umgesetzt für Dokumente und Fragen (Rechte und Bestätigung für den Agenten folgen mit F08); gemessen: Regeln allein 12,7 % Erkennung bei 0 % Fehlalarm (CI-Schwelle `apps/api/tests/security/thresholds.json`), Prüfmodell 88,8 %, beide Schichten 89,6 % bei 11,3 % Fehlalarm (Bericht `docs/security/reports/2026-10-31-injection.md`, `ministral-8b-latest`); Tests `apps/api/tests/security/` (Korpus, Szenarien mit den präparierten PDFs) |
 | LLM02 Sensitive Information Disclosure | hoch | Pseudonymisierung, Ausgabeprüfung, RLS | F06, F08 | umgesetzt für Fragen und Feldvorschlag (F06): kein Klarname an ein Modell (`tests/security/test_scenarios.py`, `tests/privacy/`), RLS je Wohnbereich (`tests/rls/`); Agent folgt mit F08 |
 | LLM03 Supply Chain | mittel | gepinnte Abhängigkeiten, Lockfiles, CI | F11 | offen |
 | LLM04 Data and Model Poisoning | mittel – Uploads | menschliche Freigabe vor Indizierung | F03, F07 | offen |

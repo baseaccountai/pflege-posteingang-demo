@@ -24,7 +24,7 @@ export type RequirementEntry = {
  * F13-AC7: the measured injection report, set by the commit that adds it
  * (`make security-report` writes docs/security/reports/<date>-injection.md). null: not yet.
  */
-export const SECURITY_REPORT: string | null = null;
+export const SECURITY_REPORT: string | null = "docs/security/reports/2026-10-31-injection.md";
 
 export const DEFAULT_REPO_URL = "https://github.com/baseaccountai/pflege-posteingang-demo";
 
