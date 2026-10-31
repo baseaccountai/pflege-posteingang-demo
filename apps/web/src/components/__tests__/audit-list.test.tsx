@@ -99,6 +99,24 @@ describe("AuditList", () => {
     );
   });
 
+  it("shows only the answer to the latest filter, even if an older one arrives later", async () => {
+    let releaseFirst: (response: Response) => void = () => {};
+    const first = new Promise<Response>((resolve) => (releaseFirst = resolve));
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => first) // "nur blockiert" on: slow
+      .mockImplementationOnce(async () => json({ events: [AGENT], next_before: null })); // then "nur Agent"
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AuditList initial={{ events: [AGENT, BLOCKED], next_before: null }} />);
+    fireEvent.click(screen.getByLabelText("nur blockiert"));
+    fireEvent.click(screen.getByLabelText("nur Agent"));
+    await waitFor(() => expect(rows()).toHaveLength(1));
+    releaseFirst(json({ events: [BLOCKED, event(7), event(6)], next_before: null }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0]).toHaveAttribute("data-actor", "agent");
+  });
+
   it("says so when there is nothing to show", () => {
     render(<AuditList initial={{ events: [], next_before: null }} />);
     expect(screen.getByText("Keine Ereignisse.")).toBeInTheDocument();

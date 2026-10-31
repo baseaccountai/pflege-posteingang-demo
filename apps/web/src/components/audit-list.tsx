@@ -3,7 +3,7 @@
 // continues below the smallest number shown; a filter starts again from the newest event.
 // Agent events are marked, so human and agent can be told apart at a glance (US-2).
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { auditQuery, describeEvent, type AuditEvent, type AuditPage } from "@/lib/audit";
@@ -25,14 +25,19 @@ export function AuditList({ initial }: { initial: AuditPage }) {
   const [blockedOnly, setBlockedOnly] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // Only the latest request may change the list: a slow answer to an earlier filter that
+  // arrives after a newer one would otherwise show events the current filter excludes.
+  const latest = useRef(0);
 
   async function load(filters: { agentOnly: boolean; blockedOnly: boolean }, before?: number) {
+    const request = ++latest.current;
     setBusy(true);
     setProblem(null);
     try {
       const response = await fetch(`/api/audit${auditQuery({ ...filters, before })}`, { cache: "no-store" });
       if (response.status === 401) return leaveEndedSession();
       const data = await response.json().catch(() => ({}));
+      if (request !== latest.current) return;
       if (!response.ok) {
         setProblem(data.message ?? LOAD_FAILED);
         return;
@@ -41,9 +46,9 @@ export function AuditList({ initial }: { initial: AuditPage }) {
       setEvents((shown) => (before === undefined ? page.events : [...shown, ...page.events]));
       setNextBefore(page.next_before);
     } catch {
-      setProblem(LOAD_FAILED);
+      if (request === latest.current) setProblem(LOAD_FAILED);
     } finally {
-      setBusy(false);
+      if (request === latest.current) setBusy(false);
     }
   }
 
