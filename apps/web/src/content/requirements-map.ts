@@ -16,7 +16,15 @@ export type RequirementEntry = {
   /** Files or folders in the repository; a folder ends with "/". */
   repoPaths: string[];
   status: "live" | "stufe2";
+  /** Shows the link to the injection report (or "folgt") - F13-AC7. */
+  showsSecurityReport?: boolean;
 };
+
+/**
+ * F13-AC7: the measured injection report, set by the commit that adds it
+ * (`make security-report` writes docs/security/reports/<date>-injection.md). null: not yet.
+ */
+export const SECURITY_REPORT: string | null = null;
 
 export const DEFAULT_REPO_URL = "https://github.com/baseaccountai/pflege-posteingang-demo";
 
@@ -103,7 +111,13 @@ export const REQUIREMENTS: RequirementEntry[] = [
       "Kein Modell außer der OCR sieht Bewohnernamen (Pseudonymisierung).",
     appHref: "/posteingang",
     appLabel: "Posteingang (Musterdokumente mit Angriff)",
-    repoPaths: ["docs/security/threat-model.md", "apps/api/app/security/", "apps/api/app/privacy/"],
+    repoPaths: [
+      "docs/security/threat-model.md",
+      "apps/api/app/security/",
+      "apps/api/app/privacy/",
+      "apps/api/tests/security/",
+    ],
     status: "live",
+    showsSecurityReport: true,
   },
 ];

@@ -2,7 +2,7 @@
 // the phone, a grid on wider screens. Data: content/requirements-map.ts.
 import Link from "next/link";
 
-import { REQUIREMENTS, repoHref } from "@/content/requirements-map";
+import { REQUIREMENTS, SECURITY_REPORT, repoHref } from "@/content/requirements-map";
 
 const LEVEL = { gefordert: "gefordert", wuenschenswert: "wünschenswert" } as const;
 
@@ -48,6 +48,7 @@ export function RequirementsMap() {
                   {entry.stage2Part}: in Arbeit (Stufe 2)
                 </span>
               )}
+              {entry.showsSecurityReport && <SecurityReportLink />}
               {entry.repoPaths.map((repoPath) => (
                 <a
                   key={repoPath}
@@ -64,5 +65,17 @@ export function RequirementsMap() {
         ))}
       </ul>
     </section>
+  );
+}
+
+/** F13-AC7: the measured detection and false alarm rates, or "folgt" until the first report. */
+export function SecurityReportLink({ report = SECURITY_REPORT }: { report?: string | null }) {
+  if (!report) {
+    return <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900">Sicherheitsbericht: folgt</span>;
+  }
+  return (
+    <a href={repoHref(report)} target="_blank" rel="noopener" className="font-medium underline">
+      Sicherheitsbericht
+    </a>
   );
 }

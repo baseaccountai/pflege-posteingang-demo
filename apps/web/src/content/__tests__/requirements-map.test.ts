@@ -5,7 +5,7 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { REQUIREMENTS, repoHref } from "@/content/requirements-map";
+import { REQUIREMENTS, SECURITY_REPORT, repoHref } from "@/content/requirements-map";
 
 const APP_DIR = path.resolve(__dirname, "../../app");
 const REPO_ROOT = path.resolve(__dirname, "../../../../..");
@@ -48,6 +48,14 @@ describe("requirements map data", () => {
     for (const entry of REQUIREMENTS) {
       if (entry.appHref) expect(isRoute(entry.appHref), `${entry.id}: ${entry.appHref}`).toBe(true);
     }
+  });
+
+  it("names a security report only if the file is in the repository (F13-AC7)", () => {
+    if (SECURITY_REPORT !== null) {
+      expect(SECURITY_REPORT).toMatch(/^docs\/security\/reports\/\d{4}-\d{2}-\d{2}-injection\.md$/);
+      expect(existsSync(path.join(REPO_ROOT, SECURITY_REPORT))).toBe(true);
+    }
+    expect(REQUIREMENTS.find((r) => r.id === "llm-security")?.repoPaths).toContain("apps/api/tests/security/");
   });
 
   it("links only to repo paths that exist", () => {

@@ -4,7 +4,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ProjectCard } from "@/components/project-card";
-import { RequirementsMap } from "@/components/requirements-map";
+import { RequirementsMap, SecurityReportLink } from "@/components/requirements-map";
 import { REQUIREMENTS } from "@/content/requirements-map";
 
 describe("RequirementsMap", () => {
@@ -45,6 +45,27 @@ describe("RequirementsMap", () => {
     const local = screen.getByTestId("requirement-local-models");
     expect(local).toHaveTextContent("in Arbeit (Stufe 2)");
     expect(within(local).queryByRole("link", { name: /In der App/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("SecurityReportLink (F13-AC7)", () => {
+  it("says 'Bericht folgt' while there is no report", () => {
+    render(<SecurityReportLink report={null} />);
+    expect(screen.getByText("Sicherheitsbericht: folgt")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("links the report on GitHub once it is there", () => {
+    render(<SecurityReportLink report="docs/security/reports/2026-11-01-injection.md" />);
+    expect(screen.getByRole("link", { name: "Sicherheitsbericht" }).getAttribute("href")).toMatch(
+      /\/blob\/main\/docs\/security\/reports\/2026-11-01-injection\.md$/,
+    );
+  });
+
+  it("is part of the entry on the security risks of LLM applications", () => {
+    render(<RequirementsMap />);
+    expect(screen.getByTestId("requirement-llm-security")).toHaveTextContent("Sicherheitsbericht");
+    expect(screen.getByTestId("requirement-llm-apis")).not.toHaveTextContent("Sicherheitsbericht");
   });
 });
 

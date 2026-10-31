@@ -29,6 +29,8 @@ test("the project page is a placeholder with links to architecture, specs and re
   await page.waitForURL("/projekt");
   await expect(page.getByRole("heading", { level: 1, name: "Über das Projekt" })).toBeVisible();
   await expect(page.getByText("Projektbeschreibung folgt")).toBeVisible();
+  // F13-AC7: the injection report, or "folgt" until the applicant has run it.
+  await expect(page.getByText(/Sicherheitsbericht/)).toBeVisible();
   for (const name of ["Architektur", "Specs", "Repository"]) {
     await expect(page.getByRole("link", { name })).toHaveAttribute("href", /github\.com\/baseaccountai\/pflege-posteingang-demo/);
   }

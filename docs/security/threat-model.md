@@ -26,12 +26,12 @@ Stand: 25.10.2026 · Orientierung: **OWASP Top 10 für LLM-Anwendungen (2025)** 
 
 | Risiko | Relevanz in der Demo | Maßnahme (geplant) | Feature | Status |
 |---|---|---|---|---|
-| LLM01 Prompt Injection (direkt/indirekt) | hoch – präparierte Dokumente | fünf Schichten (Design 5.5a) | F07 | offen |
-| LLM02 Sensitive Information Disclosure | hoch | Pseudonymisierung, Ausgabeprüfung, RLS | F06, F08 | offen |
+| LLM01 Prompt Injection (direkt/indirekt) | hoch – präparierte Dokumente | fünf Schichten (Design 5.5a) | F07, F13 | umgesetzt; gemessen: Regeln allein 12,0 % Erkennung bei 0 % Fehlalarm (CI-Schwelle `apps/api/tests/security/thresholds.json`), Prüfmodell im Bericht `docs/security/reports/` (folgt mit `make security-report`); Tests `apps/api/tests/security/` (Korpus, Szenarien mit den präparierten PDFs) |
+| LLM02 Sensitive Information Disclosure | hoch | Pseudonymisierung, Ausgabeprüfung, RLS | F06, F08 | umgesetzt für Fragen und Feldvorschlag (F06): kein Klarname an ein Modell (`tests/security/test_scenarios.py`, `tests/privacy/`), RLS je Wohnbereich (`tests/rls/`); Agent folgt mit F08 |
 | LLM03 Supply Chain | mittel | gepinnte Abhängigkeiten, Lockfiles, CI | F11 | offen |
 | LLM04 Data and Model Poisoning | mittel – Uploads | menschliche Freigabe vor Indizierung | F03, F07 | offen |
-| LLM05 Improper Output Handling | mittel | Ausgabe prüfen, nur erlaubte Quellen | F05, F07 | offen |
-| LLM06 Excessive Agency | hoch – Agent | eingeschränktes Agenten-Token, Bestätigungspflicht, keine gefährlichen Werkzeuge | F08 | offen |
+| LLM05 Improper Output Handling | mittel | Ausgabe prüfen, nur erlaubte Quellen | F05, F07 | umgesetzt: Antworten nur mit geprüften Quellenzitaten, keine Links/Bilder in der Ausgabe (`apps/api/tests/security/test_output.py`, `tests/rls/test_questions.py`) |
+| LLM06 Excessive Agency | hoch – Agent | eingeschränktes Agenten-Token, Bestätigungspflicht, keine gefährlichen Werkzeuge | F08 | offen (F08 nach dem Token-Exchange-Spike); Szenario-Tests dafür folgen in `tests/security/test_scenarios.py` |
 | LLM07 System Prompt Leakage | niedrig | keine Geheimnisse im System-Prompt | F05 | offen |
 | LLM08 Vector and Embedding Weaknesses | hoch – RAG | RLS auf Chunks, Metadaten-Filter | F05 | offen |
 | LLM09 Misinformation | mittel | Quellen in jeder Antwort, Mensch prüft | F03, F05 | offen |
