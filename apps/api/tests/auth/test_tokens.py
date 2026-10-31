@@ -121,3 +121,11 @@ def test_discovery_with_other_issuer_is_rejected():
     }
     with pytest.raises(InvalidToken):
         discover_jwks_uri(ISSUER, fetch_json=documents.__getitem__)
+
+
+def test_a_token_with_act_is_no_user_token(verifier):
+    # ADR 0012: an exchanged agent token passes every check of a user token (same iss, aud,
+    # sub, roles). As a user token it would let the agent do anything the nurse may do.
+    agent = rs256(claims(act={"iss": ISSUER, "sub": "agent-1"}))
+    with pytest.raises(InvalidToken, match="act"):
+        verifier.verify(agent)

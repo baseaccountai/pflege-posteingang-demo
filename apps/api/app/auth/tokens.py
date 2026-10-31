@@ -3,7 +3,9 @@
 The API trusts a token only if
   - its signature checks out against a key from the IdP's JWKS (looked up by `kid`),
   - it uses one of the fixed asymmetric algorithms (never `none`, never HS*),
-  - `iss`, `aud`, `exp` and `nbf` match, with 30 s leeway for clock skew.
+  - `iss`, `aud`, `exp` and `nbf` match, with 30 s leeway for clock skew,
+  - it has no `act` claim: that marks an agent acting for the user (RFC 8693, F08), which
+    only the agent's own verifier accepts (ADR 0012).
 
 Nothing here is IdP-specific: issuer and audience come from configuration and the JWKS
 address from the issuer's discovery document, so Zitadel and the test OIDC server both work.
@@ -51,6 +53,13 @@ class TokenVerifier:
 
     def verify(self, token: str) -> dict:
         """Return the verified claims or raise InvalidToken (never a partial result)."""
+        claims = self.decode(token)
+        if "act" in claims:
+            raise InvalidToken("token with act is an agent token, not a user token")
+        return claims
+
+    def decode(self, token: str) -> dict:
+        """Signature, algorithm, iss, aud, exp, nbf - shared with the agent's verifier."""
         try:
             # The key is chosen by `kid`; the algorithm list below is fixed, so the token
             # header cannot switch to `none` or to HMAC with the public key as secret.

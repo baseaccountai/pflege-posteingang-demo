@@ -41,6 +41,17 @@ class Settings(BaseSettings):
     oidc_issuer: str = ""
     oidc_audience: str = ""
     oidc_roles_claim: str = "urn:zitadel:iam:org:project:roles"
+    # The agent's own token (F08, ADR 0012). "exchange": Zitadel exchanges the nurse's token
+    # (RFC 8693); "self_signed": the API signs it (fallback where the IdP has no exchange).
+    # Without AGENT_ID and the mode's secrets there is no agent (its routes answer 503).
+    agent_token_mode: Literal["exchange", "self_signed"] = "exchange"
+    agent_id: str = ""  # act.sub: the sub of Zitadel's service user pp-agent
+    agent_client_id: str = ""  # secret pair of the service user (client credentials)
+    agent_client_secret: str = ""
+    agent_exchange_client_id: str = ""  # secret pair of the app allowed to exchange
+    agent_exchange_client_secret: str = ""
+    agent_signing_key: str = ""  # self_signed only: EC P-256 private key (PEM), secret
+    agent_token_max_seconds: int = 300  # accepted at most this long after iat (F08-AC1)
 
 
 def get_settings() -> Settings:

@@ -16,7 +16,7 @@ Bestätigen: Browser → BFF → API POST /agent/proposals/{id}/confirm (als Men
 
 **Spike zuerst (AC2a):** Die Aufgaben 2–7 beginnen erst, wenn ADR 0012 den Weg und die echten Claims festhält.
 
-**Rückfall (AC2):** `AGENT_TOKEN_MODE=self_signed`: die API signiert mit `AGENT_SIGNING_KEY` (ES256, nur API, mit `kid`; Rotation = neuer Schlüssel + Redeploy, alte Tokens laufen nach 5 min ab) ein JWT mit `iss = <API>/agent`, `aud`, `sub` = Nutzer, `act.sub` = `AGENT_ID`, `ward_ids`, `app_role`, `exp` ≤ 5 min. Im ADR dokumentiert, warum das schwächer ist (die API bestätigt sich selbst).
+**Rückfall (AC2):** `AGENT_TOKEN_MODE=self_signed`: die API signiert mit `AGENT_SIGNING_KEY` (ES256, nur API, mit `kid`; Rotation = neuer Schlüssel + Redeploy, alte Tokens laufen nach 5 min ab) ein JWT mit `iss = pflege-posteingang-api/agent`, `aud`, `sub` = Nutzer, `act.sub` = `AGENT_ID`, dem Rollen-Claim des Nutzer-Tokens (unverändert kopiert, damit beide Wege dieselbe Ableitung der Wohnbereiche nutzen), `exp` ≤ 5 min; `kid` = RFC-7638-Fingerabdruck des Schlüssels. Im ADR dokumentiert, warum das schwächer ist (die API bestätigt sich selbst).
 
 **Prüfung (AC3):** `AgentTokenVerifier` neben dem `TokenVerifier` aus F01: gleiche Algorithmenliste, eigener Aussteller je Modus, Pflichtfelder `act.sub`, `sub` = Sitzungsnutzer. Umgekehrt lehnt der `TokenVerifier` aus F01 jedes Token mit `act` ab: Ein getauschtes Token besteht sonst alle Prüfungen eines Nutzer-Tokens (ADR 0012). Rollen/Wohnbereiche werden wie in F01 aus den Claims abgeleitet, `actor_type = agent`.
 
