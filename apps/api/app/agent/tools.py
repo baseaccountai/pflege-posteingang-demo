@@ -129,6 +129,7 @@ async def search_documents(ctx: ToolContext, args: SearchArgs) -> dict:
                 "dokumentart": hit.doc_type,
                 "datum": _day(hit.document_date),
                 "bewohner": hit.resident_name,
+                "bewohner_id": hit.resident_id,  # for the next tool (record, proposal)
                 "seite": hit.page,
                 "text": hit.content,
             }
@@ -220,7 +221,7 @@ async def list_follow_ups(ctx: ToolContext, args: FollowUpListArgs) -> dict:
         cur = conn.cursor(row_factory=dict_row)
         await cur.execute(
             f"""
-            select r.display_name, f.title, f.due_date,
+            select r.display_name, r.id::text as resident_id, f.title, f.due_date,
               coalesce(f.due_date <= {TODAY}, false) as overdue
             from public.follow_ups f
             join public.residents r on r.id = f.resident_id
@@ -239,6 +240,7 @@ async def list_follow_ups(ctx: ToolContext, args: FollowUpListArgs) -> dict:
         "wiedervorlagen": [
             {
                 "bewohner": row["display_name"],
+                "bewohner_id": row["resident_id"],
                 "titel": row["title"],
                 "faellig_am": _day(row["due_date"]),
                 "ueberfaellig": row["overdue"],

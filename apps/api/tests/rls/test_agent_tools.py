@@ -75,7 +75,9 @@ async def test_the_search_finds_documents_of_the_own_ward_only(db, indexed):  # 
     assert result["treffer"]
     assert {hit["bewohner"] for hit in result["treffer"]} <= {"Hr. Muster-Bauer", "Fr. Zweite"}
     hit = result["treffer"][0]
-    assert set(hit) == {"dokument_id", "dokumentart", "datum", "bewohner", "seite", "text"}
+    assert set(hit) == {
+        "dokument_id", "dokumentart", "datum", "bewohner", "bewohner_id", "seite", "text"
+    }  # fmt: skip
     assert hit["datum"] == "2026-10-20"
 
 
@@ -157,6 +159,7 @@ async def test_the_open_follow_ups_of_the_own_ward_are_listed(db, record, done):
         "wiedervorlagen": [
             {
                 "bewohner": "Hr. Muster-Bauer",
+                "bewohner_id": WB1_RESIDENT,
                 "titel": "Kontrolle",
                 "faellig_am": berlin_today().isoformat(),
                 "ueberfaellig": True,
