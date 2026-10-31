@@ -103,7 +103,9 @@ def setup(env_path: Path) -> None:
     app_config = {
         "redirectUris": [LOCAL_REDIRECT],
         "responseTypes": ["OIDC_RESPONSE_TYPE_CODE"],
-        "grantTypes": ["OIDC_GRANT_TYPE_TOKEN_EXCHANGE"],
+        # Zitadel rejects response type "code" without the code grant (PROJECT-1n8df); the
+        # agent never logs anyone in - its only redirect is localhost.
+        "grantTypes": ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE", "OIDC_GRANT_TYPE_TOKEN_EXCHANGE"],
         "appType": "OIDC_APP_TYPE_WEB",
         "authMethodType": "OIDC_AUTH_METHOD_TYPE_BASIC",
         "devMode": True,
