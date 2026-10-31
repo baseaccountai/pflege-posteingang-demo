@@ -12,13 +12,13 @@ API: Nutzer-Token prüfen (F01) → Injection-Prüfung Auftrag (F07) → Token E
 Bestätigen: Browser → BFF → API POST /agent/proposals/{id}/confirm (als Mensch) → Einfügen als Agent mit confirmed_by
 ```
 
-**Token Exchange (AC1):** Zitadel bietet RFC 8693 als Beta-Funktion („Token Exchange“ unter Instanz → Features). Der Agent ist ein **Service-User** in Zitadel; die API holt per Client Credentials ein Actor-Token und ruft den Token-Endpunkt mit `grant_type=urn:ietf:params:oauth:grant-type:token-exchange`, `subject_token` = Nutzer-Access-Token, `actor_token` = Agenten-Token, `requested_token_type=…:jwt`, `audience` = API. Das Ergebnis trägt `sub` = Nutzer, `act: {sub: <Agent>}`, Rollen des Nutzers. Gültigkeit: Zitadel-Einstellung bzw. die API lehnt Tokens mit `exp − iat > 300 s` ab. Erste Aufgabe ist ein Spike; scheitert er, gilt der Rückfall.
+**Token Exchange (AC1):** Zitadel bietet RFC 8693 (seit v4.11 ohne Feature-Schalter; freigeschaltet je App über den Grant-Typ, dazu „Allow Impersonation“ in den Sicherheitseinstellungen und die Rolle `ORG_END_USER_IMPERSONATOR` für den Agenten). Der Agent ist ein **Service-User** in Zitadel; die API holt per Client Credentials ein Actor-Token und ruft den Token-Endpunkt mit `grant_type=urn:ietf:params:oauth:grant-type:token-exchange`, `subject_token` = Nutzer-Access-Token, `actor_token` = Agenten-Token, `requested_token_type=…:jwt`, `audience` = API. Das Ergebnis trägt `sub` = Nutzer, `act: {sub: <Agent>}`, Rollen des Nutzers. Gültigkeit: Zitadel stellt Access-Tokens mindestens 1 h aus (Konsole nur ganze Stunden); die API nimmt ein Agenten-Token nur an, solange `now − iat ≤ 300 s`, und verwirft es nach dem Auftrag (ADR 0012). Erste Aufgabe ist ein Spike; scheitert er, gilt der Rückfall.
 
 **Spike zuerst (AC2a):** Die Aufgaben 2–7 beginnen erst, wenn ADR 0012 den Weg und die echten Claims festhält.
 
 **Rückfall (AC2):** `AGENT_TOKEN_MODE=self_signed`: die API signiert mit `AGENT_SIGNING_KEY` (ES256, nur API, mit `kid`; Rotation = neuer Schlüssel + Redeploy, alte Tokens laufen nach 5 min ab) ein JWT mit `iss = <API>/agent`, `aud`, `sub` = Nutzer, `act.sub` = `AGENT_ID`, `ward_ids`, `app_role`, `exp` ≤ 5 min. Im ADR dokumentiert, warum das schwächer ist (die API bestätigt sich selbst).
 
-**Prüfung (AC3):** `AgentTokenVerifier` neben dem `TokenVerifier` aus F01: gleiche Algorithmenliste, eigener Aussteller je Modus, Pflichtfelder `act.sub`, `sub` = Sitzungsnutzer. Rollen/Wohnbereiche werden wie in F01 aus den Claims abgeleitet, `actor_type = agent`.
+**Prüfung (AC3):** `AgentTokenVerifier` neben dem `TokenVerifier` aus F01: gleiche Algorithmenliste, eigener Aussteller je Modus, Pflichtfelder `act.sub`, `sub` = Sitzungsnutzer. Umgekehrt lehnt der `TokenVerifier` aus F01 jedes Token mit `act` ab: Ein getauschtes Token besteht sonst alle Prüfungen eines Nutzer-Tokens (ADR 0012). Rollen/Wohnbereiche werden wie in F01 aus den Claims abgeleitet, `actor_type = agent`.
 
 **Werkzeuge (AC4):** JSON-Schemas für Function Calling. `medikation_abgleichen` nutzt `extraction/medication_diff.py` (F03): Eingabe Dokument-ID; Vergleich der vorgeschlagenen/freigegebenen Medikation des Dokuments mit der aktuellen Akte. Argumente werden per Pydantic geprüft (UUIDs, Datum ≥ heute, Titel ≤ 120 Zeichen).
 
@@ -60,7 +60,7 @@ Scheitert Schritt 3, kann der Endpunkt ihn wiederholen (idempotent über `unique
 
 ## Konfiguration (neu)
 
-`AGENT_TOKEN_MODE` (`exchange` \| `self_signed`), `AGENT_CLIENT_ID`, `AGENT_CLIENT_SECRET` bzw. Schlüsseldatei des Zitadel-Service-Users (geheim), `AGENT_ID`, `AGENT_SIGNING_KEY` (nur Rückfall, geheim), `AGENT_TOKEN_MAX_SECONDS` (300).
+`AGENT_TOKEN_MODE` (`exchange` \| `self_signed`), `AGENT_CLIENT_ID`, `AGENT_CLIENT_SECRET` bzw. Schlüsseldatei des Zitadel-Service-Users (geheim), `AGENT_EXCHANGE_CLIENT_ID`, `AGENT_EXCHANGE_CLIENT_SECRET` (Tausch-App, geheim), `AGENT_ID`, `AGENT_SIGNING_KEY` (nur Rückfall, geheim), `AGENT_TOKEN_MAX_SECONDS` (300).
 
 ## Sicherheitsaspekte
 

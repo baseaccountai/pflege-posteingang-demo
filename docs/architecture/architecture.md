@@ -86,13 +86,14 @@ Gleiche Architektur in beiden Umgebungen, nur andere Anbieter. CI/CD: GitHub Act
 | [0009](adr/0009-server-side-sessions.md) | Login-Sitzung serverseitig in Postgres |
 | [0010](adr/0010-files-in-postgres.md) | Originaldateien in Postgres statt Supabase Storage |
 | [0011](adr/0011-api-on-vercel.md) | API auf Vercel statt Koyeb (Koyeb-Übernahme durch Mistral, kein günstiger Tarif mehr) |
+| [0012](adr/0012-agent-token.md) | Agenten-Token per Token Exchange in Zitadel (`act`-Claim); 5-Minuten-Grenze in der API |
 
 ## 11. Risiken und technische Schulden
 
 | Risiko | Gegenmaßnahme |
 |---|---|
 | Supabase pausiert nach einer Woche Inaktivität; Backend schläft | Keep-alive per GitHub Action; Hinweis „Demo startet …“ |
-| Token Exchange im IdP nicht verfügbar | Rückfall: selbst signiertes Agenten-JWT (ADR) |
+| Token Exchange im IdP nicht verfügbar | Spike 31.10.2026 bestanden (ADR 0012); Rückfall selbst signiertes Agenten-JWT bleibt als Modus |
 | OIDC-Token und Supabase-RLS passen nicht direkt zusammen | Gelöst durch Spike S1: Login-Rolle + Claims pro Transaktion (ADR 0007), lokal und in der Cloud getestet |
 | Docling braucht viel RAM | nur lokal; öffentlich Mistral OCR |
 | Kostenlose Kontingente ändern sich | Limits beim Anlegen der Konten prüfen |
