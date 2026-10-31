@@ -40,10 +40,14 @@ RESIDENTS = [
     ("D15", "Hr. Probe", "1939-02-28", "28.02.1939"),
     ("R07", "Fr. Beispiel", "1936-06-17", "17.06.1936"),
 ]
-HEADERS = {
-    "Authorization": f"Bearer {access_token('u-wb1', 'nurse_wb1')}",
-    "X-Bff-Assertion": bff_assertion(),
-}
+
+
+def headers() -> dict[str, str]:
+    """Fresh per request: token and BFF assertion are short-lived."""
+    return {
+        "Authorization": f"Bearer {access_token('u-wb1', 'nurse_wb1')}",
+        "X-Bff-Assertion": bff_assertion(),
+    }
 
 
 def admin(sql: str, params: list | None = None) -> None:
@@ -84,11 +88,11 @@ def api(seeded: None) -> Iterator[tuple[TestClient, FakeLlm, FakeEmbeddings, Fak
 def upload(client: TestClient, name: str) -> dict:
     data = (SAMPLES / name).read_bytes()
     created = client.post(
-        "/documents", headers=HEADERS, files={"file": (name, data, "application/pdf")}
+        "/documents", headers=headers(), files={"file": (name, data, "application/pdf")}
     )
     assert created.status_code == 202, created.text
     # The background processing has run when the TestClient returns.
-    return client.get(f"/documents/{created.json()['id']}", headers=HEADERS).json()
+    return client.get(f"/documents/{created.json()['id']}", headers=headers()).json()
 
 
 def test_the_white_text_letter_is_caught_and_the_suggestion_never_sees_it(api):
@@ -113,7 +117,7 @@ def test_no_resident_name_or_birth_date_leaves_for_any_model(api):
     client, llm, embeddings, guard = api
     upload(client, "angriff_versteckt_probe.pdf")
     upload(client, "angriff_hinweis_beispiel.pdf")
-    client.post("/questions", headers=HEADERS, json={"question": "Was bekommt Hr. Probe?"})
+    client.post("/questions", headers=headers(), json={"question": "Was bekommt Hr. Probe?"})
     outgoing = [user for _, user in llm.calls + guard.calls]
     outgoing += [text for batch in embeddings.calls for text in batch]
     assert guard.calls and llm.calls and embeddings.calls  # every kind of model was used
