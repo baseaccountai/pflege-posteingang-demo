@@ -20,7 +20,6 @@ from app.main import create_app
 from app.providers.embeddings.fake import FakeEmbeddings
 from app.providers.llm.fake import FakeLlm
 from app.providers.ocr.fake import FakeOcr
-from samples import generate
 from tests.rls.conftest import ADMIN_DSN, GATEWAY_DSN, seeded  # noqa: F401 (fixture)
 from tests.support.oidc import (
     AUDIENCE,
@@ -95,12 +94,15 @@ def upload(client: TestClient, name: str) -> dict:
     return client.get(f"/documents/{created.json()['id']}", headers=headers()).json()
 
 
-def test_the_white_text_letter_is_caught_and_the_suggestion_never_sees_it(api):
+def test_the_white_text_letter_is_caught_from_the_pdf_itself(api):
+    # The OCR of this sample does not read the white text: only the PDF check can find it.
+    # (Cutting it out where the OCR does read it: tests/security/test_screening.py.)
     client, llm, _, _ = api
     doc = upload(client, "angriff_versteckt_probe.pdf")
     assert doc["status"] == "ready_for_review" and doc["screening_result"] == "suspicious"
-    assert "hidden_text" in {f["layer"] for f in doc["findings"]}
-    assert all("Wartungsmodus" not in user for _, user in llm.calls)
+    (hidden,) = [f for f in doc["findings"] if f["layer"] == "hidden_text"]
+    assert hidden["invisible"] and "Wartungsmodus" in hidden["excerpt"]
+    assert llm.calls  # the visible letter still gets its suggestion
 
 
 def test_the_note_to_the_ai_is_caught_and_cut_out_before_the_suggestion(api):
@@ -124,4 +126,3 @@ def test_no_resident_name_or_birth_date_leaves_for_any_model(api):
     for _, name, _, born in RESIDENTS:
         assert not [text for text in outgoing if name in text or born in text], name
     assert any("Bewohner_D15" in text for text in outgoing)
-    assert generate.HIDDEN_ATTACK not in "\n".join(outgoing)
