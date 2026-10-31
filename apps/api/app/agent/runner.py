@@ -76,6 +76,7 @@ class AgentResult:
     tools_used: list[str] = field(default_factory=list)  # in order, each once (AC11)
     proposals: list[dict] = field(default_factory=list)  # real names, for the proposal card
     stopped: bool = False  # a limit ended the task
+    model_calls: int = 0  # 0: answered without a model (another ward, nobody)
 
 
 LIMITS = Limits()
@@ -135,6 +136,7 @@ async def _loop(ctx, messages, pseudonymizer, mapping, visible, result, limits, 
     steps = 0
     for _ in range(limits.model_calls):
         await book()  # every model call counts against llm_call (F10), before it is made
+        result.model_calls += 1
         turn = await ctx.gateway.chat_with_tools(messages, tool_schemas(), MAX_OUTPUT_TOKENS)
         if not turn.tool_calls:
             return turn.content

@@ -90,7 +90,7 @@ async def test_the_model_sees_the_rules_and_the_task_only_pseudonymised():
     # The answer comes back with the real name; one model call, one booking (AC12).
     assert result.answer == "Hr. Muster-Bauer hat keine offenen Wiedervorlagen."
     assert result.tools_used == [] and result.proposals == [] and not result.stopped
-    assert rec.booked == 1
+    assert rec.booked == 1 and result.model_calls == 1
 
 
 async def test_a_resident_chosen_in_the_app_is_named_to_the_model():
@@ -115,7 +115,7 @@ async def test_another_ward_and_nobody_get_the_same_answer_without_a_model_call(
     assert FOREIGN_ANSWER == (
         "Dazu gibt es in deinem Wohnbereich nichts – der Agent hat dieselben Rechte wie du."
     )
-    assert llm.chats == [] and rec.booked == 0
+    assert llm.chats == [] and rec.booked == 0 and result.model_calls == 0
 
 
 # --- refused calls (AC9) --------------------------------------------------------------------
@@ -160,7 +160,7 @@ async def test_at_most_four_tool_steps_then_the_agent_stops_with_a_hint():
 async def test_at_most_five_model_calls():
     llm = FakeLlm(turns=[call("unbekannt", n=n) for n in range(1, 10)])
     result, rec = await agent(llm, "Endlos", limits=Limits(tool_steps=99))
-    assert len(llm.chats) == 5 and rec.booked == 5
+    assert len(llm.chats) == 5 and rec.booked == 5 and result.model_calls == 5
     assert result.stopped and result.answer == LIMIT_ANSWER
 
 

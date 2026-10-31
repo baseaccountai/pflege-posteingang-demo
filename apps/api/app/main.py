@@ -1,6 +1,7 @@
 """FastAPI application: the security layer between the web app and LLM/OCR/database."""
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -9,6 +10,8 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.agent.routes import router as agent_router
+from app.agent.token_exchange import create_agent_tokens
 from app.audit.routes import router as audit_router
 from app.auth.dependencies import current_principal
 from app.auth.principal import Principal
@@ -28,6 +31,7 @@ from app.rag.routes import router as questions_router
 from app.residents.routes import router as residents_router
 from app.security.screening import Screener
 
+log = logging.getLogger(__name__)
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 MAINTENANCE_MESSAGE = "Demo wird gerade zurückgesetzt – bitte in einer Minute erneut versuchen"
 
@@ -55,6 +59,12 @@ def create_app(
             app.state.verifier = TokenVerifier.from_issuer(
                 settings.oidc_issuer, settings.oidc_audience
             )
+        app.state.agent_tokens = None  # F08: without it the agent route answers 503
+        if app.state.verifier is not None:
+            try:
+                app.state.agent_tokens = create_agent_tokens(settings, app.state.verifier)
+            except Exception:  # e.g. discovery not reachable: the rest of the app still runs
+                log.exception("agent tokens could not be set up")
         app.state.database = Database(settings.database_url) if settings.database_url else None
         app.state.pipeline = None
         app.state.indexer = None
@@ -110,6 +120,7 @@ def create_app(
     app.include_router(residents_router)
     app.include_router(questions_router)
     app.include_router(audit_router)
+    app.include_router(agent_router)
     # The BFF assertion check reads its secret through this dependency.
     app.dependency_overrides[get_settings] = lambda: settings
 

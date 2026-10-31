@@ -28,8 +28,7 @@ from app.providers.llm.base import LlmUnavailable
 from app.quotas import QuotaExceeded, consume
 from app.rag.answer import answer_with_sources
 from app.rag.retrieval import Hit, retrieve
-from app.security.classifier import classify_question
-from app.security.patterns import matching_rules
+from app.security.request_check import check_request
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -37,16 +36,7 @@ router = APIRouter()
 NO_HITS_ANSWER = "Keine Treffer in deinem Wohnbereich."
 UNAVAILABLE_ANSWER = "Die Antwort ist gerade nicht möglich – bitte gleich erneut versuchen."
 REFUSED_ANSWER = "Die Anfrage wurde aus Datenschutzgründen nicht gesendet."
-INJECTION_MESSAGE = (
-    "Die Anfrage wurde als Versuch erkannt, die Regeln der KI zu umgehen, und nicht ausgeführt."
-)
-# For a question only attempts to steer the AI itself count: a nurse may well ask about
-# all residents of her ward (RLS keeps it there); rules on data leaks are for documents.
-QUESTION_CATEGORIES = {"ignore_instructions", "role_override", "addresses_ai", "outbound_link"}
 AUDIT_DOWN = "Die Antwort kann gerade nicht protokolliert werden – bitte später erneut versuchen."
-SCREENING_DOWN = (
-    "Die Sicherheitsprüfung ist gerade nicht verfügbar – bitte später erneut versuchen."
-)
 
 Caller = Annotated[Principal, Depends(current_principal)]
 
@@ -105,26 +95,9 @@ async def ask_question(request: Request, principal: Caller, body: Question):
         return response
 
     # F07-AC9: rules, then the checker model, see the question before any other model.
-    rules = [r for r in matching_rules(body.question) if r.category in QUESTION_CATEGORIES]
-    if rules:
-        await note("blocked", "blocked", layer="pattern", rule_id=rules[0].id)  # F07-AC11
-        return error(422, "injection_detected", INJECTION_MESSAGE)
-    try:
-        async with db.as_principal(principal) as conn:
-            await consume(conn, "guard_question", 1)
-        verdict = await classify_question(gateway, body.question)
-    except QuotaExceeded as exceeded:
-        return await quota_refused(db, principal, exceeded)
-    except LlmUnavailable:
-        await note(
-            "question", "error", model=gateway.guard_model, error_code="screening_unavailable"
-        )
-        return error(503, "screening_unavailable", SCREENING_DOWN)  # fail closed
-    except PseudonymizationFailed:
-        return await refused()
-    if verdict.injection:
-        await note("blocked", "blocked", model=gateway.guard_model, layer="classifier")
-        return error(422, "injection_detected", INJECTION_MESSAGE)
+    stopped = await check_request(db, gateway, principal, body.question, note, "question", refused)
+    if stopped is not None:
+        return stopped
 
     try:
         found = await retrieve(

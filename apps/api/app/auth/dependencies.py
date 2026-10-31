@@ -8,6 +8,7 @@ All 401 answers look the same, so a caller cannot tell which check failed.
 """
 
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request
@@ -21,11 +22,21 @@ from app.auth.tokens import InvalidToken
 UNAUTHENTICATED = HTTPException(status_code=401, detail="Nicht angemeldet")
 
 
-def current_principal(
+@dataclass(frozen=True)
+class VerifiedCaller:
+    """The caller plus the verified token: only the agent route needs the token itself, to
+    exchange it for the agent's token (F08). It is never stored or logged."""
+
+    principal: Principal
+    token: str
+    claims: dict
+
+
+def current_caller(
     request: Request,
     _sid_hash: Annotated[str, Depends(bff_session)],
     authorization: Annotated[str | None, Header()] = None,
-) -> Principal:
+) -> VerifiedCaller:
     verifier = request.app.state.verifier
     if verifier is None:
         raise HTTPException(status_code=503, detail="Anmeldung nicht konfiguriert")
@@ -34,11 +45,16 @@ def current_principal(
         raise UNAUTHENTICATED
     try:
         claims = verifier.verify(token)
-        return principal_from_claims(claims, request.app.state.settings.oidc_roles_claim)
+        principal = principal_from_claims(claims, request.app.state.settings.oidc_roles_claim)
     except InvalidToken as error:
         raise UNAUTHENTICATED from error
     except NoKnownRole as error:
         raise HTTPException(status_code=403, detail="Kein Zugriff") from error
+    return VerifiedCaller(principal, token, claims)
+
+
+def current_principal(caller: Annotated[VerifiedCaller, Depends(current_caller)]) -> Principal:
+    return caller.principal
 
 
 async def principal_db(

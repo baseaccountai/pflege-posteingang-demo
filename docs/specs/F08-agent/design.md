@@ -54,7 +54,7 @@ Scheitert Schritt 3, kann der Endpunkt ihn wiederholen (idempotent über `unique
 
 | Methode | Pfad | Request | Response | Rechte |
 |---|---|---|---|---|
-| POST | `/agent` | `{task (≤ 500 Zeichen), resident_id?}` | `{answer, tools_used: [name], proposals: [{id, resident, title, due_date, expires_at}], model}` | Pflegekraft/PDL |
+| POST | `/agent` | `{task (≤ 500 Zeichen), resident_id?}` | `{answer, tools_used: [name], proposals: [{id, resident, title, due_date, expires_at}], model, stopped}` · 422 `injection_detected` · 429 Kontingent · 503 `agent_unavailable` / `llm_unavailable` / `screening_unavailable` / `audit_unavailable` | Pflegekraft/PDL |
 | POST | `/agent/proposals/{id}/confirm` | – | `{follow_up_id}` · 404 fremd/unbekannt · 409 abgelaufen/entschieden | Mensch, Ersteller |
 | POST | `/agent/proposals/{id}/dismiss` | – | 204 | Mensch, Ersteller |
 
