@@ -12,9 +12,11 @@ Order of the steps:
 """
 
 import logging
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+import psycopg
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from app import audit
@@ -34,6 +36,7 @@ from app.security.request_check import check_request
 log = logging.getLogger(__name__)
 router = APIRouter()
 
+NOT_FOUND = HTTPException(status_code=404, detail="Nicht gefunden")
 AGENT_DOWN = "Der Agent ist gerade nicht verfügbar – bitte später erneut versuchen."
 UNAVAILABLE = "Das KI-Modell ist gerade nicht erreichbar – bitte gleich erneut versuchen."
 REFUSED = "Der Auftrag wurde aus Datenschutzgründen nicht gesendet."
@@ -128,3 +131,103 @@ async def run_task(request: Request, caller: Caller, body: Task):
         "model": gateway.llm_model,
         "stopped": result.stopped,
     }
+
+
+# --- deciding a proposal (F08-AC5, AC6) ------------------------------------------------------
+
+EXPIRED = "Der Vorschlag ist abgelaufen (15 Minuten) – bitte den Agenten erneut fragen."
+DECIDED = "Über diesen Vorschlag wurde schon entschieden."
+TOO_LATE = "Die Bestätigung ist zu lange her – bitte den Agenten erneut fragen."
+
+
+def _proposal_id(proposal_id: str) -> str:
+    """Malformed, unknown, foreign and other people's proposals: the same 404."""
+    try:
+        return str(uuid.UUID(proposal_id))
+    except ValueError as invalid:
+        raise NOT_FOUND from invalid
+
+
+async def _state(conn, proposal_id: str) -> tuple[str, bool, str | None]:
+    """(status, expired, follow-up id) of a proposal the caller may see (RLS), else 404."""
+    cur = await conn.execute(
+        "select p.status, p.expires_at <= now(),"
+        " (select f.id::text from public.follow_ups f where f.proposal_id = p.id)"
+        " from public.agent_proposals p where p.id = %s",
+        [proposal_id],
+    )
+    row = await cur.fetchone()
+    if row is None:
+        raise NOT_FOUND
+    return row
+
+
+@router.post("/agent/proposals/{proposal_id}/confirm")
+async def confirm_proposal(request: Request, caller: Caller, proposal_id: str):
+    db = database(request)
+    tokens = request.app.state.agent_tokens
+    nurse = caller.principal
+    proposal_id = _proposal_id(proposal_id)
+    if tokens is None:
+        return error(503, "agent_unavailable", AGENT_DOWN)  # before anything is decided
+
+    # Step 1 as the human: only she can set "confirmed" (RLS: created_for, open, in time).
+    async with db.as_principal(nurse) as conn:
+        status, expired, follow_up = await _state(conn, proposal_id)
+        if status == "open" and expired:
+            return error(409, "proposal_expired", EXPIRED)
+        # (Without the follow-up check the unique proposal_id would refuse it as well -
+        # after a needless token exchange.)
+        if status == "dismissed" or follow_up is not None:
+            return error(409, "proposal_decided", DECIDED)
+        if status == "open":
+            cur = await conn.execute(
+                "update public.agent_proposals set status = 'confirmed'"
+                " where id = %s and status = 'open' returning 1",
+                [proposal_id],
+            )
+            if await cur.fetchone() is None:  # decided or expired a moment ago
+                return error(409, "proposal_decided", DECIDED)
+    # Here the proposal is confirmed but has no follow-up yet - also when step 2 failed
+    # earlier: confirming again only repeats it.
+
+    # Step 2 as the agent, with a fresh agent token: RLS allows exactly this follow-up.
+    try:
+        agent_token = await tokens.issuer.issue(caller.token, caller.claims)
+        agent = tokens.verifier.verify(agent_token, nurse.sub)
+    except (AgentTokenUnavailable, InvalidToken):
+        log.exception("no agent token")
+        return error(503, "agent_unavailable", AGENT_DOWN)
+    del agent_token
+    try:
+        async with db.as_principal(agent) as conn:
+            cur = await conn.execute(
+                "insert into public.follow_ups (ward_id, resident_id, title, due_date, proposal_id)"
+                " select ward_id, resident_id, title, due_date, id"
+                " from public.agent_proposals where id = %s returning id::text",
+                [proposal_id],
+            )
+            (follow_up,) = await cur.fetchone()
+    except psycopg.errors.UniqueViolation:
+        return error(409, "proposal_decided", DECIDED)  # a parallel request was faster
+    except psycopg.errors.InsufficientPrivilege:
+        return error(409, "confirmation_too_old", TOO_LATE)  # RLS: within 2 minutes only
+    return {"follow_up_id": follow_up}
+
+
+@router.post("/agent/proposals/{proposal_id}/dismiss", status_code=204)
+async def dismiss_proposal(request: Request, caller: Caller, proposal_id: str):
+    db = database(request)
+    proposal_id = _proposal_id(proposal_id)
+    async with db.as_principal(caller.principal) as conn:
+        status, expired, _ = await _state(conn, proposal_id)
+        if status == "open" and expired:
+            return error(409, "proposal_expired", EXPIRED)
+        cur = await conn.execute(
+            "update public.agent_proposals set status = 'dismissed'"
+            " where id = %s and status = 'open' returning 1",
+            [proposal_id],
+        )
+        if await cur.fetchone() is None:
+            return error(409, "proposal_decided", DECIDED)
+    return Response(status_code=204)
