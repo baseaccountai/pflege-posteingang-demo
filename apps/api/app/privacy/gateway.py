@@ -12,12 +12,13 @@ backend's own role through app.pseudonym_directory() - fresh for every use: a re
 added a second ago must be replaced as well, and the list has only a few rows.
 """
 
+import json
 from collections.abc import Awaitable, Callable
 
 from app.auth.principal import Principal
 from app.privacy.pseudonymizer import KnownResident, Pseudonymizer
 from app.providers.embeddings.base import EmbeddingProvider
-from app.providers.llm.base import LlmProvider
+from app.providers.llm.base import ChatTurn, LlmProvider, Message
 
 
 class PseudonymizationFailed(Exception):
@@ -57,6 +58,20 @@ class ModelGateway:
     async def structured(self, system: str, user: str, schema: dict, max_tokens: int) -> dict:
         await self._refuse_plain_names(system, user)
         return await self.llm.structured(system, user, schema, max_tokens)
+
+    async def chat_with_tools(
+        self, messages: list[Message], tools: list[dict], max_tokens: int
+    ) -> ChatTurn:
+        """The agent's model turn (F08-AC12): every message and every tool argument the
+        model wrote earlier is checked for plain names before the conversation leaves."""
+        texts = [m.get("content") or "" for m in messages]
+        texts += [
+            json.dumps(call.arguments, ensure_ascii=False)
+            for m in messages
+            for call in m.get("tool_calls") or []
+        ]
+        await self._refuse_plain_names(*texts)
+        return await self.llm.chat_with_tools(messages, tools, max_tokens)
 
     @property
     def guard_model(self) -> str:

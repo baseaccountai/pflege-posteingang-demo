@@ -6,6 +6,7 @@ import pytest
 
 from app.privacy.gateway import ModelGateway, PseudonymizationFailed
 from app.privacy.pseudonymizer import KnownResident
+from app.providers.llm.base import ChatTurn, ToolCall
 
 pytestmark = pytest.mark.anyio
 
@@ -21,6 +22,10 @@ class RecordingLlm:
     async def structured(self, system, user, schema, max_tokens):
         self.calls.append((system, user))
         return {"answer": "ok"}
+
+    async def chat_with_tools(self, messages, tools, max_tokens):
+        self.calls.append(("chat", messages))
+        return ChatTurn(content="ok", tool_calls=[])
 
 
 class RecordingEmbeddings:
@@ -91,3 +96,35 @@ async def test_the_directory_is_read_fresh_so_a_new_resident_is_protected_at_onc
 
 async def test_the_model_names_come_from_the_providers(gateway):
     assert (gateway.llm_model, gateway.embedding_model) == ("fake-llm", "fake-embed")
+
+
+# --- the agent's conversation (F08-AC12: through pseudonymisation) -------------------------
+
+
+def agent_chat(*contents: str, arguments: dict | None = None) -> list[dict]:
+    messages = [{"role": "user", "content": text} for text in contents]
+    if arguments is not None:
+        messages.append(
+            {"role": "assistant", "content": "", "tool_calls": [ToolCall("c1", "x", arguments)]}
+        )
+    return messages
+
+
+async def test_a_pseudonymized_agent_conversation_reaches_the_model(gateway):
+    messages = agent_chat("Akte von Bewohner_K42", arguments={"titel": "Bewohner_K42 wiegen"})
+    assert await gateway.chat_with_tools(messages, [], 100) == ChatTurn("ok", [])
+    assert gateway.llm.calls == [("chat", messages)]
+
+
+@pytest.mark.parametrize(
+    "messages",
+    [
+        agent_chat("Bewohner_K42", "Ergebnis: Hr. Muster-Bauer, geb. 03.04.1941"),
+        agent_chat("Bewohner_K42", arguments={"titel": "Muster-Bauer wiegen"}),
+    ],
+    ids=["in a message", "in tool arguments"],
+)
+async def test_a_plain_name_anywhere_in_the_conversation_stops_the_agent_call(gateway, messages):
+    with pytest.raises(PseudonymizationFailed):
+        await gateway.chat_with_tools(messages, [], 100)
+    assert gateway.llm.calls == []

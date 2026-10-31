@@ -8,6 +8,8 @@ F05) is answered with the first text line of source Q1 and cites it.
 
 import re
 
+from app.providers.llm.base import ChatTurn, Message
+
 DATE = re.compile(r"\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b")
 PERSON = re.compile(r"\b(?:Hr|Fr)\. [\w-]+|\bBewohner_[A-Z]\d{2}\b")  # name or its code (F06)
 SLOTS = ("morgens", "mittags", "abends", "nachts")
@@ -85,10 +87,28 @@ def read_document(text: str) -> dict:
 class FakeLlm:
     model_name = "fake-llm (Testattrappe)"
 
-    def __init__(self, answers: list[dict | Exception] | None = None):
+    def __init__(
+        self,
+        answers: list[dict | Exception] | None = None,
+        turns: list[ChatTurn | Exception] | None = None,
+    ):
         self.answers = list(answers or [])
+        self.turns = list(turns or [])  # the agent's script (F08): one entry per model call
         self.calls: list[tuple[str, str]] = []
+        self.chats: list[list[Message]] = []  # the conversation as the model saw it each time
         self.max_tokens: list[int] = []  # the output limit of every call (F10-AC11)
+
+    async def chat_with_tools(
+        self, messages: list[Message], tools: list[dict], max_tokens: int
+    ) -> ChatTurn:
+        self.chats.append(list(messages))  # a copy: the runner appends to its list
+        self.max_tokens.append(max_tokens)
+        if self.turns:
+            turn = self.turns.pop(0)
+            if isinstance(turn, Exception):
+                raise turn
+            return turn
+        return ChatTurn(content="Ich habe den Auftrag gelesen, aber kein Werkzeug gebraucht.")
 
     async def structured(self, system: str, user: str, schema: dict, max_tokens: int) -> dict:
         self.calls.append((system, user))
