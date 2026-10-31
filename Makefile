@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe up-test smoke db-local-roles
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles
 
 SUPABASE := pnpm dlx supabase@2.122.0
 
@@ -54,6 +54,11 @@ seed-chunks:
 # Real test of questions (F05 Task 8): resets the LOCAL Supabase, asks Mistral 6 questions
 rag-probe:
 	cd apps/api && PYTHONPATH=../.. uv run python -m scripts.rag_probe ../../.env
+
+# F13-AC5: corpus against rules + the real checker model; writes docs/security/reports/
+# (applicant, own terminal; reads only MISTRAL_API_KEY from .env; resets the LOCAL database)
+security-report:
+	cd apps/api && PYTHONPATH=../.. uv run python -m scripts.security_report ../../.env
 
 # Static sample record for /muster from the seed (F10-AC14); resets the local Supabase first
 sample-record:
