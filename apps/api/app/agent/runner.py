@@ -24,6 +24,8 @@ import json
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.agent.tools import TOOLS, ToolContext, ToolRefused, call_tool, tool_schemas
 from app.privacy.pseudonymizer import PLACEHOLDER, Pseudonymizer
@@ -238,7 +240,11 @@ def _task_message(pseudonymizer, mapping, task: str, own, chosen: str | None) ->
         f"Bewohner_{r.pseudonym} (bewohner_id {r.resident_id})"
         for r in sorted(own, key=lambda r: r.pseudonym)[:MAX_RESIDENTS_SHOWN]
     ]
-    text = "Bewohner in deinem Wohnbereich:\n" + "\n".join(lines or ["(keine)"])
+    # The model does not know the date; without it qwen3:8b set due dates in 2023, which the
+    # tool refuses (phase 8 walkthrough). "Today" is the care home's day, as in the record.
+    today = datetime.now(ZoneInfo("Europe/Berlin")).date().isoformat()
+    text = f"Heute ist der {today} (JJJJ-MM-TT).\n\n"
+    text += "Bewohner in deinem Wohnbereich:\n" + "\n".join(lines or ["(keine)"])
     if chosen:
         code = next(r.pseudonym for r in own if r.resident_id == chosen)
         text += f"\n\nAusgewählter Bewohner: Bewohner_{code} (bewohner_id {chosen})"

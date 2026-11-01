@@ -93,6 +93,18 @@ async def test_the_model_sees_the_rules_and_the_task_only_pseudonymised():
     assert rec.booked == 1 and result.model_calls == 1
 
 
+async def test_the_model_is_told_todays_date():
+    # Phase 8 walkthrough: qwen3:8b proposed a follow-up "due 2023-10-05" - the model does
+    # not know the date, and a due date in the past is refused (invalid_arguments).
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    llm = FakeLlm(turns=[ChatTurn("ok")])
+    await agent(llm, "Was steht an?")
+    today = datetime.now(ZoneInfo("Europe/Berlin")).date().isoformat()
+    assert f"Heute ist der {today} (JJJJ-MM-TT)." in llm.chats[0][1]["content"]
+
+
 async def test_a_resident_chosen_in_the_app_is_named_to_the_model():
     llm = FakeLlm(turns=[ChatTurn("ok")])
     await agent(llm, "Was steht an?", resident_id=OWN)
