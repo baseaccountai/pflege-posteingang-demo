@@ -59,9 +59,12 @@ Anmelden wie öffentlich, etwa mit `pflege-wb1` / `Pflege-WB1-Demo!`. Speicherbe
 |---|---|
 | Keycloak-Start | ~75 s |
 | Docling liest einen Brief | 12–32 s |
-| Feldvorschlag mit `qwen3:8b` | ~13 min |
-| ein Werkzeugaufruf des Agenten | ~5 min |
+| Upload bis „bereit zur Prüfung“ (OCR, Injection-Prüfung, Feldvorschlag mit `qwen3:8b`) | ~14 min |
+| Frage mit Quellen | ~3,5 min |
+| Agent-Auftrag mit Vorschlag | ~8 min |
 | Embedding (`bge-m3`) | ~10 s |
+
+Bekannte Grenzen von `qwen3:8b` im Rundgang: Den Arztbrief stufte es als „Sonstiges“ ein (Docling liefert die Tabelle als Fließtext), und auf die Frage kam keine Antwort mit gültigen Quellenangaben. Die App zeigt dann „keine belegte Antwort“ statt einer unbelegten.
 
 `qwen3:8b` schreibt dort etwa 1,3 Tokens/s. Deshalb wartet der lokale Modus länger als der öffentliche (`OLLAMA_TIMEOUT_SECONDS`, `AGENT_MAX_SECONDS`, `API_WAIT_SECONDS`, siehe [Konfiguration](docs/specs/konfiguration.md)). Der Agent bekommt sein Token lokal selbst signiert, weil Keycloak beim Token Exchange kein `act` ausstellt ([ADR 0012](docs/architecture/adr/0012-agent-token.md)).
 
