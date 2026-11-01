@@ -19,6 +19,10 @@ async function openAgent(page: Page) {
   await page.goto("/fragen");
   await page.getByRole("navigation", { name: "Ansicht" }).getByRole("link", { name: "Agent" }).click();
   await page.waitForURL("/fragen?modus=agent");
+  // The URL changes before React swaps the view: for a moment both forms (each with a
+  // "Bewohner" select) are on the page - CI hit that window on 01.11.2026.
+  await expect(page.getByLabel("Frage", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Auftrag")).toBeVisible();
 }
 
 async function order(page: Page, task: string, residentId?: string) {
