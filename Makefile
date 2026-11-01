@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles project-description screens keycloak-realm
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles project-description screens keycloak-realm reindex
 
 SUPABASE := pnpm dlx supabase@2.122.0
 
@@ -86,6 +86,11 @@ up: db-start db-local-roles
 # Same, plus the test OIDC server and fake providers - no account or key needed
 up-test: db-start db-local-roles
 	infra/local-stack.sh up-test
+
+# Index all approved documents again with the configured embedding model - local database
+# only (F05-AC13, F11-AC19); `make up-local` calls it after the seed
+reindex:
+	cd apps/api && uv run python -m scripts.reindex
 
 # Keycloak realm of the fully local mode from infra/demo-users.json (F11-AC15; commit it)
 keycloak-realm:
