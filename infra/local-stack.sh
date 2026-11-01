@@ -4,6 +4,9 @@
 #   infra/local-stack.sh up        web + api with real providers and IdP from .env
 #   infra/local-stack.sh up-test   web + api + test OIDC server, fake OCR/LLM, fixed local
 #                                  secrets - no account and no key needed
+#   infra/local-stack.sh up-local  everything on this machine (F11-AC13): Keycloak, Docling,
+#                                  Ollama (runs natively), no .env, no cloud account
+#   infra/local-stack.sh check-ollama  only the Ollama check of up-local (F11-AC14)
 #   infra/local-stack.sh down
 #
 # Called by `make up`, `make up-test`, `make down` (which also start the local Supabase).
@@ -15,6 +18,12 @@ cd "$(dirname "$0")/.."
 MODE=${1:-}
 PREFIX=pp-local
 OIDC_IMAGE=ghcr.io/navikt/mock-oauth2-server:2.1.10
+KEYCLOAK_IMAGE=quay.io/keycloak/keycloak:26.8.0
+DOCLING_IMAGE=quay.io/docling-project/docling-serve-cpu:v1.37.0
+KEYCLOAK_ISSUER=http://localhost:18100/realms/pflege
+OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
+OLLAMA_CHAT_MODEL=${OLLAMA_CHAT_MODEL:-qwen3:8b}
+OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL:-bge-m3}
 TEST_ISSUER=http://localhost:18090/default # e2e uses 18080, so both can run at once
 
 # Local-only passwords of the database login roles - the same the tests set
@@ -31,7 +40,62 @@ TEST_SECRETS=(
 )
 
 down() {
-  docker rm -f "$PREFIX-web" "$PREFIX-api" "$PREFIX-oidc" >/dev/null 2>&1 || true
+  docker rm -f "$PREFIX-web" "$PREFIX-api" "$PREFIX-oidc" "$PREFIX-keycloak" "$PREFIX-docling" \
+    >/dev/null 2>&1 || true
+}
+
+# F11-AC14: Ollama runs natively; without it (or a model) nothing else is started.
+check_ollama() {
+  local tags missing=()
+  if ! tags=$(curl -fsS --max-time 5 "$OLLAMA_BASE_URL/api/tags" 2>/dev/null); then
+    echo "Ollama läuft nicht ($OLLAMA_BASE_URL). Starten: ollama serve" >&2
+    echo "(oder als Dienst: sudo systemctl start ollama)" >&2
+    return 1
+  fi
+  for model in "$OLLAMA_CHAT_MODEL" "$OLLAMA_EMBED_MODEL"; do
+    # Ollama lists "bge-m3:latest" for "bge-m3".
+    if ! python3 -c 'import json,sys; m=sys.argv[1]; names={n["name"] for n in json.load(sys.stdin)["models"]}; sys.exit(0 if m in names or m+":latest" in names else 1)' \
+      "$model" <<<"$tags"; then
+      missing+=("$model")
+    fi
+  done
+  if ((${#missing[@]})); then
+    echo "Ollama-Modell fehlt. Laden:" >&2
+    for model in "${missing[@]}"; do echo "  ollama pull $model" >&2; done
+    return 1
+  fi
+  echo "ok    Ollama mit $OLLAMA_CHAT_MODEL und $OLLAMA_EMBED_MODEL"
+}
+
+wait_for() { # name url seconds
+  local name=$1 url=$2 seconds=$3
+  for _ in $(seq 1 $((seconds / 3))); do
+    curl -fsS --max-time 5 "$url" >/dev/null 2>&1 && { echo "ok    $name"; return 0; }
+    sleep 3
+  done
+  echo "FEHLER $name startet nicht ($url) - docker logs $PREFIX-${name,,}" >&2
+  return 1
+}
+
+# Local agent key (self_signed, ADR 0012 "Lokal"): made once, kept outside git.
+agent_key() {
+  local key=infra/.local/agent-signing-key.pem
+  if [[ ! -f $key ]]; then
+    mkdir -p infra/.local
+    openssl ecparam -name prime256v1 -genkey -noout 2>/dev/null |
+      openssl pkcs8 -topk8 -nocrypt -out "$key"
+    chmod 600 "$key"
+  fi
+  cat "$key"
+}
+
+memory_hint() {
+  local free_gb
+  free_gb=$(awk '/MemAvailable/ {printf "%d", $2 / 1048576}' /proc/meminfo)
+  if ((free_gb < 10)); then
+    echo "Hinweis: nur ${free_gb} GB Arbeitsspeicher frei; empfohlen sind etwa 10 GB" >&2
+    echo "(Keycloak, Docling, Ollama mit $OLLAMA_CHAT_MODEL). Andere Container oder Programme schließen." >&2
+  fi
 }
 
 build() {
@@ -86,12 +150,46 @@ case "$MODE" in
     echo "Web: http://localhost:3000  Test-IdP: $TEST_ISSUER"
     echo "Anmelden: beliebiger Name, Claims z. B. {\"roles\": [\"nurse_wb1\"]}"
     ;;
+  check-ollama)
+    check_ollama
+    ;;
+  up-local)
+    check_ollama
+    memory_hint
+    down
+    build
+    run keycloak -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+      -e KC_HTTP_PORT=18100 -e KC_HOSTNAME=http://localhost:18100 \
+      -v "$PWD/infra/keycloak/pflege-realm.json:/opt/keycloak/data/import/pflege-realm.json:ro" \
+      "$KEYCLOAK_IMAGE" start-dev --import-realm
+    run docling -e DOCLING_SERVE_ENABLE_UI=false "$DOCLING_IMAGE"
+    # Keycloak needs about 75 s on a laptop, Docling loads its models.
+    wait_for Keycloak "$KEYCLOAK_ISSUER/.well-known/openid-configuration" 240
+    wait_for Docling http://localhost:5001/health 240
+    LOCAL_LLM=(-e LLM_PROVIDER=ollama -e OCR_PROVIDER=docling
+      -e OLLAMA_BASE_URL="$OLLAMA_BASE_URL" -e OLLAMA_CHAT_MODEL="$OLLAMA_CHAT_MODEL"
+      -e OLLAMA_EMBED_MODEL="$OLLAMA_EMBED_MODEL" -e DOCLING_BASE_URL=http://localhost:5001)
+    run api "${LOCAL_DB[@]}" "${LOCAL_LLM[@]}" \
+      -e OIDC_ISSUER=$KEYCLOAK_ISSUER -e OIDC_AUDIENCE=pflege-api -e OIDC_ROLES_CLAIM=roles \
+      -e BFF_API_SECRET=local-bff-api-secret-at-least-32-bytes \
+      -e AGENT_TOKEN_MODE=self_signed -e AGENT_ID=pflege-agent-local \
+      -e "AGENT_SIGNING_KEY=$(agent_key)" "$PREFIX-api"
+    run web "${LOCAL_DB[@]}" \
+      -e OIDC_ISSUER=$KEYCLOAK_ISSUER -e OIDC_ROLES_CLAIM=roles \
+      -e BFF_API_SECRET=local-bff-api-secret-at-least-32-bytes \
+      -e APP_ORIGIN=http://localhost:3000 -e API_BASE_URL=http://127.0.0.1:8000 \
+      -e OIDC_CLIENT_ID=pflege-web -e OIDC_CLIENT_SECRET=pflege-web-local-only-secret \
+      -e "OIDC_SCOPES=openid profile offline_access" \
+      -e SESSION_ENC_KEY=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc= "$PREFIX-web"
+    echo "Web: http://localhost:3000  Keycloak: $KEYCLOAK_ISSUER"
+    echo "Anmelden wie öffentlich: pflege-wb1 / Pflege-WB1-Demo! (Liste auf der Startseite)"
+    ;;
   down)
     down
     echo "Lokaler Stack gestoppt (Supabase läuft weiter: make db-stop)."
     ;;
   *)
-    echo "Aufruf: infra/local-stack.sh up|up-test|down" >&2
+    echo "Aufruf: infra/local-stack.sh up|up-test|up-local|check-ollama|down" >&2
     exit 2
     ;;
 esac

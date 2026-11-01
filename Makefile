@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles project-description screens keycloak-realm reindex
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles project-description screens keycloak-realm reindex up-local smoke-local
 
 SUPABASE := pnpm dlx supabase@2.122.0
 
@@ -95,6 +95,17 @@ reindex:
 # Keycloak realm of the fully local mode from infra/demo-users.json (F11-AC15; commit it)
 keycloak-realm:
 	python3 infra/keycloak/build_realm.py
+
+# Everything on this machine (F11-AC13): Keycloak, Docling, Ollama (native), no .env.
+# Resets the LOCAL demo data to the seed and indexes it with the local embedding model.
+up-local: db-start db-local-roles
+	infra/local-stack.sh up-local
+	cd apps/api && env -u SUPABASE_DB_ADMIN_URL uv run python -m scripts.reset_demo --local
+	cd apps/api && LLM_PROVIDER=ollama uv run python -m scripts.reindex
+
+# Checks the fully local stack against the real local services (F11-AC20)
+smoke-local:
+	infra/smoke-local.sh
 
 # Checks the running local stack: start page, API with database, test IdP
 smoke:

@@ -29,3 +29,6 @@ __pycache__/
 
 # Vercel CLI link of the API project (ADR 0011)
 .vercel
+
+# Local-only key of the fully local mode (infra/local-stack.sh up-local)
+infra/.local/
