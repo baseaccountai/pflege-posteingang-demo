@@ -1,6 +1,8 @@
-"""Ollama (local model, F03-AC13): same interface, schema passed as `format`.
+"""Ollama (local model, F03-AC13, F11-AC18): same interface, schema passed as `format`.
 
-Stage 1: adapter only; the local stack with a model follows in phase 8.
+Measured on the applicant's laptop (01.11.2026, CPU only): qwen3 "thinks" before it answers
+unless told not to - minutes per call, and the thinking eats the output limit. Ollama's
+default context is short and cuts longer prompts silently, so the window is fixed here.
 """
 
 import httpx
@@ -9,6 +11,7 @@ from app.providers.llm._json import json_object
 from app.providers.llm.base import ChatTurn, LlmUnavailable, Message, ToolCall
 
 TIMEOUT_SECONDS = 120  # local models on a laptop are slow
+CONTEXT_TOKENS = 8192  # agent prompt with tools and results, RAG sources: fits, not cut
 
 
 class OllamaLlm:
@@ -22,7 +25,8 @@ class OllamaLlm:
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "format": schema,
             "stream": False,
-            "options": {"num_predict": max_tokens, "temperature": 0},
+            "think": False,
+            "options": _options(max_tokens),
         }
         message = await self._chat(body)
         return json_object(message.get("content"))
@@ -35,7 +39,8 @@ class OllamaLlm:
             "messages": [_to_ollama(m) for m in messages],
             "tools": tools,
             "stream": False,
-            "options": {"num_predict": max_tokens, "temperature": 0},
+            "think": False,
+            "options": _options(max_tokens),
         }
         message = await self._chat(body)
         try:
@@ -61,6 +66,10 @@ class OllamaLlm:
             raise LlmUnavailable(f"Ollama answered {error.response.status_code}") from None
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as error:
             raise LlmUnavailable(f"Ollama failed: {type(error).__name__}") from None
+
+
+def _options(max_tokens: int) -> dict:
+    return {"num_predict": max_tokens, "temperature": 0, "num_ctx": CONTEXT_TOKENS}
 
 
 def _to_ollama(message: Message) -> dict:

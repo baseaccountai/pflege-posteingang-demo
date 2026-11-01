@@ -108,7 +108,9 @@ async def test_ollama_sends_the_schema_as_format():
     assert answer == {"doc_type": "sonstiges"}
     body = json.loads(route.calls.last.request.content)
     assert body["format"] == SCHEMA and body["stream"] is False
-    assert body["options"] == {"num_predict": 99, "temperature": 0}
+    assert body["options"] == {"num_predict": 99, "temperature": 0, "num_ctx": 8192}
+    # qwen3 would think first: slow on a laptop CPU and it eats the output limit (01.11.2026).
+    assert body["think"] is False
 
 
 @respx.mock

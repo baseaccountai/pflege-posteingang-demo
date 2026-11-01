@@ -134,7 +134,8 @@ async def test_ollama_sends_tools_and_the_conversation_in_its_format():
     assert turn == ChatTurn(content="", tool_calls=[ToolCall("call_1", "x", {"a": 1})])
     body = json.loads(route.calls.last.request.content)
     assert body["tools"] == TOOLS and body["stream"] is False
-    assert body["options"] == {"num_predict": 300, "temperature": 0}
+    assert body["options"] == {"num_predict": 300, "temperature": 0, "num_ctx": 8192}
+    assert body["think"] is False
     assert body["messages"][2] == {
         "role": "assistant",
         "content": "",
