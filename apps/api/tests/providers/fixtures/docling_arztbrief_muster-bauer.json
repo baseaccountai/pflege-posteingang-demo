@@ -1,0 +1,9 @@
+{
+ "document": {
+  "filename": "arztbrief_muster-bauer.pdf",
+  "md_content": "## Entlassungsbrief\n\nKlinikum Musterstadt, Innere Medizin, 20.10.2026 Patient: Hr. Muster-Bauer, geb. 03.04.1941, Pflegeheim Haus Beispielhof Behandelnder Arzt: Dr. med. Lorem\n\n## Diagnosen\n\nHerzinsuffizienz NYHA II Diabetes mellitus Typ 2\n\n## Medikation bei Entlassung\n\nMedikament Stärke Dosierung (mo-mi-ab-na) Ramipril 5 mg 1-0-0-0 Metformin 1000 mg 1-0-1-0 Torasemid 10 mg 1-0-0-0 Empfehlungen Kontrolle Kreatinin und Kalium in 2 Wochen beim Hausarzt. Gewicht täglich messen, Zunahme über 2 kg in 3 Tagen bitte melden. MUSTER"
+ },
+ "status": "success",
+ "errors": [],
+ "processing_time": 6.213325633958448
+}

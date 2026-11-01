@@ -21,12 +21,6 @@ def test_docling_is_used_when_configured():
     assert isinstance(provider, DoclingOcr)
 
 
-async def test_docling_is_not_connected_in_stage_1():
-    # Interface only until phase 8: a clear "unavailable", never a silent empty result.
-    with pytest.raises(OcrUnavailable):
-        await DoclingOcr("http://docling:5001").extract(b"%PDF", "application/pdf")
-
-
 def test_fake_is_used_when_configured():
     assert isinstance(create_ocr_provider(Settings(ocr_provider="fake")), FakeOcr)
 
