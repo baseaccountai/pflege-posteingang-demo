@@ -11,7 +11,9 @@ export function dosageText(dosage: Dosage): string {
   return [dosage.morgens, dosage.mittags, dosage.abends, dosage.nachts].map((v) => v || "0").join("-");
 }
 
-const side = (s: MedicationSide) => [s.strength, dosageText(s.dosage), s.hint].filter(Boolean).join(", ");
+// A history side is jsonb from the database: strength or dosage may be missing.
+const side = (s: MedicationSide) =>
+  [s.strength, s.dosage && dosageText(s.dosage), s.hint].filter(Boolean).join(", ");
 
 function documentName(provenance: ProvenanceData | null): string {
   if (!provenance?.document_id) return "ohne Dokument";

@@ -63,6 +63,19 @@ describe("MedicationList", () => {
     expect(row).toHaveTextContent("angesetzt: 500 mg, 1-0-1-0, bei Bedarf");
   });
 
+  // The history is jsonb: an entry without strength or dosage must not break the record page.
+  it("shows a history entry without dosage instead of crashing", () => {
+    const after = {} as RecordMedication["events"][number]["after"];
+    render(
+      <MedicationList
+        active={[med({ events: [{ kind: "new", before: null, after, created_at: "2026-10-26T08:00:00Z", provenance: prov() }] })]}
+        discontinued={[]}
+      />,
+    );
+    fireEvent.click(screen.getByText("Verlauf (1)"));
+    expect(screen.getByTestId("medication-m1")).toHaveTextContent("angesetzt");
+  });
+
   it("marks new and changed medications, with the value before", () => {
     render(
       <MedicationList
