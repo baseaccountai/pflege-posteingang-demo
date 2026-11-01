@@ -22,7 +22,7 @@ Stand: 01.11.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `AGENT_MAX_SECONDS` | API | nein | `60` | nein | Gesamtzeit eines Agent-Auftrags (1–600 s, F08-AC12); öffentlich 60, `make up-local` setzt 600 |
 | `DOCLING_BASE_URL` | API | bei `docling` (Phase 8) | `http://localhost:5001` | nein | lokale OCR (docling-serve, F11-AC17) |
 | `API_WAIT_SECONDS` | Web | nein | – | nein | nur lokal: so lange wartet das BFF bei schreibenden API-Aufrufen auf die erste Antwort (Node bricht sonst nach 300 s ab); `make up-local` setzt 1800 |
-| `RAG_MIN_SIMILARITY` | API | nein | `0.72` | nein | Treffer-Schwelle (F05), kalibriert mit mistral-embed am 28.10.2026; ein lokales Modell braucht eigene Kalibrierung |
+| `RAG_MIN_SIMILARITY` | API | nein | `0.72` | nein | Treffer-Schwelle (F05), kalibriert mit mistral-embed am 28.10.2026. Lokal mit `bge-m3` setzt `make up-local` **0.45** (kalibriert 01.11.2026 mit `scripts/rag_probe.py --local`: echte Treffer 0,49–0,71, Frage ohne Bezug höchstens 0,35; nur 6 Fragen, knapper Abstand) |
 | `OIDC_ISSUER` | Web, API | ja | – | nein | IdP-Adresse |
 | `OIDC_CLIENT_ID` | Web | ja | – | nein | OIDC-Client |
 | `OIDC_CLIENT_SECRET` | Web | bei Basic (Spike S2) | – | **ja** | Client-Authentifizierung |
