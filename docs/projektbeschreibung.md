@@ -54,7 +54,7 @@ Anforderungs-Landkarte auf der Startseite):
 | Anbindung von LLMs über APIs | Mistral OCR, Mistral Small (Feldvorschläge, Antworten, Agent), Ministral (Prüfmodell), mistral-embed; Anbieter per Konfiguration austauschbar, Tageskontingente | Posteingang | [`providers/`](../apps/api/app/providers/), [`extraction/`](../apps/api/app/extraction/) |
 | RAG und agentenbasierte KI | Strukturbewusstes Chunking, Vektorsuche nur im eigenen Wohnbereich, Antworten nur mit geprüften Zitaten; Agent mit Function Calling, fünf Werkzeugen und Bestätigungspflicht | Fragen, Agent | [`rag/`](../apps/api/app/rag/), [`agent/`](../apps/api/app/agent/) |
 | IT- und API-Sicherheit, OAuth 2.0/OIDC | OIDC-Login (Code + PKCE) über den BFF, Tokens nie im Browser, Zugriff im Namen des Nutzers unter RLS, Agenten-Token per Token Exchange (RFC 8693) | Rollenwahl, Bewohner | [`auth/`](../apps/api/app/auth/), [Migrationen](../supabase/migrations/), [ADR 0012](architecture/adr/0012-agent-token.md) |
-| *wünschenswert:* lokale Sprachmodelle | Ollama (Chat, Embeddings) und Docling (OCR) als Anbieter angelegt, per Konfiguration umschaltbar; vollständiger lokaler Betrieb in Arbeit | – | [`ollama.py`](../apps/api/app/providers/llm/ollama.py) |
+| *wünschenswert:* lokale Sprachmodelle | Komplett lokaler Betrieb mit `make up-local`: Ollama (`qwen3:8b`, `bge-m3`), Docling und Keycloak, ohne Cloud-Dienst; nur per Konfiguration umgeschaltet | – | [`ollama.py`](../apps/api/app/providers/llm/ollama.py) |
 | *wünschenswert:* Docker, CI/CD | Docker-Images für Web und API; GitHub Actions: Tests, Secret-Scan, Deployment nur bei grüner CI, nächtlicher Reset | – | [Workflows](../.github/workflows/), [`infra/`](../infra/) |
 | *wünschenswert:* Sicherheitsrisiken von LLM-Anwendungen | Bedrohungsmodell nach OWASP Top 10 für LLM-Anwendungen, fünf Schichten gegen Prompt-Injection, gemessen auf einem Testkorpus | Posteingang (Musterdokumente mit Angriff) | [Bedrohungsmodell](security/threat-model.md), [`security/`](../apps/api/app/security/) |
 
@@ -199,9 +199,13 @@ nicht schlechter werden.
 - Messwerte statt Behauptungen: Erkennungs- und Fehlalarmrate je Schicht und Kategorie.
 - Kosten: Tageskontingente begrenzen die öffentliche Demo auf höchstens 0,50 € Mistral-Kosten pro Tag.
 
-**Noch offen:** ein gemessener Vergleich von Cloud- und lokalen Modellen (Qualität der
-Feldvorschläge und Antworten, Erkennungsrate, Laufzeit) sowie der vollständige lokale Betrieb
-mit Ollama, Docling und Keycloak per Docker.
+- Komplett lokal läuft dieselbe Anwendung ohne Cloud-Dienst (Keycloak, Docling, Ollama). Auf einem
+  Laptop ohne GPU ist das langsam: `qwen3:8b` schreibt etwa 1,3 Tokens/s, ein Feldvorschlag dauert
+  rund 13 Minuten. Der lokale Modus zeigt, dass es geht und dass kein Text den Rechner verlässt;
+  für den Alltag bräuchte er eine GPU oder ein kleineres Modell.
+
+**Noch offen:** ein gemessener Vergleich der Qualität von Cloud- und lokalen Modellen
+(Feldvorschläge, Antworten, Erkennungsrate).
 
 **Was im KLARA-Kontext als Nächstes käme:**
 
@@ -240,5 +244,15 @@ make test      # Unit-Tests API und Web
 make e2e       # End-to-End auf Desktop und Handy
 ```
 
-Mit `make up` laufen echte Anbieter und der IdP aus der `.env`. Der vollständig lokale Betrieb mit
-Ollama, Docling und Keycloak ist in Arbeit. Weitere Befehle stehen in der [README](../README.md).
+Mit `make up` laufen echte Anbieter und der IdP aus der `.env`.
+
+**Komplett lokal**, ohne Cloud-Dienst (Keycloak, Docling, Ollama auf dem eigenen Rechner, etwa 10 GB
+freier Arbeitsspeicher):
+
+```bash
+ollama pull qwen3:8b && ollama pull bge-m3
+make up-local      # anmelden wie öffentlich, z. B. pflege-wb1
+make smoke-local   # prüft alle Dienste und ruft die echten Modelle einmal auf
+```
+
+Weitere Befehle und gemessene Laufzeiten stehen in der [README](../README.md).

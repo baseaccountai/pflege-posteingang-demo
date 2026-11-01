@@ -42,6 +42,29 @@ make down
 
 Lokal laufen Web (http://localhost:3000) und API (http://localhost:8000) per `docker run` im Host-Netzwerk (`infra/local-stack.sh`); Supabase kommt über die CLI (`make db-start`). Im Test-IdP (http://localhost:18090/default) meldet man sich mit beliebigem Namen an und trägt die Rolle als Claims ein, z. B. `{"roles": ["nurse_wb1"]}` (Rollen: `nurse_wb1`, `nurse_wb2`, `pdl`).
 
+### Komplett lokal (ohne Cloud)
+
+Login, OCR, Modelle und Datenbank laufen auf dem eigenen Rechner: Keycloak, Docling, Ollama und das lokale Supabase. Es wird keine `.env` gelesen, und kein Text verlässt den Rechner.
+
+```bash
+ollama pull qwen3:8b && ollama pull bge-m3   # einmalig; Ollama läuft nativ (ollama serve)
+make up-local    # Supabase + Keycloak + Docling + API + Web; setzt die lokalen Musterdaten zurück und indiziert sie mit bge-m3
+make smoke-local # prüft alle Dienste und ruft die echten Modelle einmal auf
+make down
+```
+
+Anmelden wie öffentlich, etwa mit `pflege-wb1` / `Pflege-WB1-Demo!`. Speicherbedarf: etwa 10 GB frei. Gemessen am 01.11.2026 auf einem Laptop ohne GPU (8 Kerne, 15 GB):
+
+| Schritt | Dauer |
+|---|---|
+| Keycloak-Start | ~75 s |
+| Docling liest einen Brief | 12–32 s |
+| Feldvorschlag mit `qwen3:8b` | ~13 min |
+| ein Werkzeugaufruf des Agenten | ~5 min |
+| Embedding (`bge-m3`) | ~10 s |
+
+`qwen3:8b` schreibt dort etwa 1,3 Tokens/s. Deshalb wartet der lokale Modus länger als der öffentliche (`OLLAMA_TIMEOUT_SECONDS`, `AGENT_MAX_SECONDS`, `API_WAIT_SECONDS`, siehe [Konfiguration](docs/specs/konfiguration.md)). Der Agent bekommt sein Token lokal selbst signiert, weil Keycloak beim Token Exchange kein `act` ausstellt ([ADR 0012](docs/architecture/adr/0012-agent-token.md)).
+
 ## Dokumentation
 
 - Architektur: [`docs/architecture/architecture.md`](docs/architecture/architecture.md)
