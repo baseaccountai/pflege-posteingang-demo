@@ -36,7 +36,9 @@ def test_the_demo_users_with_their_public_passwords_and_roles():
     assert set(users) == {"pflege-wb1", "pflege-wb2", "pdl"}
     for wanted in CONFIG["users"]:
         user = users[wanted["username"]]
-        assert user["realmRoles"] == wanted["roles"]
+        # Imported users get only the roles listed: without offline_access Keycloak refuses
+        # the scope the BFF asks for its refresh token (found in the first local run).
+        assert user["realmRoles"] == [*wanted["roles"], "offline_access"]
         assert user["credentials"] == [
             {"type": "password", "value": wanted["password"], "temporary": False}
         ]

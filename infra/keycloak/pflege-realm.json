@@ -78,7 +78,8 @@
         }
       ],
       "realmRoles": [
-        "nurse_wb1"
+        "nurse_wb1",
+        "offline_access"
       ]
     },
     {
@@ -96,7 +97,8 @@
         }
       ],
       "realmRoles": [
-        "nurse_wb2"
+        "nurse_wb2",
+        "offline_access"
       ]
     },
     {
@@ -114,7 +116,8 @@
         }
       ],
       "realmRoles": [
-        "pdl"
+        "pdl",
+        "offline_access"
       ]
     }
   ]

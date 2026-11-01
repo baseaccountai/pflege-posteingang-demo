@@ -83,7 +83,9 @@ def _user(user: dict) -> dict:
         "email": user["email"],
         "emailVerified": True,
         "credentials": [{"type": "password", "value": user["password"], "temporary": False}],
-        "realmRoles": list(user["roles"]),
+        # Imported users get only these roles; offline_access allows the refresh token the BFF
+        # asks for (scope offline_access, as at Zitadel).
+        "realmRoles": [*user["roles"], "offline_access"],
     }
 
 
