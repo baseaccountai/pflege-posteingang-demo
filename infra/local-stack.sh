@@ -181,6 +181,7 @@ case "$MODE" in
       -e BFF_API_SECRET=local-bff-api-secret-at-least-32-bytes \
       -e APP_ORIGIN=http://localhost:3000 -e API_BASE_URL=http://127.0.0.1:8000 \
       -e OIDC_CLIENT_ID=pflege-web -e OIDC_CLIENT_SECRET=pflege-web-local-only-secret \
+      -e API_WAIT_SECONDS=1800 \
       -e "OIDC_SCOPES=openid profile offline_access" \
       -e SESSION_ENC_KEY=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc= "$PREFIX-web"
     echo "Web: http://localhost:3000  Keycloak: $KEYCLOAK_ISSUER"

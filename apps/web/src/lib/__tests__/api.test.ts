@@ -1,6 +1,7 @@
 // @vitest-environment node
 // F01-AC8 (BFF assertion), F01-AC14 (no caching of user data), F01-AC21 (401 -> session gone).
 import { createHash, createHmac } from "node:crypto";
+import { Agent } from "undici";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -149,6 +150,20 @@ describe("apiSend", () => {
     expect(init).toMatchObject({ method: "POST", body, cache: "no-store" });
     expect(init.headers.authorization).toBe("Bearer access-123");
     expect(decode(init.headers["x-bff-assertion"]).valid).toBe(true);
+  });
+
+  // F11 local mode: qwen3:8b on a laptop CPU needs minutes per answer, longer than Node's
+  // fetch waits for the first byte (300 s). Only API_WAIT_SECONDS (set by up-local) changes it.
+  it("waits longer for an answer only when API_WAIT_SECONDS is set", async () => {
+    const plain = answer(200, {});
+    await apiSend("/questions", caller, { method: "POST", body: "{}" }, { env, fetch: plain });
+    expect(plain.mock.calls[0][1].dispatcher).toBeUndefined();
+
+    const local = answer(200, {});
+    const localEnv = { ...env, API_WAIT_SECONDS: "1500" };
+    await apiSend("/questions", caller, { method: "POST", body: "{}" }, { env: localEnv, fetch: local });
+    const { dispatcher } = local.mock.calls[0][1];
+    expect(dispatcher).toBeInstanceOf(Agent);
   });
 
   it("keeps the content type of a JSON body, but the auth headers cannot be overridden", async () => {

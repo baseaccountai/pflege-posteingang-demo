@@ -1,6 +1,7 @@
 // Server-side client for the FastAPI backend (design F01 "API-Client"). Every call carries
 // the user's access token and a fresh BFF assertion (F01-AC8), so a token copied out of the
 // BFF alone is not enough to call the API. Never import this into a client component.
+import { Agent } from "undici";
 import { createHash, createHmac } from "node:crypto";
 
 const ASSERTION_LIFETIME_SECONDS = 60;
@@ -56,14 +57,20 @@ const apiBase = (deps: Deps) => (deps.env ?? process.env).API_BASE_URL ?? "http:
 async function callApi(
   path: string,
   caller: Caller,
-  init: { method: string; body?: BodyInit; headers?: Record<string, string>; signal?: AbortSignal },
+  init: {
+    method: string;
+    body?: BodyInit;
+    headers?: Record<string, string>;
+    signal?: AbortSignal;
+    dispatcher?: Agent; // undici option of Node's fetch (local mode, see longWait)
+  },
   deps: Deps,
 ): Promise<Response> {
   const env = deps.env ?? process.env;
   const assertion = bffAssertion(caller.sid, env.BFF_API_SECRET ?? "", Math.floor(Date.now() / 1000));
   try {
     return await (deps.fetch ?? fetch)(new URL(path, apiBase(deps)).toString(), {
-      ...init,
+      ...(init as RequestInit),
       cache: "no-store",
       // Auth headers last: a caller-supplied header can never replace them.
       headers: { ...init.headers, authorization: `Bearer ${caller.accessToken}`, "x-bff-assertion": assertion },
@@ -72,6 +79,19 @@ async function callApi(
     throw new ApiUnavailable(`API not reachable for ${path}`, { cause: error });
   }
 }
+
+/**
+ * Fully local mode only (F11, `make up-local`): a CPU model needs minutes for an answer, but
+ * Node's fetch gives up after 300 s without the first byte. API_WAIT_SECONDS raises that for
+ * writing calls; without it nothing changes (public demo).
+ */
+function longWait(deps: Deps): { dispatcher?: Agent } {
+  const seconds = Number((deps.env ?? process.env).API_WAIT_SECONDS);
+  if (!Number.isFinite(seconds) || seconds <= 0) return {};
+  waitingAgent ??= new Agent({ headersTimeout: seconds * 1000, bodyTimeout: seconds * 1000 });
+  return { dispatcher: waitingAgent };
+}
+let waitingAgent: Agent | undefined;
 
 const readSignal = (deps: Deps) => AbortSignal.timeout(deps.timeoutMs ?? READ_TIMEOUT_MS);
 
@@ -120,7 +140,7 @@ export async function apiSend(
   init: { method: "POST"; body?: BodyInit; headers?: Record<string, string> },
   deps: Deps = {},
 ): Promise<{ status: number; data: unknown }> {
-  const response = await callApi(path, caller, init, deps);
+  const response = await callApi(path, caller, { ...init, ...longWait(deps) }, deps);
   if (response.status === 401) throw new ApiUnauthorized("API rejected token or assertion");
   const data = await response.json().catch(() => null);
   // A 503 with the API's own error code (reset, model or agent not reachable) carries a
