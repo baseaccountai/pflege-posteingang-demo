@@ -1,0 +1,121 @@
+{
+  "realm": "pflege",
+  "enabled": true,
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      {
+        "name": "nurse_wb1",
+        "description": "Pflegekraft WB1"
+      },
+      {
+        "name": "nurse_wb2",
+        "description": "Pflegekraft WB2"
+      },
+      {
+        "name": "pdl",
+        "description": "Pflegedienstleitung"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "pflege-web",
+      "name": "pflege-posteingang-web",
+      "secret": "pflege-web-local-only-secret",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/auth/callback"
+      ],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3000/"
+      },
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "pflege-api",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "pflege-wb1",
+      "enabled": true,
+      "firstName": "Paula",
+      "lastName": "Beispiel",
+      "email": "pflege-wb1@example.invalid",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Pflege-WB1-Demo!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "nurse_wb1"
+      ]
+    },
+    {
+      "username": "pflege-wb2",
+      "enabled": true,
+      "firstName": "Ben",
+      "lastName": "Beispiel",
+      "email": "pflege-wb2@example.invalid",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Pflege-WB2-Demo!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "nurse_wb2"
+      ]
+    },
+    {
+      "username": "pdl",
+      "enabled": true,
+      "firstName": "Petra",
+      "lastName": "Leitung",
+      "email": "pdl@example.invalid",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Pflege-PDL-Demo1!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "pdl"
+      ]
+    }
+  ]
+}

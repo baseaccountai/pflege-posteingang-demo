@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles project-description screens
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles project-description screens keycloak-realm
 
 SUPABASE := pnpm dlx supabase@2.122.0
 
@@ -86,6 +86,10 @@ up: db-start db-local-roles
 # Same, plus the test OIDC server and fake providers - no account or key needed
 up-test: db-start db-local-roles
 	infra/local-stack.sh up-test
+
+# Keycloak realm of the fully local mode from infra/demo-users.json (F11-AC15; commit it)
+keycloak-realm:
+	python3 infra/keycloak/build_realm.py
 
 # Checks the running local stack: start page, API with database, test IdP
 smoke:
