@@ -207,9 +207,11 @@ async def test_a_late_ocr_answer_does_not_overwrite_a_timeout(db, seeded):
 async def test_stalled_documents_are_marked_as_timeout(db, seeded):
     stuck_upload = new_document(status="uploaded", age_minutes=3)
     fresh_upload = new_document(status="uploaded", age_minutes=1)
-    stuck_ocr = new_document(status="processing", age_minutes=6)
+    stuck_ocr = new_document(status="processing", age_minutes=7)
     busy_extraction = new_document(status="extracting", age_minutes=4)
-    stuck_extraction = new_document(status="extracting", age_minutes=6)
+    stuck_extraction = new_document(status="extracting", age_minutes=7)
+    # Review phase 8: a step right at its limit may still be running (60 s grace).
+    at_the_limit = new_document(status="extracting", age_minutes=5)
     other_ward = new_document(ward="wb2", status="processing", age_minutes=30)
 
     await mark_stalled(db, NURSE_WB1)
@@ -219,14 +221,15 @@ async def test_stalled_documents_are_marked_as_timeout(db, seeded):
     assert state(stuck_ocr)[:2] == ("failed", "timeout")
     assert state(busy_extraction)[0] == "extracting"
     assert state(stuck_extraction)[:2] == ("failed", "timeout")
+    assert state(at_the_limit)[0] == "extracting"
     assert state(other_ward)[0] == "processing"  # RLS: WB1 cannot touch WB2
 
 
 async def test_the_local_mode_waits_longer_before_a_document_counts_as_stalled(db, seeded):
     # F02-AC8/AC9 with PIPELINE_STEP_SECONDS: qwen3:8b needs ~13 min for a suggestion on a
     # laptop CPU (01.11.2026); the public demo keeps its 5 minutes.
-    busy = new_document(status="extracting", age_minutes=20)
-    stuck = new_document(status="extracting", age_minutes=31)
+    busy = new_document(status="extracting", age_minutes=30)
+    stuck = new_document(status="extracting", age_minutes=32)
     await mark_stalled(db, NURSE_WB1, step_seconds=1800)
     assert state(busy)[0] == "extracting"
     assert state(stuck)[:2] == ("failed", "timeout")

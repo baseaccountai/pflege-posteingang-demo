@@ -164,6 +164,15 @@ describe("apiSend", () => {
     await apiSend("/questions", caller, { method: "POST", body: "{}" }, { env: localEnv, fetch: local });
     const { dispatcher } = local.mock.calls[0][1];
     expect(dispatcher).toBeInstanceOf(Agent);
+
+    // Review phase 8: one waiting client per value, not the first value forever.
+    const again = answer(200, {});
+    await apiSend("/questions", caller, { method: "POST", body: "{}" }, { env: localEnv, fetch: again });
+    expect(again.mock.calls[0][1].dispatcher).toBe(dispatcher);
+    const other = answer(200, {});
+    const otherEnv = { ...env, API_WAIT_SECONDS: "60" };
+    await apiSend("/questions", caller, { method: "POST", body: "{}" }, { env: otherEnv, fetch: other });
+    expect(other.mock.calls[0][1].dispatcher).not.toBe(dispatcher);
   });
 
   it("keeps the content type of a JSON body, but the auth headers cannot be overridden", async () => {

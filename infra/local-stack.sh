@@ -77,17 +77,24 @@ wait_for() { # name url seconds
   return 1
 }
 
-# Local agent key (self_signed, ADR 0012 "Lokal"): made once, kept outside git.
-agent_key() {
-  local key=infra/.local/agent-signing-key.pem
-  if [[ ! -f $key ]]; then
-    mkdir -p infra/.local
-    openssl ecparam -name prime256v1 -genkey -noout 2>/dev/null |
-      openssl pkcs8 -topk8 -nocrypt -out "$key"
-    chmod 600 "$key"
+# Local secrets, made once, kept outside git (infra/.local/, mode 0600). Written to a temp
+# file first: an interrupted openssl never leaves a half key that would be used forever.
+local_secret() { # file command...
+  local file=infra/.local/$1
+  shift
+  if [[ ! -s $file ]]; then
+    (
+      umask 077
+      mkdir -p infra/.local
+      "$@" >"$file.tmp" && [[ -s $file.tmp ]] && mv "$file.tmp" "$file"
+    )
   fi
-  cat "$key"
+  cat "$file"
 }
+new_agent_key() { # self_signed agent tokens (ADR 0012 "Lokal")
+  openssl ecparam -name prime256v1 -genkey -noout 2>/dev/null | openssl pkcs8 -topk8 -nocrypt
+}
+new_password() { openssl rand -base64 24; }
 
 memory_hint() {
   local free_gb
@@ -158,11 +165,15 @@ case "$MODE" in
     memory_hint
     down
     build
-    run keycloak -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
-      -e KC_HTTP_PORT=18100 -e KC_HOSTNAME=http://localhost:18100 \
+    # Only on this machine (127.0.0.1): with host networking the services would otherwise be
+    # reachable from the same Wi-Fi - a Keycloak admin there could hand out the PDL role.
+    run keycloak -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+      -e "KC_BOOTSTRAP_ADMIN_PASSWORD=$(local_secret keycloak-admin-password new_password)" \
+      -e KC_HTTP_HOST=127.0.0.1 -e KC_HTTP_PORT=18100 -e KC_HOSTNAME=http://localhost:18100 \
       -v "$PWD/infra/keycloak/pflege-realm.json:/opt/keycloak/data/import/pflege-realm.json:ro" \
       "$KEYCLOAK_IMAGE" start-dev --import-realm
-    run docling -e DOCLING_SERVE_ENABLE_UI=false "$DOCLING_IMAGE"
+    run docling -e DOCLING_SERVE_ENABLE_UI=false "$DOCLING_IMAGE" \
+      docling-serve run --host 127.0.0.1 --port 5001
     # Keycloak needs about 75 s on a laptop, Docling loads its models.
     wait_for Keycloak "$KEYCLOAK_ISSUER/.well-known/openid-configuration" 240
     wait_for Docling http://localhost:5001/health 240
@@ -177,7 +188,8 @@ case "$MODE" in
       -e OIDC_ISSUER=$KEYCLOAK_ISSUER -e OIDC_AUDIENCE=pflege-api -e OIDC_ROLES_CLAIM=roles \
       -e BFF_API_SECRET=local-bff-api-secret-at-least-32-bytes \
       -e AGENT_TOKEN_MODE=self_signed -e AGENT_ID=pflege-agent-local \
-      -e "AGENT_SIGNING_KEY=$(agent_key)" "$PREFIX-api"
+      -e "AGENT_SIGNING_KEY=$(local_secret agent-signing-key.pem new_agent_key)" "$PREFIX-api" \
+      /app/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
     run web "${LOCAL_DB[@]}" \
       -e OIDC_ISSUER=$KEYCLOAK_ISSUER -e OIDC_ROLES_CLAIM=roles \
       -e BFF_API_SECRET=local-bff-api-secret-at-least-32-bytes \
@@ -185,8 +197,9 @@ case "$MODE" in
       -e OIDC_CLIENT_ID=pflege-web -e OIDC_CLIENT_SECRET=pflege-web-local-only-secret \
       -e API_WAIT_SECONDS=1800 \
       -e "OIDC_SCOPES=openid profile offline_access" \
+      -e HOSTNAME=127.0.0.1 \
       -e SESSION_ENC_KEY=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc= "$PREFIX-web"
-    echo "Web: http://localhost:3000  Keycloak: $KEYCLOAK_ISSUER"
+    echo "Web: http://localhost:3000  Keycloak: $KEYCLOAK_ISSUER (alles nur auf diesem Rechner)"
     echo "Anmelden wie öffentlich: pflege-wb1 / Pflege-WB1-Demo! (Liste auf der Startseite)"
     ;;
   down)

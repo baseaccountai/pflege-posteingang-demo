@@ -43,6 +43,7 @@ log = logging.getLogger(__name__)
 # F02-AC8: a step that takes longer than 5 minutes fails with "timeout"
 # (PIPELINE_STEP_SECONDS, longer only in the fully local mode).
 STEP_TIMEOUT_SECONDS = 300
+STALLED_GRACE_SECONDS = 60
 
 
 @dataclass(frozen=True)
@@ -382,5 +383,6 @@ async def mark_stalled(
                or (status in ('processing', 'screening', 'extracting')
                    and status_changed_at < now() - make_interval(secs => %s))
             """,
-            [step_seconds],
+            # 60 s grace: a step right at its limit may still be running (review phase 8).
+            [step_seconds + STALLED_GRACE_SECONDS],
         )

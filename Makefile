@@ -90,7 +90,7 @@ up-test: db-start db-local-roles
 # Index all approved documents again with the configured embedding model - local database
 # only (F05-AC13, F11-AC19); `make up-local` calls it after the seed
 reindex:
-	cd apps/api && uv run python -m scripts.reindex
+	cd apps/api && LLM_PROVIDER=ollama uv run python -m scripts.reindex
 
 # Keycloak realm of the fully local mode from infra/demo-users.json (F11-AC15; commit it)
 keycloak-realm:

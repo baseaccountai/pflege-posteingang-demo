@@ -20,7 +20,7 @@ Stand: 01.11.2026 · Orientierung: **OWASP Top 10 für LLM-Anwendungen (2025)** 
 | API ↔ Supabase | Zugriff im Namen von Nutzer/Agent, RLS erzwingt Wohnbereich |
 | API ↔ Cloud-LLM | nur pseudonymisierte Texte – gilt auch für den Injection-Klassifikator; die Prüfung davor (Regeln, versteckter Text) läuft lokal im Backend |
 | API ↔ Cloud-OCR | **sieht Rohdaten** (bekannte Grenze; lokal: Docling) |
-| lokaler Modus (`make up-local`) | kein Dienst außerhalb des Rechners: Docling liest das Original lokal, alle Modellrollen laufen über Ollama, auch wenn ein `MISTRAL_API_KEY` gesetzt wäre (`apps/api/tests/providers/test_local_mode.py`); `.env` wird nicht gelesen. Agenten-Token lokal selbst signiert (Keycloak stellt kein `act` aus, ADR 0012) |
+| lokaler Modus (`make up-local`) | kein Dienst außerhalb des Rechners: Docling liest das Original lokal, alle Modellrollen laufen über Ollama, auch wenn ein `MISTRAL_API_KEY` gesetzt wäre (`apps/api/tests/providers/test_local_mode.py`); `.env` wird nicht gelesen. Agenten-Token lokal selbst signiert (Keycloak stellt kein `act` aus, ADR 0012); ein lokaler Auftrag darf länger dauern als das Token gilt (bewusst, ADR 0012 „Abweichung lokal“). Keycloak und Docling lauschen nur auf 127.0.0.1, das Keycloak-Admin-Passwort ist zufällig (`infra/.local/`, nicht im Repo) |
 | Dokumentinhalt ↔ Prompt | Dokumente sind **Daten**, keine Anweisungen |
 
 ## OWASP Top 10 für LLM-Anwendungen – Zuordnung

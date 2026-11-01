@@ -88,10 +88,14 @@ async function callApi(
 function longWait(deps: Deps): { dispatcher?: Agent } {
   const seconds = Number((deps.env ?? process.env).API_WAIT_SECONDS);
   if (!Number.isFinite(seconds) || seconds <= 0) return {};
-  waitingAgent ??= new Agent({ headersTimeout: seconds * 1000, bodyTimeout: seconds * 1000 });
-  return { dispatcher: waitingAgent };
+  let agent = waitingAgents.get(seconds);
+  if (!agent) {
+    agent = new Agent({ headersTimeout: seconds * 1000, bodyTimeout: seconds * 1000 });
+    waitingAgents.set(seconds, agent);
+  }
+  return { dispatcher: agent };
 }
-let waitingAgent: Agent | undefined;
+const waitingAgents = new Map<number, Agent>(); // one client per wait, reused across calls
 
 const readSignal = (deps: Deps) => AbortSignal.timeout(deps.timeoutMs ?? READ_TIMEOUT_MS);
 

@@ -66,7 +66,7 @@ Anmelden wie öffentlich, etwa mit `pflege-wb1` / `Pflege-WB1-Demo!`. Speicherbe
 
 Bekannte Grenzen von `qwen3:8b` im Rundgang: Den Arztbrief stufte es als „Sonstiges“ ein (Docling liefert die Tabelle als Fließtext), und auf die Frage kam keine Antwort mit gültigen Quellenangaben. Die App zeigt dann „keine belegte Antwort“ statt einer unbelegten.
 
-`qwen3:8b` schreibt dort etwa 1,3 Tokens/s. Deshalb wartet der lokale Modus länger als der öffentliche (`OLLAMA_TIMEOUT_SECONDS`, `AGENT_MAX_SECONDS`, `API_WAIT_SECONDS`, siehe [Konfiguration](docs/specs/konfiguration.md)). Der Agent bekommt sein Token lokal selbst signiert, weil Keycloak beim Token Exchange kein `act` ausstellt ([ADR 0012](docs/architecture/adr/0012-agent-token.md)).
+`qwen3:8b` schreibt dort etwa 1,3 Tokens/s. Deshalb wartet der lokale Modus länger als der öffentliche (`OLLAMA_TIMEOUT_SECONDS`, `PIPELINE_STEP_SECONDS`, `AGENT_MAX_SECONDS`, `API_WAIT_SECONDS`, siehe [Konfiguration](docs/specs/konfiguration.md)). Der Agent bekommt sein Token lokal selbst signiert, weil Keycloak beim Token Exchange kein `act` ausstellt ([ADR 0012](docs/architecture/adr/0012-agent-token.md)).
 
 ## Dokumentation
 

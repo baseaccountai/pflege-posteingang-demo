@@ -1,6 +1,6 @@
 """Index every approved document again with the configured embedding model (F05-AC13, F11-AC19).
 
-    make reindex      (LLM_PROVIDER etc. from the environment; `make up-local` calls it)
+    make reindex      (with LLM_PROVIDER=ollama; `make up-local` calls it)
 
 Why: vectors of different models cannot be compared. The seed brings chunks computed with
 mistral-embed; in the fully local mode the API embeds with Ollama (bge-m3), so the seed
