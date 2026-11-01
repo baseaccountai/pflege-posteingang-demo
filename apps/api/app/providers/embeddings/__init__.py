@@ -14,5 +14,7 @@ def create_embedding_provider(settings: Settings) -> EmbeddingProvider:
     if settings.llm_provider == "mistral":
         return MistralEmbeddings(settings.mistral_api_key, settings.mistral_embed_model)
     if settings.llm_provider == "ollama":
-        return OllamaEmbeddings(settings.ollama_base_url, settings.ollama_embed_model)
+        return OllamaEmbeddings(
+            settings.ollama_base_url, settings.ollama_embed_model, settings.ollama_timeout_seconds
+        )
     return FakeEmbeddings()

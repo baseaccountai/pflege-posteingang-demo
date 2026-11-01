@@ -70,6 +70,11 @@ class Limits:
     seconds: float = 60
 
 
+def agent_limits(settings) -> Limits:
+    """The limits of one task; only the time comes from the configuration (AGENT_MAX_SECONDS)."""
+    return Limits(seconds=settings.agent_max_seconds)
+
+
 @dataclass
 class AgentResult:
     answer: str

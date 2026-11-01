@@ -13,5 +13,7 @@ def create_llm_provider(settings: Settings) -> LlmProvider:
     if settings.llm_provider == "mistral":
         return MistralLlm(settings.mistral_api_key, settings.mistral_chat_model)
     if settings.llm_provider == "ollama":
-        return OllamaLlm(settings.ollama_base_url, settings.ollama_chat_model)
+        return OllamaLlm(
+            settings.ollama_base_url, settings.ollama_chat_model, settings.ollama_timeout_seconds
+        )
     return FakeLlm()

@@ -15,9 +15,10 @@ CONTEXT_TOKENS = 8192  # agent prompt with tools and results, RAG sources: fits,
 
 
 class OllamaLlm:
-    def __init__(self, base_url: str, model: str):
+    def __init__(self, base_url: str, model: str, timeout: float = TIMEOUT_SECONDS):
         self.base_url = base_url.rstrip("/")
         self.model_name = model
+        self.timeout = timeout
 
     async def structured(self, system: str, user: str, schema: dict, max_tokens: int) -> dict:
         body = {
@@ -55,7 +56,7 @@ class OllamaLlm:
 
     async def _chat(self, body: dict) -> dict:
         try:
-            async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(f"{self.base_url}/api/chat", json=body)
             response.raise_for_status()
             message = response.json()["message"]

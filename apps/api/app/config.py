@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     ollama_chat_model: str = "qwen3:8b"
     # Must give 1024-dimensional vectors like mistral-embed (column chunks.embedding).
     ollama_embed_model: str = "bge-m3"
+    # Per model call. A CPU-only laptop writes ~1.2 tokens/s with qwen3:8b (01.11.2026):
+    # `make up-local` raises it; nothing else changes.
+    ollama_timeout_seconds: float = Field(120, ge=10, le=1800)
     # Questions (F05): chunks below this cosine similarity are no hit. Calibrated with
     # mistral-embed on the seed (F05 Task 8, 28.10.2026): real hits 0.77-0.86, an off-topic
     # question 0.75 - so 0.72 keeps every real hit; the citation check catches the rest.
@@ -45,6 +48,8 @@ class Settings(BaseSettings):
     # The agent's own token (F08, ADR 0012). "exchange": Zitadel exchanges the nurse's token
     # (RFC 8693); "self_signed": the API signs it (fallback where the IdP has no exchange).
     # Without AGENT_ID and the mode's secrets there is no agent (its routes answer 503).
+    # F08-AC12: the whole agent task. 60 s publicly; the local CPU model needs minutes.
+    agent_max_seconds: int = Field(60, ge=1, le=600)
     agent_token_mode: Literal["exchange", "self_signed"] = "exchange"
     agent_id: str = ""  # act.sub: the sub of Zitadel's service user pp-agent
     agent_client_id: str = ""  # secret pair of the service user (client credentials)

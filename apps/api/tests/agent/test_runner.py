@@ -220,3 +220,22 @@ async def test_a_placeholder_typed_into_the_task_is_no_error():
     llm = FakeLlm(turns=[ChatTurn("Kenne ich nicht.")])
     result, _ = await agent(llm, "Was ist mit Bewohner_Z99?")
     assert result.answer == "Kenne ich nicht."
+
+
+def test_the_agent_has_60_seconds_unless_the_local_mode_sets_more():
+    # F08-AC12: 60 s in the public demo; a local CPU model needs minutes (OLLAMA, 01.11.2026).
+    from app.agent.runner import agent_limits
+    from app.config import Settings
+
+    assert agent_limits(Settings()) == Limits(seconds=60)
+    assert agent_limits(Settings(agent_max_seconds=300)) == Limits(seconds=300)
+
+
+@pytest.mark.parametrize("seconds", [0, 601])
+def test_the_agent_time_limit_stays_within_ten_minutes(seconds):
+    from pydantic import ValidationError
+
+    from app.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(agent_max_seconds=seconds)

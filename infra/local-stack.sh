@@ -168,7 +168,9 @@ case "$MODE" in
     wait_for Docling http://localhost:5001/health 240
     LOCAL_LLM=(-e LLM_PROVIDER=ollama -e OCR_PROVIDER=docling
       -e OLLAMA_BASE_URL="$OLLAMA_BASE_URL" -e OLLAMA_CHAT_MODEL="$OLLAMA_CHAT_MODEL"
-      -e OLLAMA_EMBED_MODEL="$OLLAMA_EMBED_MODEL" -e DOCLING_BASE_URL=http://localhost:5001)
+      -e OLLAMA_EMBED_MODEL="$OLLAMA_EMBED_MODEL" -e DOCLING_BASE_URL=http://localhost:5001
+      # qwen3:8b on a CPU-only laptop: ~4 tokens/s in, ~1.3 tokens/s out (01.11.2026).
+      -e OLLAMA_TIMEOUT_SECONDS=1800 -e AGENT_MAX_SECONDS=600)
     run api "${LOCAL_DB[@]}" "${LOCAL_LLM[@]}" \
       -e OIDC_ISSUER=$KEYCLOAK_ISSUER -e OIDC_AUDIENCE=pflege-api -e OIDC_ROLES_CLAIM=roles \
       -e BFF_API_SECRET=local-bff-api-secret-at-least-32-bytes \

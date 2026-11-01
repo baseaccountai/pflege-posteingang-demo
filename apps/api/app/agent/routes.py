@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app import audit
-from app.agent.runner import run_agent
+from app.agent.runner import agent_limits, run_agent
 from app.agent.token_exchange import AgentTokenUnavailable
 from app.agent.tools import ToolContext
 from app.auth.dependencies import VerifiedCaller, current_caller
@@ -104,7 +104,14 @@ async def run_task(request: Request, caller: Caller, body: Task):
         min_similarity=request.app.state.settings.rag_min_similarity,
     )
     try:
-        result = await run_agent(ctx, body.task, body.resident_id, book=book, log=log_step)
+        result = await run_agent(
+            ctx,
+            body.task,
+            body.resident_id,
+            book=book,
+            log=log_step,
+            limits=agent_limits(request.app.state.settings),
+        )
     except QuotaExceeded as exceeded:
         return await quota_refused(db, agent, exceeded)
     except LlmUnavailable:
