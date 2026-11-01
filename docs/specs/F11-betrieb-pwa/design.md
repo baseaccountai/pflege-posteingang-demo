@@ -27,7 +27,22 @@
 | Supabase | `supabase start` (CLI, eigene Container) | `make up` ruft es vor Compose auf |
 | `web`, `api` | vorhandene Dockerfiles, **Host-Netzwerk** (Browser, Container und Supabase erreichen sich einheitlich als `localhost`; gleicher OIDC-Issuer für Browser und BFF), lokale Rollen-Passwörter wie in den Tests (`scripts/local_db_roles.py`) | `make up` |
 | `oidc-mock` | `ghcr.io/navikt/mock-oauth2-server`, Konfiguration `infra/oidc-mock/config.json` (Login-Formular, Rollen als Claims eintragen), Port 18090 (E2E nutzt 18080) | `make up-test` |
-| `keycloak`, `ollama`, `docling` | Phase 8 | – |
+| `keycloak` | `quay.io/keycloak/keycloak` (Version beim Bau pinnen, 26.x), `start-dev --import-realm`, Realm `infra/keycloak/pflege-realm.json`, Port 18100 | `make up-local` |
+| `docling` | `quay.io/docling-project/docling-serve-cpu` (Version pinnen), Port 5001 | `make up-local` |
+| Ollama | nativ auf dem Rechner (`localhost:11434`), Modelle `qwen3:8b` (Chat, Agent, Prüfmodell) und `bge-m3` (Embeddings, 1024 Dim.) – beide schon Standard in `config.py` | vorher `ollama pull`; `make up-local` prüft (AC14) |
+
+### Lokal komplett (Phase 8)
+
+| Thema | Festlegung |
+|---|---|
+| Start | `infra/local-stack.sh up-local` (dritter Modus neben `up` und `up-test`, gleiche `run`-Funktion); Reihenfolge: Ollama-Prüfung → Supabase + Rollen → Keycloak (warten auf Discovery) → Docling (warten auf `/health`) → API → Web → `make reindex` |
+| Geheimnisse | feste lokale Werte im Skript wie bei `up-test` (BFF-Secret, Keycloak-Client-Secret, Agent-Signierschlüssel lokal erzeugt in einem Docker-Volume bzw. `infra/.local/`, in `.gitignore`); `.env` wird **nicht** gelesen, damit kein Cloud-Schlüssel versehentlich mitläuft (AC18) |
+| Keycloak-Realm | Clients: `pflege-web` (vertraulich, Code-Flow, PKCE S256 Pflicht, Redirect `http://localhost:3000/auth/callback`), Audience-Mapper auf die API-Audience; Rollen-Mapper „realm roles → Claim `roles` (Liste)“; Nutzer aus `infra/demo-users.json` (Generator-Skript `infra/keycloak/build_realm.py`, Ergebnis committet, Test vergleicht) |
+| Agent-Token | Spike (Aufgabe 9): Keycloak „Standard Token Exchange“ prüfen. Ergebnis erwartet: kein `act`-Claim → lokal `AGENT_TOKEN_MODE=self_signed`; ADR 0012 bekommt einen Abschnitt „Lokal“ |
+| Docling | `DoclingOcr.extract`: `POST /v1/convert/file` (Multipart), Ausgabe Markdown, Seiten getrennt über `page_break_placeholder`; Zeitlimit 180 s (CPU); Fehler → `OcrUnavailable`. Unit-Tests mit `httpx.MockTransport` (Antwort aus einer echten Aufnahme, als Fixture committet) |
+| Reindex | `apps/api/scripts/reindex.py --local`: für jedes freigegebene Dokument die Chunks löschen und mit dem `Indexer` neu bauen; Verbindung wie `reset_demo --local` (nur lokale Admin-DSN, `SUPABASE_DB_ADMIN_URL` wird ignoriert) |
+| Probe | `apps/api/scripts/local_probe.py` (von `make smoke-local` gerufen): ruft die Provider direkt auf, ohne Login; gibt je Prüfung „ok/FEHLER + Dauer“ aus |
+| Speicher | Richtwert für den Bewerber-Rechner (15 GB RAM, keine GPU): Supabase ~2 GB, Keycloak ~0,7 GB, Docling ~2–3 GB, Ollama mit `qwen3:8b` ~6 GB, `bge-m3` ~1,2 GB. In der README als „ca. 12 GB frei“ nennen und messen (Aufgabe 14) |
 
 ## CI/CD
 
