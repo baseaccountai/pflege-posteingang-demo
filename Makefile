@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles project-description screens
 
 SUPABASE := pnpm dlx supabase@2.122.0
 
@@ -63,6 +63,17 @@ security-report:
 # Static sample record for /muster from the seed (F10-AC14); resets the local Supabase first
 sample-record:
 	cd apps/api && uv run python -m scripts.build_sample_record
+
+# Project description (phase 9): copies docs/projektbeschreibung.md and its pictures into the web app
+project-description:
+	cd apps/web && node scripts/copy-project-description.mjs
+
+# Screenshots for the project description: LOCAL database back to the seed, e2e stack with
+# the fake models, then make project-description
+screens:
+	cd apps/api && env -u SUPABASE_DB_ADMIN_URL uv run python -m scripts.reset_demo --local
+	cd apps/web && pnpm build && SCREENS=1 pnpm exec playwright test e2e/screens.spec.ts --project=desktop --project=mobile
+	$(MAKE) project-description
 
 lint:
 	cd apps/api && uv run ruff check . && uv run ruff format --check .

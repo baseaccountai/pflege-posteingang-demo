@@ -223,9 +223,10 @@ Pflichtinhalte, die in den Specs nicht fehlen dürfen:
 - Modify: Startseite (Karte ganz oben), Kopfzeile (dauerhafter Eintrag „Über das Projekt“), `README.md` (Kurzfassung + Link)
 - Test: `apps/web/e2e/projekt.spec.ts`
 
-- [ ] **Step 1: Failing test** — Playwright (desktop + mobile): Kopfzeile enthält Link „Über das Projekt“ auf jeder Hauptseite; Startseite zeigt die Karte oberhalb der Anforderungs-Landkarte; `/projekt` zeigt Überschrift „Was die Anwendung macht“.
-- [ ] **Step 2:** Test → FAIL.
-- [ ] **Step 3:** Text schreiben (gemessene Werte aus `docs/security/reports/` übernehmen, keine Planwerte), Seite und Links umsetzen.
-- [ ] **Step 4:** Test → PASS.
-- [ ] **Step 5: Commit** — `docs: add project description and in-app about page`
+- [x] **Step 1: Failing test** — Playwright (desktop + mobile): Kopfzeile enthält Link „Über das Projekt“ auf jeder Hauptseite; Startseite zeigt die Karte oberhalb der Anforderungs-Landkarte; `/projekt` zeigt Überschrift „Was die Anwendung macht“.
+- [x] **Step 2:** Test → FAIL.
+- [x] **Step 3:** Text schreiben (gemessene Werte aus `docs/security/reports/` übernehmen, keine Planwerte), Seite und Links umsetzen.
+- [x] **Step 4:** Test → PASS.
+- [x] **Step 5: Commit** — `docs: add project description and in-app about page`
+- Umsetzung (01.11.2026): Bilder in `docs/assets/projekt/` (`make screens`, lokale Testumgebung mit Modell-Attrappe), Kopie für die App per `make project-description` (Test vergleicht), Anzeige mit `react-markdown` + `remark-gfm`. Kopfzeilen-Link und Startseiten-Karte gab es schon (F09). Offen nach Phase 7/8: Abschnitte Agent, lokaler Betrieb, Ergebnisse nachziehen.
 - [ ] **Halte-Punkt:** Bewerber nimmt den Text ab.

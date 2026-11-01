@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <title>Architektur Pflege-Posteingang</title>
+  <desc>Browser, Next.js als Backend-for-Frontend, FastAPI als Sicherheitsschicht, Supabase mit Row Level Security, Identity Provider und KI-Anbieter, jeweils öffentlich und lokal.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect width="960" height="560" fill="#ffffff"/>
+
+  <!-- Browser -->
+  <rect x="20" y="200" width="150" height="110" rx="10" fill="#f1f5f9" stroke="#334155"/>
+  <text x="95" y="228" text-anchor="middle" font-weight="bold">Browser / Handy</text>
+  <text x="95" y="250" text-anchor="middle">PWA</text>
+  <text x="95" y="270" text-anchor="middle" fill="#475569">nur Sitzungs-Cookie,</text>
+  <text x="95" y="288" text-anchor="middle" fill="#475569">kein Token</text>
+
+  <!-- BFF -->
+  <rect x="220" y="180" width="190" height="150" rx="10" fill="#ecfeff" stroke="#0e7490"/>
+  <text x="315" y="206" text-anchor="middle" font-weight="bold">Next.js (BFF)</text>
+  <text x="315" y="228" text-anchor="middle">OIDC Code + PKCE</text>
+  <text x="315" y="248" text-anchor="middle">Tokens serverseitig</text>
+  <text x="315" y="268" text-anchor="middle">(Postgres, verschlüsselt)</text>
+  <text x="315" y="288" text-anchor="middle">Oberfläche, Weiterleitung</text>
+  <text x="315" y="308" text-anchor="middle">mit BFF-Nachweis</text>
+
+  <!-- API -->
+  <rect x="460" y="140" width="230" height="230" rx="10" fill="#f0fdfa" stroke="#115e59" stroke-width="2"/>
+  <text x="575" y="166" text-anchor="middle" font-weight="bold">FastAPI – Sicherheitsschicht</text>
+  <text x="478" y="192">1 Token prüfen (JWKS, iss, aud)</text>
+  <text x="478" y="214">2 Injection-Prüfung (Regeln,</text>
+  <text x="494" y="232">versteckter Text, Prüfmodell)</text>
+  <text x="478" y="254">3 Pseudonymisierung</text>
+  <text x="478" y="276">4 Modell-Tor (kein Klarname)</text>
+  <text x="478" y="298">5 Ausgabe prüfen, Quellen</text>
+  <text x="478" y="320">6 Agent: eigenes Token,</text>
+  <text x="494" y="338">5 Werkzeuge, Bestätigung</text>
+  <text x="478" y="360">7 Protokoll, Kontingente</text>
+
+  <!-- Supabase -->
+  <rect x="760" y="190" width="185" height="130" rx="10" fill="#f0fdf4" stroke="#15803d"/>
+  <text x="852" y="216" text-anchor="middle" font-weight="bold">Supabase (Postgres)</text>
+  <text x="852" y="240" text-anchor="middle">Row Level Security</text>
+  <text x="852" y="260" text-anchor="middle">je Wohnbereich</text>
+  <text x="852" y="280" text-anchor="middle">pgvector, Dateien,</text>
+  <text x="852" y="300" text-anchor="middle">Protokoll</text>
+
+  <!-- IdP -->
+  <rect x="220" y="20" width="300" height="90" rx="10" fill="#fefce8" stroke="#a16207"/>
+  <text x="370" y="46" text-anchor="middle" font-weight="bold">Identity Provider (OIDC)</text>
+  <text x="370" y="68" text-anchor="middle">öffentlich Zitadel · lokal Keycloak</text>
+  <text x="370" y="90" text-anchor="middle">Rollen, Token Exchange (RFC 8693)</text>
+
+  <!-- AI -->
+  <rect x="430" y="430" width="290" height="110" rx="10" fill="#faf5ff" stroke="#7e22ce"/>
+  <text x="575" y="456" text-anchor="middle" font-weight="bold">KI-Anbieter</text>
+  <text x="575" y="478" text-anchor="middle">öffentlich Mistral · lokal Ollama, Docling</text>
+  <text x="575" y="500" text-anchor="middle">OCR sieht das Original,</text>
+  <text x="575" y="520" text-anchor="middle">alle anderen nur Platzhalter</text>
+
+  <!-- Arrows -->
+  <line x1="170" y1="255" x2="218" y2="255" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="410" y1="255" x2="458" y2="255" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="434" y="244" text-anchor="middle" font-size="11" fill="#475569">Token</text>
+  <line x1="690" y1="255" x2="758" y2="255" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="724" y="244" text-anchor="middle" font-size="11" fill="#475569">als Nutzer</text>
+  <text x="724" y="272" text-anchor="middle" font-size="11" fill="#475569">/ Agent</text>
+  <line x1="315" y1="180" x2="315" y2="112" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="300" y="150" text-anchor="end" font-size="11" fill="#475569">Login</text>
+  <line x1="520" y1="140" x2="470" y2="112" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="560" y="126" font-size="11" fill="#475569">Schlüssel, Agenten-Token</text>
+  <line x1="575" y1="370" x2="575" y2="428" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="585" y="404" font-size="11" fill="#475569">nur über das Modell-Tor</text>
+</svg>
