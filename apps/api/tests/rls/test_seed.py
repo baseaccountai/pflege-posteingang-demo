@@ -40,6 +40,9 @@ def seed(seeded: None) -> None:
     """Empties the visitor tables and loads supabase/seed/*.sql in name order."""
     with psycopg.connect(ADMIN_DSN, autocommit=True) as conn:
         conn.execute("truncate public.residents, public.wards cascade")
+        # "70 days ago" in the seed are Berlin calendar days, like the nightly reset at 03:00
+        # (in UTC they are a day off at night across the summer/winter time change).
+        conn.execute("set timezone = 'Europe/Berlin'")
         for path in sorted(SEED_DIR.glob("*.sql")):
             conn.execute(path.read_text(encoding="utf-8"))
 
@@ -166,6 +169,9 @@ def test_loading_the_seed_twice_after_emptying_gives_the_same_state(seed: None) 
     assert all(count > 0 for count in first[0])
     with psycopg.connect(ADMIN_DSN, autocommit=True) as conn:
         conn.execute("truncate public.residents, public.wards cascade")
+        # "70 days ago" in the seed are Berlin calendar days, like the nightly reset at 03:00
+        # (in UTC they are a day off at night across the summer/winter time change).
+        conn.execute("set timezone = 'Europe/Berlin'")
         for path in sorted(SEED_DIR.glob("*.sql")):
             conn.execute(path.read_text(encoding="utf-8"))
     assert admin_rows(query) == first
