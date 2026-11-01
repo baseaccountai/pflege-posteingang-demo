@@ -26,7 +26,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 from app.agent.tools import TOOLS, ToolContext, ToolRefused, call_tool, tool_schemas
-from app.privacy.pseudonymizer import Pseudonymizer
+from app.privacy.pseudonymizer import PLACEHOLDER, Pseudonymizer
 from app.providers.llm.base import Message, ToolCall
 from app.rag.retrieval import surname, titled_names
 from app.security.delimiters import defuse
@@ -104,7 +104,11 @@ async def run_agent(
     visible = await ctx.gateway.visible_residents(ctx.principal)
     own = [r for r in pseudonymizer.residents.values() if r.resident_id in visible]
     chosen = _chosen_resident(resident_id, visible)
-    if chosen is False or not _named_residents_are_own(task, own):
+    if (
+        chosen is False
+        or not _named_residents_are_own(task, own)
+        or _mentions_a_hidden_resident(pseudonymizer, task, visible)
+    ):
         return AgentResult(answer=FOREIGN_ANSWER)
 
     mapping: dict[str, str] = {}  # one mapping for the whole conversation
@@ -212,6 +216,16 @@ def _named_residents_are_own(task: str, own) -> bool:
     """Every name with a form of address ("Fr. Testfeld") must be an own resident."""
     own_surnames = {surname(r.display_name) for r in own}
     return all(name in own_surnames for name in titled_names(task))
+
+
+def _mentions_a_hidden_resident(pseudonymizer: Pseudonymizer, task: str, visible) -> bool:
+    """The pseudonymizer also finds a bare or lower-case surname ("Testfeld"). A resident of
+    another ward found that way would reach the model as a placeholder that is not in its
+    list - and the answer would show it. So such a task is answered like one about nobody."""
+    placeholders = PLACEHOLDER.finditer(pseudonymizer.pseudonymize(task).text)
+    codes = {m.group(1) or m.group(2) for m in placeholders} - {None}
+    known = [pseudonymizer.residents.get(c) for c in codes]
+    return any(r is not None and r.resident_id not in visible for r in known)
 
 
 def _task_message(pseudonymizer, mapping, task: str, own, chosen: str | None) -> str:

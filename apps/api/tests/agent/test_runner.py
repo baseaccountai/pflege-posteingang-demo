@@ -104,6 +104,10 @@ async def test_a_resident_chosen_in_the_app_is_named_to_the_model():
     [
         ("Medikation von Fr. Testfeld?", None),  # another ward
         ("Medikation von Fr. Unbekannt?", None),  # nobody
+        # Review phase 7: the placeholders would give these away (W58 is not in the list).
+        ("Medikation von Testfeld?", None),  # bare surname of another ward
+        ("medikation von fr. testfeld?", None),  # lower case
+        ("Medikation von Fr. Muster-Bauer und Fr. Testfeld?", None),  # one of two foreign
         ("Medikation?", FOREIGN),
         ("Medikation?", "kein-uuid"),
     ],
@@ -210,3 +214,9 @@ async def test_a_plain_foreign_name_written_by_the_model_is_not_shown():
     # The model names a resident of another ward: shown only as its placeholder.
     result, _ = await agent(FakeLlm(turns=[ChatTurn("Fr. Testfeld auch prüfen.")]), "Auftrag")
     assert result.answer == "Bewohner_W58 auch prüfen."
+
+
+async def test_a_placeholder_typed_into_the_task_is_no_error():
+    llm = FakeLlm(turns=[ChatTurn("Kenne ich nicht.")])
+    result, _ = await agent(llm, "Was ist mit Bewohner_Z99?")
+    assert result.answer == "Kenne ich nicht."

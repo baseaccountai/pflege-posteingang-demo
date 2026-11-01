@@ -18,7 +18,7 @@ has more rights than the nurse, and RLS and the audit log can tell the two apart
 import dataclasses
 import time
 
-from app.auth.claims import principal_from_claims
+from app.auth.claims import NoKnownRole, principal_from_claims
 from app.auth.principal import Principal
 from app.auth.tokens import LEEWAY_SECONDS, InvalidToken, TokenVerifier
 
@@ -38,7 +38,9 @@ class AgentTokenVerifier:
         self.roles_claim = roles_claim
         self.max_age = max_age
 
-    def verify(self, token: str, session_sub: str) -> Principal:
+    def verify(
+        self, token: str, session_sub: str, session_wards: tuple[str, ...] | None = None
+    ) -> Principal:
         claims = self.tokens.decode(token)
         act = claims.get("act")
         if not isinstance(act, dict) or act.get("sub") != self.agent_id:
@@ -51,5 +53,11 @@ class AgentTokenVerifier:
             raise InvalidToken("iat missing or in the future")
         if now - issued > self.max_age:
             raise InvalidToken(f"iat more than {self.max_age} s ago")
-        principal = principal_from_claims(claims, self.roles_claim)
+        try:
+            principal = principal_from_claims(claims, self.roles_claim)
+        except NoKnownRole as missing:
+            raise InvalidToken("no known role in the agent token") from missing
+        # The agent never gets more than its nurse: no ward she does not have herself.
+        if session_wards is not None and not set(principal.ward_ids) <= set(session_wards):
+            raise InvalidToken("agent token has a ward the user does not have")
         return dataclasses.replace(principal, actor_type="agent")

@@ -8,7 +8,6 @@ import time
 import pytest
 
 from app.agent.verifier import AgentTokenVerifier
-from app.auth.claims import NoKnownRole
 from app.auth.tokens import InvalidToken
 from tests.support.oidc import ISSUER, ROLES_CLAIM, claims, rs256, test_verifier
 
@@ -92,5 +91,14 @@ def test_a_forged_signature_is_refused(verifier):
 
 
 def test_without_a_known_role_the_agent_gets_nothing(verifier):
-    with pytest.raises(NoKnownRole):
+    # Review phase 7: an invalid agent token like any other (the route answers 503, not 500).
+    with pytest.raises(InvalidToken):
         verifier.verify(exchanged(**{ROLES_CLAIM: {"admin": {}}}), session_sub=NURSE)
+
+
+def test_the_agent_gets_no_ward_its_nurse_does_not_have(verifier):
+    both = {"nurse_wb1": {}, "nurse_wb2": {}}
+    with pytest.raises(InvalidToken):
+        verifier.verify(exchanged(**{ROLES_CLAIM: both}), NURSE, session_wards=("wb1",))
+    agent = verifier.verify(exchanged(), NURSE, session_wards=("wb1",))
+    assert agent.ward_ids == ("wb1",)

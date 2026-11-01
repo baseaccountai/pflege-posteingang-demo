@@ -206,3 +206,14 @@ def test_without_complete_configuration_there_is_no_agent(values):
 def test_the_signing_key_must_be_an_ec_p256_key():
     with pytest.raises(ValueError, match="P-256"):
         SelfSignedIssuer("not a key", AUDIENCE, AGENT, ROLES_CLAIM)
+
+
+@pytest.mark.parametrize("seconds", [0, 301, 3600])
+def test_the_agent_token_lifetime_cannot_be_configured_beyond_five_minutes(seconds):
+    # Review phase 7: F08-AC1 says at most 5 minutes - a typo in the env must not widen it.
+    from pydantic import ValidationError
+
+    from app.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(agent_token_max_seconds=seconds)

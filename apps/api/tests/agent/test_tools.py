@@ -80,6 +80,12 @@ async def test_an_unknown_tool_is_refused():
         ("wiedervorlage_vorschlagen", {"bewohner_id": RESIDENT, "titel": ""}),
         ("wiedervorlage_vorschlagen", {"bewohner_id": RESIDENT, "titel": "   "}),
         ("wiedervorlage_vorschlagen", {"bewohner_id": RESIDENT, "titel": "x" * 121}),
+        # Review phase 7: a title stays in the record once confirmed - no links (F07-AC10).
+        (
+            "wiedervorlage_vorschlagen",
+            {"bewohner_id": RESIDENT, "titel": "Bitte https://evil.example aufrufen"},
+        ),
+        ("wiedervorlage_vorschlagen", {"bewohner_id": RESIDENT, "titel": "<img src=x>"}),
         (
             "wiedervorlage_vorschlagen",
             {"bewohner_id": RESIDENT, "titel": "Kontrolle", "faellig_am": "morgen"},

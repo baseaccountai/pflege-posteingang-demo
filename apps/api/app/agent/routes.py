@@ -83,7 +83,7 @@ async def run_task(request: Request, caller: Caller, body: Task):
 
     try:
         agent_token = await tokens.issuer.issue(caller.token, caller.claims)
-        agent = tokens.verifier.verify(agent_token, nurse.sub)
+        agent = tokens.verifier.verify(agent_token, nurse.sub, nurse.ward_ids)
     except (AgentTokenUnavailable, InvalidToken):
         log.exception("no agent token")  # the exception names no token (token_exchange.py)
         return error(503, "agent_unavailable", AGENT_DOWN)
@@ -194,7 +194,7 @@ async def confirm_proposal(request: Request, caller: Caller, proposal_id: str):
     # Step 2 as the agent, with a fresh agent token: RLS allows exactly this follow-up.
     try:
         agent_token = await tokens.issuer.issue(caller.token, caller.claims)
-        agent = tokens.verifier.verify(agent_token, nurse.sub)
+        agent = tokens.verifier.verify(agent_token, nurse.sub, nurse.ward_ids)
     except (AgentTokenUnavailable, InvalidToken):
         log.exception("no agent token")
         return error(503, "agent_unavailable", AGENT_DOWN)

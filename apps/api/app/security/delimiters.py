@@ -7,8 +7,8 @@ import re
 
 
 def defuse(text: str, tags: tuple[str, ...]) -> str:
-    """ "</abschnitt>" in a text becomes "‹/abschnitt>": still readable, no marker any more."""
-    pattern = re.compile(r"</?\s*(" + "|".join(map(re.escape, tags)) + r")\b", re.IGNORECASE)
+    """ "</abschnitt>" (also "< /abschnitt>") becomes "‹/abschnitt>": readable, no marker."""
+    pattern = re.compile(r"<\s*/?\s*(" + "|".join(map(re.escape, tags)) + r")\b", re.IGNORECASE)
     return pattern.sub(lambda m: "‹" + m.group(0)[1:], text)
 
 

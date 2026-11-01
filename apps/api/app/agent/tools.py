@@ -42,6 +42,7 @@ from app.extraction.resident_match import suggest_resident
 from app.privacy.gateway import ModelGateway
 from app.rag.retrieval import retrieve
 from app.residents.routes import TODAY, get_record
+from app.security.output import unsafe_output
 
 MAX_FOLLOW_UPS = 20  # enough for one ward; keeps the tool result small for the model
 NOT_FOUND = {"gefunden": False}  # foreign and unknown look exactly alike (AC10)
@@ -99,6 +100,14 @@ class ProposalArgs(Arguments):
     bewohner_id: uuid.UUID = Field(description="ID des Bewohners.")
     titel: Title = Field(description="Was zu tun ist, höchstens 120 Zeichen.")
     faellig_am: date | None = Field(None, description="Fälligkeitsdatum (JJJJ-MM-TT), ab heute.")
+
+    @field_validator("titel")
+    @classmethod
+    def no_links_or_markup(cls, title: str) -> str:
+        # Confirmed, the title stays in the record: the same check as for answers (F07-AC10).
+        if unsafe_output(title):
+            raise ValueError("Titel enthält Links oder Markup")
+        return title
 
     @field_validator("faellig_am")
     @classmethod

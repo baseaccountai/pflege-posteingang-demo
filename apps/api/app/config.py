@@ -7,6 +7,7 @@ Providers are switched by configuration only (never by code changes):
 
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -51,7 +52,8 @@ class Settings(BaseSettings):
     agent_exchange_client_id: str = ""  # secret pair of the app allowed to exchange
     agent_exchange_client_secret: str = ""
     agent_signing_key: str = ""  # self_signed only: EC P-256 private key (PEM), secret
-    agent_token_max_seconds: int = 300  # accepted at most this long after iat (F08-AC1)
+    # Accepted at most this long after iat; capped: F08-AC1 says at most 5 minutes.
+    agent_token_max_seconds: int = Field(300, ge=1, le=300)
 
 
 def get_settings() -> Settings:
