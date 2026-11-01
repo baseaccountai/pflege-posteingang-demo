@@ -40,7 +40,8 @@ from app.security.screening import Screener, Screening
 
 log = logging.getLogger(__name__)
 
-# F02-AC8: a step that takes longer than 5 minutes fails with "timeout".
+# F02-AC8: a step that takes longer than 5 minutes fails with "timeout"
+# (PIPELINE_STEP_SECONDS, longer only in the fully local mode).
 STEP_TIMEOUT_SECONDS = 300
 
 
@@ -364,7 +365,9 @@ class Pipeline:
             return await cur.fetchone() is not None
 
 
-async def mark_stalled(db: Database, principal: Principal) -> None:
+async def mark_stalled(
+    db: Database, principal: Principal, step_seconds: int = STEP_TIMEOUT_SECONDS
+) -> None:
     """F02-AC9: documents stuck after a restart become failed/timeout instead of "in progress".
 
     Runs before the inbox is listed; RLS limits it to the caller's wards. "uploaded" for more
@@ -377,6 +380,7 @@ async def mark_stalled(db: Database, principal: Principal) -> None:
             set status = 'failed', error_code = 'timeout', status_changed_at = now()
             where (status = 'uploaded' and status_changed_at < now() - interval '2 minutes')
                or (status in ('processing', 'screening', 'extracting')
-                   and status_changed_at < now() - interval '5 minutes')
-            """
+                   and status_changed_at < now() - make_interval(secs => %s))
+            """,
+            [step_seconds],
         )

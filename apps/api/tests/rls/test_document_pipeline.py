@@ -222,6 +222,16 @@ async def test_stalled_documents_are_marked_as_timeout(db, seeded):
     assert state(other_ward)[0] == "processing"  # RLS: WB1 cannot touch WB2
 
 
+async def test_the_local_mode_waits_longer_before_a_document_counts_as_stalled(db, seeded):
+    # F02-AC8/AC9 with PIPELINE_STEP_SECONDS: qwen3:8b needs ~13 min for a suggestion on a
+    # laptop CPU (01.11.2026); the public demo keeps its 5 minutes.
+    busy = new_document(status="extracting", age_minutes=20)
+    stuck = new_document(status="extracting", age_minutes=31)
+    await mark_stalled(db, NURSE_WB1, step_seconds=1800)
+    assert state(busy)[0] == "extracting"
+    assert state(stuck)[:2] == ("failed", "timeout")
+
+
 async def test_retry_after_a_crash_before_ocr_starts_with_ocr(db, seeded):
     doc = new_document(status="uploaded", age_minutes=3)
     await mark_stalled(db, NURSE_WB1)

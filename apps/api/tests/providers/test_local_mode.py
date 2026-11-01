@@ -29,3 +29,9 @@ def test_the_ollama_timeout_is_two_minutes_unless_the_local_mode_sets_more():
         gateway = create_gateway(Settings(llm_provider="ollama", **extra), db=None)
         assert gateway.llm.timeout == gateway.guard.timeout == expected
         assert gateway.embeddings.timeout == expected
+
+
+def test_the_pipeline_step_limit_is_five_minutes_unless_the_local_mode_sets_more(monkeypatch):
+    assert Settings().pipeline_step_seconds == 300  # F02-AC8, public demo
+    monkeypatch.setenv("PIPELINE_STEP_SECONDS", "1800")  # set by `make up-local`
+    assert Settings().pipeline_step_seconds == 1800

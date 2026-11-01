@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     # The agent's own token (F08, ADR 0012). "exchange": Zitadel exchanges the nurse's token
     # (RFC 8693); "self_signed": the API signs it (fallback where the IdP has no exchange).
     # Without AGENT_ID and the mode's secrets there is no agent (its routes answer 503).
+    # F02-AC8/AC9: one processing step (OCR, check, suggestion) and when a document counts
+    # as stalled. 300 s publicly; the local CPU model needs ~13 min for a suggestion.
+    pipeline_step_seconds: int = Field(300, ge=60, le=3600)
     # F08-AC12: the whole agent task. 60 s publicly; the local CPU model needs minutes.
     agent_max_seconds: int = Field(60, ge=1, le=600)
     agent_token_mode: Literal["exchange", "self_signed"] = "exchange"

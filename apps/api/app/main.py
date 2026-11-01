@@ -89,6 +89,7 @@ def create_app(
                 database,
                 ocr,
                 Extractor(app.state.gateway, book_retry),
+                step_timeout=settings.pipeline_step_seconds,
                 screener=Screener(app.state.gateway, book_guard),
             )
             app.state.indexer = Indexer(database, app.state.gateway)

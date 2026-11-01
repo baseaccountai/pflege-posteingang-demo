@@ -140,7 +140,8 @@ async def upload_document(
 @router.get("")
 async def list_documents(request: Request, principal: Caller, status: str | None = None):
     db = database(request)
-    await mark_stalled(db, principal)  # F02-AC9, before the list is read
+    # F02-AC9, before the list is read
+    await mark_stalled(db, principal, request.app.state.settings.pipeline_step_seconds)
     async with db.as_principal(principal) as conn:
         cur = conn.cursor(row_factory=dict_row)
         # No ward filter on purpose: RLS decides which documents exist for this caller.
