@@ -12,11 +12,11 @@
 - [x] **8. Abnahme öffentlich** — Handy-Installation, Region, API-Health auf Vercel; Ergebnisse im Phasenbericht
   - Nachweis 28.10.2026: API `/health/ready` db ok, Auslieferung aus fra1 (`x-vercel-id: fra1::…`), CSP mit Nonce und HSTS live; Anmeldung als `pflege-wb1` öffentlich; App auf dem Handy installiert, startet ohne Adressleiste (standalone); pro Commit genau ein Produktiv-Deployment je Vercel-Projekt, aus dem Workflow.
 
-## Phase 8 – Lokaler Betrieb komplett (Entwurf 01.11.2026, zur Freigabe)
+## Phase 8 – Lokaler Betrieb komplett (freigegeben 01.11.2026)
 
 Reihenfolge = Abhängigkeit. Jede Aufgabe: Test zuerst → rot → Code → grün → Commit. Alles läuft auf dem Bewerber-Rechner ohne Cloud-Konto; Claude kann jede Aufgabe selbst ausführen (keine `.env`, keine Schlüssel).
 
-- [ ] **9. Spike Keycloak** — `F11-AC15`, `F11-AC16` · Keycloak-Container von Hand mit Minimal-Realm starten; Login per Code+PKCE, Claim `roles` als Liste prüfen; Token Exchange (RFC 8693) versuchen und die Claims zeigen (`act`?) · Ergebnis als Abschnitt „Lokal“ in ADR 0012 · **Tor:** Aufgaben 10 und 13 erst danach · Commit `docs(adr): record the local agent token way`
+- [x] **9. Spike Keycloak** — `F11-AC15`, `F11-AC16` · Keycloak-Container von Hand mit Minimal-Realm starten; Login per Code+PKCE, Claim `roles` als Liste prüfen; Token Exchange (RFC 8693) versuchen und die Claims zeigen (`act`?) · Ergebnis als Abschnitt „Lokal“ in ADR 0012 · **Tor:** Aufgaben 10 und 13 erst danach · Commit `docs(adr): record the local agent token way` · erledigt 01.11.2026: kein `act` bei Keycloak 26.8 → lokal `self_signed`
 - [ ] **10. Keycloak-Realm** — `F11-AC15` · Test zuerst: `infra/keycloak/pflege-realm.json` enthält genau die drei Rollen und die Nutzer aus `demo-users.json`, PKCE S256 Pflicht, Direct Access Grant aus, Rollen-Mapper auf `roles` · `build_realm.py` erzeugt die Datei, Test vergleicht · Commit `feat(infra): add the keycloak realm`
 - [ ] **11. Docling anbinden** — `F11-AC17` · Unit-Tests mit `httpx.MockTransport`: Seiten-Markdown wie bei Mistral, Fehlerstatus/Zeitüberschreitung/Verbindungsfehler → `OcrUnavailable`, Foto (JPEG) geht ebenfalls · `DoclingOcr.extract` · eine echte Antwort von docling-serve als Fixture aufnehmen · Commit `feat(api): read documents with docling`
 - [ ] **12. Ollama vollständig** — `F11-AC18` · Tests: Fabrik erzeugt bei `ollama` für LLM, Prüfmodell und Embeddings nur Ollama-Clients, auch mit gesetztem `MISTRAL_API_KEY`; `chat_with_tools` gegen aufgenommene Ollama-Antworten (Werkzeugaufruf, Text, Fehler → `LlmUnavailable`); `structured` mit `format`-Schema · Lücken im Adapter schließen · Commit `feat(api): run every model role on ollama`

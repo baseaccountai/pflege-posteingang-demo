@@ -1,6 +1,6 @@
 # F11 – Docker Compose lokal, CI/CD, Deployment, PWA: Anforderungen
 
-Status: freigegeben 25.10.2026, geändert 27.10.2026 (API-Hosting Vercel statt Koyeb) · Stufe: 1 (Keycloak, Ollama, Docling: Phase 8, AC13–AC21 Entwurf 01.11.2026) · Bildschirme: alle
+Status: freigegeben 25.10.2026, geändert 27.10.2026 (API-Hosting Vercel statt Koyeb) · Stufe: 1 (Keycloak, Ollama, Docling: Phase 8, AC13–AC21 freigegeben 01.11.2026) · Bildschirme: alle
 
 ## Einführung
 
@@ -34,7 +34,7 @@ Die Demo läuft öffentlich (Vercel für Web und API + Supabase + Zitadel) und l
 
 ## Phase 8 – Lokaler Betrieb komplett
 
-Status: **Entwurf 01.11.2026, zur Freigabe durch den Bewerber** · Grundlage: Design 3 („komplett lokal betreibbar“), 5.1 (Tabelle öffentlich/lokal), 10 (Docling braucht RAM) · Ergänzt F11-AC5.
+Status: **freigegeben 01.11.2026** · Grundlage: Design 3 („komplett lokal betreibbar“), 5.1 (Tabelle öffentlich/lokal), 10 (Docling braucht RAM) · Ergänzt F11-AC5.
 
 - **US-4:** Als Professor möchte ich sehen, dass dieselbe Anwendung ohne jeden Cloud-Dienst läuft – Login, OCR, Modelle und Datenbank auf einem Rechner –, damit „im lokalen Modus sieht kein fremdes Modell die Daten“ belegt ist.
 

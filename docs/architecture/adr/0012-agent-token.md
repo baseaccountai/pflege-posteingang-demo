@@ -56,3 +56,18 @@ Das Nutzer-Token hat dieselben Claims **ohne** `act`; das Agenten-Token aus Clie
 − **Instanzweite Einstellung:** „Allow Impersonation“ gilt für die ganze Instanz; begrenzt wird es durch die Rolle `ORG_END_USER_IMPERSONATOR` (nur ein Service-User, nur Endnutzer) und den Grant an nur einer App.
 − **Bekannte Lücke im Tausch-Endpunkt:** CVE-2026-56668 (GHSA-vrh8-c9cm-wh8v, CVSS 8.1, behoben in Zitadel v4.15.3, veröffentlicht 14.09.2026): Zitadel prüfte nicht, ob das eingetauschte Token zum anfragenden Client gehört, und erzwang angefragte Scopes nicht. Zitadel Cloud sollte gepatcht sein (Version nicht von außen geprüft). Unsere API vertraut dem getauschten Token deshalb nicht allein: Sie prüft `sub` gegen die Sitzung, `act.sub` gegen `AGENT_ID` und die Zielgruppe selbst.
 − Die Einrichtung (Service-User, Rolle, Tausch-App) steht noch im Spike-Skript; sie wandert mit F08 in `infra/zitadel/setup.py`. „Allow Impersonation“ bleibt ein Handgriff in der Konsole.
+
+## Lokal (Keycloak) – Spike 01.11.2026 (F11-AC16)
+
+Geprüft mit `quay.io/keycloak/keycloak:26.8.0` und einem Minimal-Realm („Standard Token Exchange“, Client-Attribut `standard.token.exchange.enabled`):
+
+| Versuch | Ergebnis |
+|---|---|
+| Tausch eines Nutzer-Tokens durch den Tausch-Client | erst `403 Client is not within the token audience`; mit dem Tausch-Client in der Audience des Nutzer-Tokens: 200 |
+| Inhalt des getauschten Tokens | gleicher `sub`, `azp` = Tausch-Client, **kein `act`**, keine Rollen, keine Audience (nur über eigene Mapper), Laufzeit 300 s (Realm-Standard) |
+| zusätzlich `actor_token` (Client-Credentials-Token des Tausch-Clients) | 200, `actor_token` wird **ignoriert**, weiterhin kein `act` |
+| `audience=<Tausch-Client>` | `400 Requested audience not available` |
+
+**Entscheidung lokal:** `AGENT_TOKEN_MODE=self_signed` (Rückfall b). Keycloak bestätigt keine Delegation im Token; ein festes `act` per Mapper wäre eine Behauptung des Clients, keine geprüfte Delegation, und bräuchte eine zweite Variante des Tausch-Codes. Die API prüft das selbst signierte Token wie das von Zitadel (`act.sub`, `sub` = Sitzung, ≤ 300 s, Wohnbereiche ⊆ Nutzer). `/projekt` zeigt den Weg an (F08-AC2).
+
+Nebenbefunde für den Realm: Ohne den Standard-Scope `basic` fehlt `sub` im Token (Realm-Import nicht mit leerer `clientScopes`-Liste anlegen). Keycloak braucht auf dem Bewerber-Rechner rund 75 s zum Start (Startskript wartet bis 180 s) und ~0,6 GB RAM.
