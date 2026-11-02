@@ -41,6 +41,14 @@ class AgentTokenVerifier:
     def verify(
         self, token: str, session_sub: str, session_wards: tuple[str, ...] | None = None
     ) -> Principal:
+        return self.verify_until(token, session_sub, session_wards)[0]
+
+    def verify_until(
+        self, token: str, session_sub: str, session_wards: tuple[str, ...] | None = None
+    ) -> tuple[Principal, float]:
+        """The principal and the time (Unix seconds) after which the token is no longer
+        accepted - exp or iat + max_age, whichever comes first. The task ends there too
+        (Codex review phase 8)."""
         claims = self.tokens.decode(token)
         act = claims.get("act")
         if not isinstance(act, dict) or act.get("sub") != self.agent_id:
@@ -60,4 +68,5 @@ class AgentTokenVerifier:
         # The agent never gets more than its nurse: no ward she does not have herself.
         if session_wards is not None and not set(principal.ward_ids) <= set(session_wards):
             raise InvalidToken("agent token has a ward the user does not have")
-        return dataclasses.replace(principal, actor_type="agent")
+        valid_until = min(float(claims["exp"]), issued + self.max_age)
+        return dataclasses.replace(principal, actor_type="agent"), valid_until

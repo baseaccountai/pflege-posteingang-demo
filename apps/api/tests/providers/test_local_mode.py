@@ -5,6 +5,8 @@ all go to Ollama - also when a MISTRAL_API_KEY happens to be set, so no text lea
 computer by mistake ("im lokalen Modus sieht kein fremdes Modell die Daten").
 """
 
+import pytest
+
 from app.config import Settings
 from app.privacy.gateway import create_gateway
 from app.providers.embeddings.ollama import OllamaEmbeddings
@@ -34,4 +36,40 @@ def test_the_ollama_timeout_is_two_minutes_unless_the_local_mode_sets_more():
 def test_the_pipeline_step_limit_is_five_minutes_unless_the_local_mode_sets_more(monkeypatch):
     assert Settings().pipeline_step_seconds == 300  # F02-AC8, public demo
     monkeypatch.setenv("PIPELINE_STEP_SECONDS", "1800")  # set by `make up-local`
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
     assert Settings().pipeline_step_seconds == 1800
+
+
+# --- longer limits only in the local mode (Codex review phase 8) -----------------------------
+
+
+@pytest.mark.parametrize("provider", ["mistral", "fake"])
+@pytest.mark.parametrize(
+    "longer",
+    [
+        {"agent_max_seconds": 61},
+        {"pipeline_step_seconds": 301},
+        {"agent_token_max_seconds": 301},
+    ],
+    ids=["agent", "pipeline-step", "agent-token"],
+)
+def test_longer_local_limits_are_refused_outside_the_local_mode(provider, longer):
+    # Local env variables copied into Vercel by mistake must not stretch the public limits.
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="LLM_PROVIDER=ollama"):
+        Settings(llm_provider=provider, **longer)
+
+
+def test_the_local_mode_may_set_ten_minutes_for_the_agent_and_its_token():
+    settings = Settings(llm_provider="ollama", agent_max_seconds=600, agent_token_max_seconds=600)
+    assert (settings.agent_max_seconds, settings.agent_token_max_seconds) == (600, 600)
+
+
+def test_a_task_may_not_outlast_the_agent_token():
+    # Codex review phase 8: 600 s for the task, 300 s for the token - the agent kept working
+    # after its delegation had expired.
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="AGENT_TOKEN_MAX_SECONDS"):
+        Settings(llm_provider="ollama", agent_max_seconds=600, agent_token_max_seconds=300)

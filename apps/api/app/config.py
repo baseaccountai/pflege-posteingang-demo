@@ -7,7 +7,7 @@ Providers are switched by configuration only (never by code changes):
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -60,8 +60,29 @@ class Settings(BaseSettings):
     agent_exchange_client_id: str = ""  # secret pair of the app allowed to exchange
     agent_exchange_client_secret: str = ""
     agent_signing_key: str = ""  # self_signed only: EC P-256 private key (PEM), secret
-    # Accepted at most this long after iat; capped: F08-AC1 says at most 5 minutes.
-    agent_token_max_seconds: int = Field(300, ge=1, le=300)
+    # Accepted at most this long after iat; F08-AC1 says at most 5 minutes. Only the local
+    # mode may give it as long as its task, up to 10 minutes (Codex review phase 8).
+    agent_token_max_seconds: int = Field(300, ge=1, le=600)
+
+    @model_validator(mode="after")
+    def _longer_limits_only_locally(self) -> "Settings":
+        """The local CPU model needs minutes (`make up-local`). Such values copied into the
+        public deployment by mistake would stretch its limits (Codex review phase 8)."""
+        public = {
+            "agent_max_seconds": 60,
+            "pipeline_step_seconds": 300,
+            "agent_token_max_seconds": 300,
+        }
+        if self.llm_provider != "ollama":
+            for name, limit in public.items():
+                if getattr(self, name) > limit:
+                    raise ValueError(
+                        f"{name.upper()} > {limit} only in the local mode (LLM_PROVIDER=ollama)"
+                    )
+        if self.agent_max_seconds > self.agent_token_max_seconds:
+            # The agent must not keep working after its delegation has expired.
+            raise ValueError("AGENT_MAX_SECONDS must not exceed AGENT_TOKEN_MAX_SECONDS")
+        return self
 
 
 def get_settings() -> Settings:

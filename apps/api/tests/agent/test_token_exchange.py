@@ -208,12 +208,30 @@ def test_the_signing_key_must_be_an_ec_p256_key():
         SelfSignedIssuer("not a key", AUDIENCE, AGENT, ROLES_CLAIM)
 
 
-@pytest.mark.parametrize("seconds", [0, 301, 3600])
-def test_the_agent_token_lifetime_cannot_be_configured_beyond_five_minutes(seconds):
+@pytest.mark.parametrize(
+    ("provider", "seconds"), [("mistral", 0), ("mistral", 301), ("ollama", 601)]
+)
+def test_the_agent_token_lifetime_cannot_be_configured_beyond_its_limit(provider, seconds):
     # Review phase 7: F08-AC1 says at most 5 minutes - a typo in the env must not widen it.
+    # Only the local mode may give it as long as its task (Codex review phase 8): 10 minutes.
     from pydantic import ValidationError
 
     from app.config import Settings
 
     with pytest.raises(ValidationError):
-        Settings(agent_token_max_seconds=seconds)
+        Settings(llm_provider=provider, agent_token_max_seconds=seconds)
+
+
+async def test_the_verifier_tells_until_when_the_token_may_be_used():
+    # Codex review phase 8: the task must end when its delegation ends - at exp or at
+    # iat + max_age, whichever comes first.
+    import time
+
+    issuer = SelfSignedIssuer(pem(), AUDIENCE, AGENT, ROLES_CLAIM, lifetime=120)
+    token, user_claims = nurse()
+    agent_token = await issuer.issue(token, user_claims)
+    for max_age, seconds in [(60, 60), (300, 120)]:
+        verifier = AgentTokenVerifier(issuer.verifier(), AGENT, ROLES_CLAIM, max_age=max_age)
+        principal, valid_until = verifier.verify_until(agent_token, session_sub="user-1")
+        assert principal.actor_type == "agent"
+        assert time.time() + seconds - 2 <= valid_until <= time.time() + seconds

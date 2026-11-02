@@ -13,6 +13,7 @@ Order of the steps:
 
 import asyncio
 import logging
+import time
 import uuid
 from typing import Annotated
 
@@ -87,7 +88,9 @@ async def run_task(request: Request, caller: Caller, body: Task):
             if stopped is not None:
                 return stopped
             agent_token = await tokens.issuer.issue(caller.token, caller.claims)
-            agent = tokens.verifier.verify(agent_token, nurse.sub, nurse.ward_ids)
+            agent, valid_until = tokens.verifier.verify_until(
+                agent_token, nurse.sub, nurse.ward_ids
+            )
             del agent_token  # used once, for the principal above
     except (AgentTokenUnavailable, InvalidToken):
         log.exception("no agent token")  # the exception names no token (token_exchange.py)
@@ -102,6 +105,10 @@ async def run_task(request: Request, caller: Caller, body: Task):
             "model": gateway.llm_model,
             "stopped": True,
         }
+
+    # The agent acts no longer than its token allows (Codex review phase 8).
+    loop = asyncio.get_running_loop()
+    deadline = min(deadline, loop.time() + (valid_until - time.time()))
 
     async def book() -> None:
         async with db.as_principal(agent) as conn:

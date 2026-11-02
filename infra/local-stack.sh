@@ -182,6 +182,9 @@ case "$MODE" in
       -e OLLAMA_EMBED_MODEL="$OLLAMA_EMBED_MODEL" -e DOCLING_BASE_URL=http://localhost:5001
       # qwen3:8b on a CPU-only laptop: ~4 tokens/s in, ~1.3 tokens/s out (01.11.2026).
       -e OLLAMA_TIMEOUT_SECONDS=1800 -e AGENT_MAX_SECONDS=600 -e PIPELINE_STEP_SECONDS=1800
+      # The agent's token lives as long as its task, never shorter (ADR 0012, Codex review
+      # phase 8); the API refuses these values unless LLM_PROVIDER=ollama.
+      -e AGENT_TOKEN_MAX_SECONDS=600
       # bge-m3 calibrated 01.11.2026 (rag_probe --local): hits 0.49-0.71, off-topic <= 0.35.
       -e RAG_MIN_SIMILARITY=0.45)
     run api "${LOCAL_DB[@]}" "${LOCAL_LLM[@]}" \

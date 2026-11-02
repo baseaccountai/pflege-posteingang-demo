@@ -15,11 +15,11 @@ Stand: 01.11.2026 · Einzige Übersicht; `.env.example` listet dieselben Namen o
 | `AGENT_ID` | API | Stufe 2 | – | nein | erwartetes `act.sub` (Service-User des Agenten), F08 |
 | `AGENT_CLIENT_ID`, `AGENT_CLIENT_SECRET` | API | bei `exchange` | – | **ja** (Secret) | Zugang des Agenten-Service-Users zum Token-Endpunkt, F08 |
 | `AGENT_SIGNING_KEY` | API | bei `self_signed` | – | **ja** | ES256-Schlüssel für selbst ausgestellte Agenten-Tokens, F08 |
-| `AGENT_TOKEN_MAX_SECONDS` | API | nein | `300` | nein | längste angenommene Laufzeit eines Agenten-Tokens, F08 |
+| `AGENT_TOKEN_MAX_SECONDS` | API | nein | `300` | nein | längste angenommene Laufzeit eines Agenten-Tokens, F08-AC1; der Auftrag endet spätestens dann. Nur mit `LLM_PROVIDER=ollama` bis 600 (`make up-local` setzt 600, ADR 0012); nie kleiner als `AGENT_MAX_SECONDS` |
 | `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBED_MODEL` | API | bei `ollama` (Phase 8) | `http://localhost:11434`, `qwen3:8b`, `bge-m3` | nein | lokales LLM; das Embedding-Modell muss 1024 Dimensionen liefern (sonst `EmbeddingUnavailable`) |
 | `OLLAMA_TIMEOUT_SECONDS` | API | nein | `120` | nein | Wartezeit je Ollama-Aufruf (10–1800 s); `make up-local` setzt 1800, weil `qwen3:8b` auf dem CPU-Laptop ~1,3 Tokens/s schreibt (F11-AC18) |
-| `PIPELINE_STEP_SECONDS` | API | nein | `300` | nein | Grenze je Verarbeitungsschritt und ab wann ein Dokument als hängend gilt (60–3600 s, F02-AC8/AC9); `make up-local` setzt 1800 (Feldvorschlag ~13 min) |
-| `AGENT_MAX_SECONDS` | API | nein | `60` | nein | Gesamtzeit eines Agent-Auftrags (1–600 s, F08-AC12); öffentlich 60, `make up-local` setzt 600 |
+| `PIPELINE_STEP_SECONDS` | API | nein | `300` | nein | Grenze je Verarbeitungsschritt und ab wann ein Dokument als hängend gilt (60–3600 s, F02-AC8/AC9); `make up-local` setzt 1800 (Feldvorschlag ~13 min); über 300 nur mit `LLM_PROVIDER=ollama` |
+| `AGENT_MAX_SECONDS` | API | nein | `60` | nein | Gesamtzeit eines Agent-Auftrags inkl. Injection-Prüfung und Token (1–600 s, F08-AC12); öffentlich 60, `make up-local` setzt 600; über 60 nur mit `LLM_PROVIDER=ollama` |
 | `DOCLING_BASE_URL` | API | bei `docling` (Phase 8) | `http://localhost:5001` | nein | lokale OCR (docling-serve, F11-AC17) |
 | `API_WAIT_SECONDS` | Web | nein | – | nein | nur lokal: so lange wartet das BFF bei schreibenden API-Aufrufen auf die erste Antwort (Node bricht sonst nach 300 s ab); `make up-local` setzt 1800 |
 | `RAG_MIN_SIMILARITY` | API | nein | `0.72` | nein | Treffer-Schwelle (F05), kalibriert mit mistral-embed am 28.10.2026. Lokal mit `bge-m3` setzt `make up-local` **0.45** (kalibriert 01.11.2026 mit `scripts/rag_probe.py --local`: echte Treffer 0,49–0,71, Frage ohne Bezug höchstens 0,35; nur 6 Fragen, knapper Abstand) |

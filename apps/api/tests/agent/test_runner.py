@@ -303,7 +303,8 @@ def test_the_agent_has_60_seconds_unless_the_local_mode_sets_more():
     from app.config import Settings
 
     assert agent_limits(Settings()) == Limits(seconds=60)
-    assert agent_limits(Settings(agent_max_seconds=300)) == Limits(seconds=300)
+    local = Settings(llm_provider="ollama", agent_max_seconds=300)
+    assert agent_limits(local) == Limits(seconds=300)
 
 
 @pytest.mark.parametrize("seconds", [0, 601])

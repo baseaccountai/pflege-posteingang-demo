@@ -48,8 +48,9 @@ def ward(record):  # noqa: F811
     admin("truncate public.usage_counters")
 
 
-def client(llm: FakeLlm, with_agent: bool = True) -> TestClient:
+def client(llm: FakeLlm, with_agent: bool = True, **extra) -> TestClient:
     settings = Settings(
+        **extra,
         database_url=GATEWAY_DSN,
         oidc_issuer=ISSUER,
         oidc_audience=AUDIENCE,
@@ -66,12 +67,12 @@ def client(llm: FakeLlm, with_agent: bool = True) -> TestClient:
     return TestClient(app)
 
 
-def order(llm: FakeLlm, task: str, with_agent: bool = True, **extra):
+def order(llm: FakeLlm, task: str, with_agent: bool = True, settings: dict | None = None, **extra):
     headers = {
         "Authorization": f"Bearer {access_token('u-nurse_wb1', 'nurse_wb1')}",
         "X-Bff-Assertion": bff_assertion(),
     }
-    with client(llm, with_agent) as api:
+    with client(llm, with_agent, **(settings or {})) as api:
         return api.post("/agent", headers=headers, json={"task": task, **extra})
 
 
@@ -198,14 +199,18 @@ def slow_check(monkeypatch):
 
 
 class SlowLlm(FakeLlm):
+    seconds = 0.3
+
     async def chat_with_tools(self, messages, tools, max_tokens):
         turn = await super().chat_with_tools(messages, tools, max_tokens)
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(self.seconds)
         return turn
 
 
-def endless() -> SlowLlm:
-    return SlowLlm(turns=[ChatTurn("", [ToolCall(f"c{n}", "unbekannt", {})]) for n in range(9)])
+def endless(seconds: float = 0.3) -> SlowLlm:
+    llm = SlowLlm(turns=[ChatTurn("", [ToolCall(f"c{n}", "unbekannt", {})]) for n in range(9)])
+    llm.seconds = seconds
+    return llm
 
 
 def test_a_slow_check_leaves_the_agent_no_time(ward, slow_check):
@@ -226,3 +231,16 @@ def test_the_time_of_the_check_counts_against_the_agent(ward, slow_check):
     response = order(llm, "Was steht an?")
     assert response.json()["stopped"]
     assert 1 <= len(llm.chats) <= 2
+
+
+def test_the_task_ends_when_the_agent_token_expires(ward, slow_check, monkeypatch):
+    # Codex review phase 8: the local task had 600 s, its token 300 s - the agent kept
+    # reading and proposing after its delegation had ended. The configuration refuses that
+    # now; the route caps the task at the token as well. Here: a token of 1 s, a task limit
+    # of 10 s and calls of 0.4 s - without the cap the agent makes all five calls.
+    monkeypatch.setattr("app.agent.routes.agent_limits", lambda settings: Limits(seconds=10.0))
+    llm = endless(0.4)
+    settings = {"agent_token_max_seconds": 1, "agent_max_seconds": 1}
+    response = order(llm, "Was steht an?", settings=settings)
+    assert response.json()["stopped"]
+    assert len(llm.chats) <= 3
