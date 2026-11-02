@@ -11,6 +11,7 @@ Order of the steps:
 5. One agent_task event closes the task (F12); without it the answer is not delivered.
 """
 
+import asyncio
 import logging
 import uuid
 from typing import Annotated
@@ -20,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app import audit
-from app.agent.runner import agent_limits, run_agent
+from app.agent.runner import LIMIT_ANSWER, agent_limits, run_agent
 from app.agent.token_exchange import AgentTokenUnavailable
 from app.agent.tools import ToolContext
 from app.auth.dependencies import VerifiedCaller, current_caller
@@ -75,19 +76,32 @@ async def run_task(request: Request, caller: Caller, body: Task):
     if tokens is None:
         return error(503, "agent_unavailable", AGENT_DOWN)
 
-    stopped = await check_request(
-        db, gateway, nurse, body.task, noter(nurse), "agent_task", refused
-    )
-    if stopped is not None:
-        return stopped
-
+    # One deadline for the whole task: check, agent token and loop (Codex review phase 7).
+    limits = agent_limits(request.app.state.settings)
+    deadline = asyncio.get_running_loop().time() + limits.seconds
     try:
-        agent_token = await tokens.issuer.issue(caller.token, caller.claims)
-        agent = tokens.verifier.verify(agent_token, nurse.sub, nurse.ward_ids)
+        async with asyncio.timeout_at(deadline):
+            stopped = await check_request(
+                db, gateway, nurse, body.task, noter(nurse), "agent_task", refused
+            )
+            if stopped is not None:
+                return stopped
+            agent_token = await tokens.issuer.issue(caller.token, caller.claims)
+            agent = tokens.verifier.verify(agent_token, nurse.sub, nurse.ward_ids)
+            del agent_token  # used once, for the principal above
     except (AgentTokenUnavailable, InvalidToken):
         log.exception("no agent token")  # the exception names no token (token_exchange.py)
         return error(503, "agent_unavailable", AGENT_DOWN)
-    del agent_token  # used once, for the principal above
+    except TimeoutError:
+        if not await noter(nurse)("agent_task"):
+            return error(503, "audit_unavailable", AUDIT_DOWN)
+        return {
+            "answer": LIMIT_ANSWER,
+            "tools_used": [],
+            "proposals": [],
+            "model": gateway.llm_model,
+            "stopped": True,
+        }
 
     async def book() -> None:
         async with db.as_principal(agent) as conn:
@@ -110,7 +124,8 @@ async def run_task(request: Request, caller: Caller, body: Task):
             body.resident_id,
             book=book,
             log=log_step,
-            limits=agent_limits(request.app.state.settings),
+            limits=limits,
+            deadline=deadline,
         )
     except QuotaExceeded as exceeded:
         return await quota_refused(db, agent, exceeded)

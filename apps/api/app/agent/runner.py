@@ -113,8 +113,22 @@ async def run_agent(
     book: Book,
     log: Log,
     limits: Limits = LIMITS,
+    deadline: float | None = None,
 ) -> AgentResult:
-    """QuotaExceeded, LlmUnavailable, PseudonymizationFailed and audit errors are passed on."""
+    """QuotaExceeded, LlmUnavailable, PseudonymizationFailed and audit errors are passed on.
+
+    `deadline` (event loop time) is set by the route before the injection check, so the
+    limit covers the whole task (Codex review phase 7); without it the time starts here."""
+    if deadline is None:
+        deadline = asyncio.get_running_loop().time() + limits.seconds
+    try:
+        async with asyncio.timeout_at(deadline):
+            return await _run(ctx, task, resident_id, book, log, limits)
+    except TimeoutError:
+        return AgentResult(answer=LIMIT_ANSWER, stopped=True)
+
+
+async def _run(ctx, task, resident_id, book, log, limits) -> AgentResult:
     pseudonymizer = await ctx.gateway.pseudonymizer()
     visible = await ctx.gateway.visible_residents(ctx.principal)
     own = [r for r in pseudonymizer.residents.values() if r.resident_id in visible]
@@ -133,11 +147,10 @@ async def run_agent(
         {"role": "user", "content": _task_message(pseudonymizer, mapping, task, own, chosen)},
     ]
     try:
-        async with asyncio.timeout(limits.seconds):
-            answer = await _loop(
-                ctx, messages, pseudonymizer, mapping, visible, result, limits, book, log
-            )
-    except (TimeoutError, _LimitReached):
+        answer = await _loop(
+            ctx, messages, pseudonymizer, mapping, visible, result, limits, book, log
+        )
+    except _LimitReached:
         result.answer, result.stopped = LIMIT_ANSWER, True
         return result
 

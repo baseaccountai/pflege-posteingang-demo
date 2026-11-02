@@ -2,11 +2,13 @@
 agent token (here the fallback way, self_signed) -> loop -> answer with the tools used and
 the proposals. The agent's steps are logged as the agent, the nurse's check as the nurse."""
 
+import asyncio
+
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
-from app.agent.runner import FOREIGN_ANSWER
+from app.agent.runner import FOREIGN_ANSWER, LIMIT_ANSWER, Limits
 from app.config import Settings
 from app.main import create_app
 from app.providers.embeddings.fake import FakeEmbeddings
@@ -173,3 +175,54 @@ def test_an_unavailable_model_gives_a_hint_and_an_error_event(ward):
     assert ("agent_task", "error", "agent", None, "llm_unavailable") in [
         e[:5] for e in events(ward)
     ]
+
+
+# --- one deadline for the whole task (Codex review phase 7) ---------------------------------
+
+
+@pytest.fixture
+def slow_check(monkeypatch):
+    """The injection check takes `delay` seconds; the task has 1 second in all."""
+    import app.agent.routes as routes
+
+    original = routes.check_request
+    delay = {"seconds": 0.0}
+
+    async def check(*args, **kwargs):
+        await asyncio.sleep(delay["seconds"])
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(routes, "check_request", check)
+    monkeypatch.setattr(routes, "agent_limits", lambda settings: Limits(seconds=1.0))
+    return delay
+
+
+class SlowLlm(FakeLlm):
+    async def chat_with_tools(self, messages, tools, max_tokens):
+        turn = await super().chat_with_tools(messages, tools, max_tokens)
+        await asyncio.sleep(0.3)
+        return turn
+
+
+def endless() -> SlowLlm:
+    return SlowLlm(turns=[ChatTurn("", [ToolCall(f"c{n}", "unbekannt", {})]) for n in range(9)])
+
+
+def test_a_slow_check_leaves_the_agent_no_time(ward, slow_check):
+    slow_check["seconds"] = 1.2
+    llm = endless()
+    response = order(llm, "Was steht an?")
+    assert response.status_code == 200
+    assert response.json()["answer"] == LIMIT_ANSWER and response.json()["stopped"]
+    assert llm.chats == []
+    assert ("agent_task", "ok") in [e[:2] for e in events(ward)]
+
+
+def test_the_time_of_the_check_counts_against_the_agent(ward, slow_check):
+    # Calls take 0.3 s. With the whole second the loop makes four (0, 0.3, 0.6, 0.9 s);
+    # after a check of 0.6 s only the remaining 0.4 s count: at most two.
+    slow_check["seconds"] = 0.6
+    llm = endless()
+    response = order(llm, "Was steht an?")
+    assert response.json()["stopped"]
+    assert 1 <= len(llm.chats) <= 2
