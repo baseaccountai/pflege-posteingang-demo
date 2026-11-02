@@ -120,6 +120,9 @@ def test_the_agent_is_told_it_cannot_ask_back():
 
     assert "keine Rückfragen" in SYSTEM_PROMPT
     assert "schlage sie direkt vor" in SYSTEM_PROMPT
+    # Second realtest: it named the open follow-up correctly, but ended with "Soll ich eine
+    # vorschlagen?" for the other residents.
+    assert "Beende die Antwort nie mit einer Frage" in SYSTEM_PROMPT
 
 
 async def test_the_model_is_told_todays_date():
