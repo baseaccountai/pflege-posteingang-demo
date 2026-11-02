@@ -20,6 +20,8 @@ failed ──Neuversuch──▶ processing (keine OCR) | screening (OCR vorhand
 
 **Schicht 2 – Klassifikator (AC4):** Ein Aufruf je Dokument (alle Abschnitte nummeriert in einem Prompt, Ausgabe JSON `[{section, injection, category, reason}]`) bzw. je Frage. Modell `GUARD_MODEL` (Standard `ministral-8b-latest`), Aufruf über das Gateway aus F06 (also pseudonymisiert). Zwei Kontingente (Umsetzung 29.10.2026, damit die Tagesobergrenze von F10 hält): `guard_document` (20/Tag; ein Aufruf prüft höchstens 20 000 Zeichen, längere Dokumente brauchen mehrere Aufrufe; Antwort ≤ 560 Tokens, Begründung höchstens 6 Wörter – zuerst 400 ohne Längenvorgabe; der F13-Bericht vom 31.10.2026 zeigte abgeschnittene Antworten, sobald 9 Abschnitte markiert waren; mehr als 583 Tokens sprengen die Tagesgrenze von F10) und `guard_question` (100/Tag; Frage oder Agent-Auftrag ≤ 500 Zeichen; Antwort ≤ 100 Tokens). Kosten in `costs.py` zu den Preisen von Mistral Small (sichere Obergrenze), ADR 0003. Antwortform kompakt: `checked` (Anzahl geprüfter Abschnitte) und `flagged` (nur verdächtige); stimmt `checked` nicht, gelten alle Abschnitte als verdächtig. Ungültiges JSON oder fehlende Abschnitte → alle betroffenen Abschnitte verdächtig.
 
+**Anfragen (AC15, AC16, ergänzt 02.11.2026):** Fragen und Agent-Aufträge prüft der Klassifikator mit einer eigenen Anweisung (`REQUEST_PROMPT`): Aufgaben im Rahmen der App und bloße Wünsche außerhalb davon sind keine Injection, nur Versuche, die KI umzusteuern (Regeln aufheben, Rolle/Modus, Bestätigung umgehen, Anweisungen oder Klarnamen preisgeben, Links/Bilder). Grund: Mit der Dokument-Anweisung („Aktionen auslösen“) hielt `ministral-8b-latest` im Realtest jeden Agent-Auftrag für einen Angriff. Ein unbrauchbares Urteil sperrt weiterhin (sicherer Ausfall), meldet aber 503 `screening_unusable` statt „als Versuch erkannt“; das Protokoll nennt `error_code = classifier_unusable` bzw. bei echtem Urteil `rule_id = classifier:<Kategorie>` (nur Kategorien aus fester Liste, sonst `classifier:other` – der Freitext des Modells kommt nie ins Protokoll).
+
 **Schicht 3 – Prompt-Aufbau (AC8):** Die Begrenzer-Logik aus `rag/answer.py` (`_defuse`) wandert nach `app/security/delimiters.py` und wird von F03, F05, F07-Klassifikator und F08 genutzt.
 
 **Schicht 4 – Minimale Rechte:** RLS (F01), Agenten-Token und Bestätigungspflicht (F08), menschliche Freigabe vor Indizierung (F03). Keine eigene Implementierung in F07; F13 testet die Wirkung („durchgerutschte“ Injection kann nichts schreiben).
@@ -54,7 +56,7 @@ failed ──Neuversuch──▶ processing (keine OCR) | screening (OCR vorhand
 | Methode | Pfad | Änderung |
 |---|---|---|
 | GET | `/documents`, `/documents/{id}` | + `screening`, `findings: [{layer, page, rule_id, category, excerpt, explanation}]` |
-| POST | `/questions` | 422 `{error_code: injection_detected, message}` (AC9) |
+| POST | `/questions` | 422 `{error_code: injection_detected, message}` (AC9) · 503 `screening_unusable` (AC16) |
 | POST | `/documents/{id}/retry` | gilt auch für `screening_unavailable` |
 
 ## Sicherheitsaspekte

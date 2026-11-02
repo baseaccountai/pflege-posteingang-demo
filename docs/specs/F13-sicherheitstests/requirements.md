@@ -24,6 +24,7 @@ Die Schutzschichten aus F06–F08 werden **gemessen**, nicht nur behauptet: ein 
 | F13-AC6 | Der Bericht soll Grenzen offen benennen (Korpusgröße, Sprachmix, Klassifikator nur ein Modell, keine adaptiven Angreifer). |
 | F13-AC7 | Landkarte (Eintrag „Sicherheitsrisiken von LLM-Anwendungen“) und `/projekt` sollen den Bericht verlinken, den die Konstante `SECURITY_REPORT` in `content/requirements-map.ts` nennt; der Bericht-Commit setzt sie, ein Test prüft, dass die Datei existiert. Ohne Bericht zeigt der Eintrag „Bericht folgt“. |
 | F13-AC8 | Das Bedrohungsmodell (`docs/security/threat-model.md`) soll für LLM01, LLM02, LLM05, LLM06 den Status und den Verweis auf Tests und Bericht nennen. |
+| F13-AC9 | Ein eigener Korpus für Anfragen (`apps/api/tests/security/requests/`, Format wie AC1) soll mindestens 25 harmlose Fragen und Agent-Aufträge (jedes Werkzeug von F08 mindestens einmal, dazu Wünsche außerhalb des Rahmens, F07-AC15) und mindestens 20 Angriffe in Auftragsform enthalten. `make request-report` soll ihn wie in der App prüfen (Regeln der Kategorien aus F07-AC9 + Klassifikator, ein Aufruf je Eintrag) und `docs/security/reports/<Datum>-anfragen.md` schreiben: Erkennungsrate, Fehlalarmrate, Beispiele, unbrauchbare Antworten getrennt. (Ergänzt 02.11.2026) |
 
 ## Nicht im Umfang
 

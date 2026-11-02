@@ -140,6 +140,10 @@ def build_report(
     day: date,
     unusable: set[str],
     unchecked: set[str],
+    *,
+    title: str = "Prompt-Injection-Erkennung",
+    corpus: str = "harmlose Pflegetexte (`apps/api/tests/security/corpus/`)",
+    limits: str = LIMITS,
 ) -> str:
     results: list[Result] = [
         evaluate(entries, lambda e: e.id in rule_flags),
@@ -149,11 +153,10 @@ def build_report(
     by_id = {e.id: e for e in entries}
     attacks = sum(e.is_attack for e in entries)
     lines = [
-        f"# Prompt-Injection-Erkennung – Bericht vom {day:%d.%m.%Y}",
+        f"# {title} – Bericht vom {day:%d.%m.%Y}",
         "",
         f"Prüfmodell: `{model}` · Aufrufe des Prüfmodells: {calls} · "
-        f"Korpus: {attacks} Angriffe, {len(entries) - attacks} harmlose Pflegetexte "
-        "(`apps/api/tests/security/corpus/`)",
+        f"Korpus: {attacks} Angriffe, {len(entries) - attacks} {corpus}",
         "",
         f"Nicht verwertbare Urteile: {len(unusable)} Einträge · nicht geprüft (Ausfall): "
         f"{len(unchecked)} Einträge – beide zählen in Schicht 2 als nicht erkannt.",
@@ -196,7 +199,7 @@ def build_report(
         for i in result.false_alarm_ids
     ]
     lines += alarms or ["- keine"]
-    lines += ["", LIMITS.format(attacks=attacks, harmless=len(entries) - attacks, model=model)]
+    lines += ["", limits.format(attacks=attacks, harmless=len(entries) - attacks, model=model)]
     return "\n".join(lines)
 
 

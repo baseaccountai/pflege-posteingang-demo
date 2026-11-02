@@ -14,7 +14,8 @@ from app.documents.routes import error, quota_refused
 from app.privacy.gateway import ModelGateway, PseudonymizationFailed
 from app.providers.llm.base import LlmUnavailable
 from app.quotas import QuotaExceeded, consume
-from app.security.classifier import classify_question
+from app.security.classifier import UNUSABLE, classify_question
+from app.security.evaluation import ATTACK_CATEGORIES
 from app.security.patterns import matching_rules
 
 INJECTION_MESSAGE = (
@@ -23,9 +24,21 @@ INJECTION_MESSAGE = (
 SCREENING_DOWN = (
     "Die Sicherheitsprüfung ist gerade nicht verfügbar – bitte später erneut versuchen."
 )
+# F07-AC16: the checker answered, but not with a usable verdict. Blocked all the same (fail
+# closed), yet the person is not told she attacked the AI - she did nothing wrong.
+SCREENING_UNUSABLE = (
+    "Die Sicherheitsprüfung lieferte kein verwertbares Ergebnis – bitte erneut versuchen."
+)
 REQUEST_CATEGORIES = {"ignore_instructions", "role_override", "addresses_ai", "outbound_link"}
 
 Note = Callable[..., Awaitable[bool]]
+
+
+def checker_rule(category: str) -> str:
+    """The checker's category for the audit log (F07-AC16) - only from a fixed list: the
+    model writes free text, and the log takes identifiers only (F12-AC3)."""
+    name = category.strip().lower()
+    return f"classifier:{name if name in ATTACK_CATEGORIES | REQUEST_CATEGORIES else 'other'}"
 
 
 async def check_request(
@@ -57,7 +70,16 @@ async def check_request(
         return error(503, "screening_unavailable", SCREENING_DOWN)  # fail closed
     except PseudonymizationFailed:
         return await refused()
+    if verdict.category == UNUSABLE:
+        await note(
+            "blocked", "blocked", model=gateway.guard_model, layer="classifier",
+            error_code="classifier_unusable",
+        )  # fmt: skip
+        return error(503, "screening_unusable", SCREENING_UNUSABLE)
     if verdict.injection:
-        await note("blocked", "blocked", model=gateway.guard_model, layer="classifier")
+        await note(
+            "blocked", "blocked", model=gateway.guard_model, layer="classifier",
+            rule_id=checker_rule(verdict.category),
+        )  # fmt: skip
         return error(422, "injection_detected", INJECTION_MESSAGE)
     return None

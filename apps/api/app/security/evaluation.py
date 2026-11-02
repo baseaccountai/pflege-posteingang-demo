@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 CORPUS_DIR = Path(__file__).parents[2] / "tests" / "security" / "corpus"
+# Questions and agent tasks (F13-AC9): measured apart, with the request instruction.
+REQUESTS_DIR = Path(__file__).parents[2] / "tests" / "security" / "requests"
 ATTACK_CATEGORIES = frozenset(
     {
         "role_override",

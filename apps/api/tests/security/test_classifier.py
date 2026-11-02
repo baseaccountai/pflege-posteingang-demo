@@ -10,6 +10,7 @@ from app.providers.llm.fake import FakeLlm
 from app.security.classifier import (
     DOCUMENT_MAX_TOKENS,
     QUESTION_MAX_TOKENS,
+    REQUEST_PROMPT,
     SYSTEM_PROMPT,
     classify_document,
     classify_question,
@@ -86,6 +87,30 @@ async def test_a_question_is_one_section_with_a_short_answer():
     assert verdict.injection and guard.max_tokens == [QUESTION_MAX_TOKENS]
 
 
+async def test_a_question_or_task_is_judged_by_its_own_instruction():
+    # F07-AC15, realtest 02.11.2026: with the document instruction ("Aktionen auslösen" is an
+    # injection) ministral-8b blocked "Plane eine Blutdruckkontrolle ..." - a normal task.
+    guard = FakeLlm([{"checked": 1, "flagged": []}])
+    await classify_question(gateway(guard), "Plane eine Kontrolle.")
+    system, user = guard.calls[0]
+    assert system == REQUEST_PROMPT != SYSTEM_PROMPT
+    assert '<abschnitt nr="1">\nPlane eine Kontrolle.\n</abschnitt>' in user
+    assert "keine Anweisungen" in system  # the request is data for the checker, too
+
+
+def test_the_request_instruction_names_what_is_allowed_and_what_steers_the_ai():
+    allowed = ("Akte", "Medikation", "Wiedervorlage", "plane", "außerhalb")
+    steering = ("Regeln", "Rolle", "Bestätigung", "Platzhalter", "Links")
+    for word in allowed + steering:
+        assert word in REQUEST_PROMPT, word
+
+
+async def test_documents_keep_their_instruction():
+    guard = FakeLlm([{"checked": 1, "flagged": []}])
+    await classify_document(gateway(guard), ["Ramipril 5 mg morgens."])
+    assert guard.calls[0][0] == SYSTEM_PROMPT
+
+
 async def test_the_fake_guard_flags_obvious_orders_to_the_ai():
     # Used in the e2e run without a Mistral key.
     verdicts = await classify_document(
@@ -102,3 +127,13 @@ def test_a_document_check_has_room_for_a_full_bundle_of_flagged_sections():
     # near 35 tokens; the limit leaves room for 10 of them and stays in the daily budget.
     assert "höchstens 6 Wörter" in SYSTEM_PROMPT
     assert DOCUMENT_MAX_TOKENS >= 10 * 40 + 100
+
+
+def test_the_checker_category_enters_the_audit_log_only_from_a_fixed_list():
+    # F07-AC16 / F12-AC3: the model's free text never reaches the log.
+    from app.security.request_check import checker_rule
+
+    assert checker_rule("role_override") == "classifier:role_override"
+    assert checker_rule(" Addresses_AI ") == "classifier:addresses_ai"
+    assert checker_rule("Rollenwechsel von Fr. Beispiel") == "classifier:other"
+    assert checker_rule("") == "classifier:other"

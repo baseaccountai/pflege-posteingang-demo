@@ -1,4 +1,4 @@
-.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles project-description screens keycloak-realm reindex up-local smoke-local
+.PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report request-report up-test smoke db-local-roles project-description screens keycloak-realm reindex up-local smoke-local
 
 SUPABASE := pnpm dlx supabase@2.122.0
 # Docker network whose published ports bind to 127.0.0.1 only: by default `supabase start`
@@ -66,6 +66,10 @@ rag-probe:
 # (applicant, own terminal; reads only MISTRAL_API_KEY from .env; resets the LOCAL database)
 security-report:
 	cd apps/api && PYTHONPATH=../.. uv run python -m scripts.security_report ../../.env
+
+# Questions and agent tasks, checked like in the app (F13-AC9); resets the LOCAL database
+request-report:
+	cd apps/api && PYTHONPATH=../.. uv run python -m scripts.request_report ../../.env $(ANWEISUNG)
 
 # Static sample record for /muster from the seed (F10-AC14); resets the local Supabase first
 sample-record:
