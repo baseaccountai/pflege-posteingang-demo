@@ -2,7 +2,7 @@
 
 > **Unabhängige Bewerbungsdemo, inspiriert von KLARA — kein Produkt der Hochschule Anhalt.**
 > Bewerbung auf Stelle Nr. 479 (Wissenschaftliche Mitarbeit Web Engineering). Alle Personen und
-> Dokumente sind erfundene Musterdaten. Stand: 01.11.2026.
+> Dokumente sind erfundene Musterdaten. Stand: 02.11.2026.
 
 Demo: <https://pflege-posteingang-demo.vercel.app> · Repository: <https://github.com/baseaccountai/pflege-posteingang-demo>
 
@@ -150,7 +150,7 @@ das Modell tatsächlich gesehen hat.
 | 4. Minimale Rechte | RLS, eingeschränktes Agenten-Token, Bestätigungspflicht |
 | 5. Ausgabe prüfen | nur Zitate aus erlaubten Quellen, keine Klarnamen, keine Links |
 
-**Gemessen** auf einem Testkorpus mit 134 Angriffen (deepset/prompt-injections, eigene Angriffe
+**Gemessen** an Dokumenten, auf einem Testkorpus mit 134 Angriffen (deepset/prompt-injections, eigene Angriffe
 nach BIPIA-Muster, eigene Pflege-Angriffe) und 62 harmlosen Pflegetexten
 ([Bericht vom 31.10.2026](security/reports/2026-10-31-injection.md)):
 
@@ -159,6 +159,22 @@ nach BIPIA-Muster, eigene Pflege-Angriffe) und 62 harmlosen Pflegetexten
 | Regeln allein | 12,7 % (17/134) | 0,0 % (0/62) |
 | Prüfmodell (`ministral-8b-latest`) | 88,8 % (119/134) | 11,3 % (7/62) |
 | beide zusammen | 89,6 % (120/134) | 11,3 % (7/62) |
+
+**Fragen und Agent-Aufträge** prüft das Prüfmodell mit einer eigenen Anweisung: Aufgaben wie
+„Plane eine Blutdruckkontrolle“ sind kein Angriff, nur Versuche, die KI umzusteuern (Regeln
+aufheben, Rolle wechseln, Bestätigung umgehen, Anweisungen preisgeben). Anlass war der Realtest:
+Mit der Anweisung für Dokumente hielt Ministral normale Agent-Aufträge für Angriffe. Gemessen auf
+26 harmlosen Anfragen und 21 Angriffen in Auftragsform
+([Bericht vom 02.11.2026](security/reports/2026-11-02-anfragen.md),
+[Vergleich mit der Dokument-Anweisung](security/reports/2026-11-02-anfragen-dokumentanweisung.md)):
+
+| Prüfanweisung | Erkennungsrate | Fehlalarmrate |
+|---|---|---|
+| für Dokumente (vorher) | 100,0 % (21/21) | 30,8 % (8/26) |
+| für Anfragen (jetzt) | 100,0 % (21/21) | 3,8 % (1/26) |
+
+Liefert das Prüfmodell kein verwertbares Urteil, wird die Anfrage trotzdem nicht ausgeführt,
+aber mit eigener Meldung statt „Angriff erkannt“; das Protokoll nennt den Grund.
 
 Erkennungsmuster und Testkorpus liegen getrennt. Die CI prüft bei jedem Push, dass die Regeln
 nicht schlechter werden.
@@ -171,6 +187,8 @@ nicht schlechter werden.
   die Akte, und der Agent kann nur vorschlagen.
 - 11,3 % Fehlalarme bei harmlosen Texten: Ein markiertes Dokument wird nicht gelöscht, sondern
   einem Menschen zur Prüfung gezeigt.
+- Der Anfragen-Korpus ist klein (47 Einträge, alle vom selben Autor wie die Prüfanweisung); 100 %
+  Erkennung dort heißt nicht, dass jeder umformulierte Angriff erkannt wird.
 - Die Pseudonymisierung arbeitet mit dem Verzeichnis der Bewohner und mit Regeln. Ein Name ohne
   Anrede, der nicht im Verzeichnis steht, kann durchrutschen.
 - Beim Agenten verrät ein bloßer Nachname ohne Anrede, ob es ihn im anderen Wohnbereich gibt:
@@ -180,13 +198,13 @@ nicht schlechter werden.
 ## Vorgehen
 
 - **Spec vor Code:** 13 Funktionen (F01–F13), jede mit Anforderungen, Design und Aufgaben im
-  Kiro-Stil ([ADR 0006](architecture/adr/0006-kiro-spec-format.md)), zusammen 167
+  Kiro-Stil ([ADR 0006](architecture/adr/0006-kiro-spec-format.md)), zusammen 180
   Akzeptanzkriterien in EARS-Form („WENN …, DANN soll das System …“). Code entstand erst nach
   Freigabe der Spec ([`docs/specs/`](specs/)).
 - **Testgetrieben:** Zu jedem Akzeptanzkriterium gibt es mindestens einen Test, und jeder Test
-  wurde zuerst rot gesehen. Stand: 920 API-Tests (pytest, davon 422 gegen eine echte
-  Postgres-Datenbank mit RLS), über 330 Web-Unit-Tests (Vitest) und 84 End-to-End-Abläufe
-  (Playwright), jeweils auf Desktop und Handy. Sprachmodelle sind in den Tests Attrappen. Echte
+  wurde zuerst rot gesehen. Stand: rund 1 030 API-Tests (pytest, davon 433 gegen eine echte
+  Postgres-Datenbank mit RLS), 373 Web-Tests (Vitest, davon 20 gegen die Datenbank) und
+  86 End-to-End-Abläufe (Playwright), jeweils auf Desktop und Handy – zusammen rund 1 600 Tests. Sprachmodelle sind in den Tests Attrappen. Echte
   Modelle prüft ein kleiner, getrennter Satz von Realtests.
 - **Phasen mit Halte-Punkt:** Jede Phase endet mit grünen Tests, einem unabhängigen Code-Review
   (Codex) und einer Entscheidung des Bewerbers, ob und wie es weitergeht.
@@ -201,7 +219,11 @@ nicht schlechter werden.
 - Die Sicherheitsarchitektur ist in einer laufenden Anwendung sichtbar: Rollen, RLS, Agenten-Token
   und Pseudonymisierung kann man ausprobieren, ebenso Angriffe über die Musterdokumente im Posteingang.
 - Messwerte statt Behauptungen: Erkennungs- und Fehlalarmrate je Schicht und Kategorie.
-- Kosten: Tageskontingente begrenzen die öffentliche Demo auf höchstens 0,50 € Mistral-Kosten pro Tag.
+- Kosten: Tageskontingente begrenzen die öffentliche Demo auf Modellaufrufe im Wert von höchstens
+  0,50 € pro Tag (zu Mistral-Listenpreisen) – auch als Schutz vor Missbrauch der öffentlichen Demo.
+- Realtest des Agenten gegen Mistral und Zitadel: Er brachte zwei Fehler ans Licht, die die
+  Attrappen nicht zeigen konnten (Fehlalarme des Prüfmodells bei normalen Aufträgen, Rückfragen
+  des Agenten, obwohl ein Auftrag nur einen Durchgang hat). Beide sind behoben und mit Tests belegt.
 
 - Komplett lokal läuft dieselbe Anwendung ohne Cloud-Dienst (Keycloak, Docling, Ollama). Auf einem
   Laptop ohne GPU ist das langsam: `qwen3:8b` schreibt etwa 1,3 Tokens/s, ein Feldvorschlag dauert
@@ -236,7 +258,8 @@ zurückgesetzt:
 Ohne Anmeldung zeigt `/muster` eine Musterakte. Jede Nacht um 3 Uhr werden alle Daten auf die
 Musterdaten zurückgesetzt. Uploads sind auf fünf pro Sitzung begrenzt. **Bitte keine echten
 Personendaten hochladen.** Schläft die Datenbank (kostenloser Tarif), zeigt die App „Demo
-startet gerade …“.
+startet gerade …“. Ob der KI-Anbieter gerade erreichbar ist, steht unten auf der Projektseite
+(„KI-Anbieter: erreichbar“).
 
 **Lokal**, ohne Konto und ohne Schlüssel (Supabase, Web, API, Test-IdP, Attrappen für OCR und LLM):
 
