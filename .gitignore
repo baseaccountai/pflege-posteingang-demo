@@ -32,3 +32,6 @@ __pycache__/
 
 # Local-only key of the fully local mode (infra/local-stack.sh up-local)
 infra/.local/
+
+# Job advert printout (third-party page, kept locally only)
+docs/background/Job-Wissenschaft-HS-Anhalt.pdf
