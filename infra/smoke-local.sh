@@ -30,6 +30,8 @@ check "API nutzt Docling" "$API_URL/health" '"ocr_provider":"docling"'
 check "Agent lokal (self_signed)" "$API_URL/health" '"agent_token":"self_signed"'
 check "Keycloak (Discovery)" "$KEYCLOAK_ISSUER/.well-known/openid-configuration" "\"issuer\":\"$KEYCLOAK_ISSUER\""
 check "Docling" "$DOCLING_URL/health" '"ok"'
+# The probe runs on the host: it needs the API's Ollama timeout (infra/local-stack.sh), or a
+# slow CPU model fails it after the default 120 s (Codex review phase 8).
 (cd apps/api && LLM_PROVIDER=ollama OCR_PROVIDER=docling DOCLING_BASE_URL="$DOCLING_URL" \
-  uv run python -m scripts.local_probe)
+  OLLAMA_TIMEOUT_SECONDS=1800 uv run python -m scripts.local_probe)
 echo "Lokaler Betrieb komplett läuft."
