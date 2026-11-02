@@ -112,6 +112,16 @@ async def test_an_own_resident_typed_in_lower_case_reaches_the_model_only_as_pla
     assert "Bewohner_K42" in llm.chats[1][-1]["content"]  # the tool result
 
 
+def test_the_agent_is_told_it_cannot_ask_back():
+    # Realtest 02.11.2026: the agent answered "Möchtest du das Datum anpassen ...?" - but a
+    # task is one turn, the API gets no conversation. It must propose (the nurse can
+    # dismiss) or say plainly what it cannot do.
+    from app.agent.runner import SYSTEM_PROMPT
+
+    assert "keine Rückfragen" in SYSTEM_PROMPT
+    assert "schlage sie direkt vor" in SYSTEM_PROMPT
+
+
 async def test_the_model_is_told_todays_date():
     # Phase 8 walkthrough: qwen3:8b proposed a follow-up "due 2023-10-05" - the model does
     # not know the date, and a due date in the past is refused (invalid_arguments).

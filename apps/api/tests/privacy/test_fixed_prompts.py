@@ -37,6 +37,7 @@ FIXED_TEXTS = {
     "answer system prompt": answer.SYSTEM_PROMPT,
     "extraction system prompt": extraction.SYSTEM_PROMPT,
     "classifier system prompt": classifier.SYSTEM_PROMPT,
+    "classifier request prompt": classifier.REQUEST_PROMPT,  # F07-AC15
 }
 
 
