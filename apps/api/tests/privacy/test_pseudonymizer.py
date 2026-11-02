@@ -26,10 +26,13 @@ def p():
         ("Fr.Testfeld bekommt Ramipril", "Bewohner_K42 bekommt Ramipril"),
         ("Muster-Bauer klagt über Schwindel", "Bewohner_A17 klagt über Schwindel"),
         ("HR. MUSTER-BAUER", "Bewohner_A17"),
-        # Lower case "probe" is the ordinary word, not the resident.
+        # Codex review phase 7: a surname typed in lower case is still the resident. The
+        # ordinary word "probe" is replaced too - a little meaning lost, no name leaked.
+        ("medikation von testfeld?", "medikation von Bewohner_K42?"),
+        ("muster-bauer: Ramipril", "Bewohner_A17: Ramipril"),
         (
             "Blutprobe, eine probe Aufnahme, Hr. Probe",
-            "Blutprobe, eine probe Aufnahme, Bewohner_P08",
+            "Blutprobe, eine Bewohner_P08 Aufnahme, Bewohner_P08",
         ),
     ],
 )
@@ -93,6 +96,7 @@ def test_unknown_placeholders_stay_visible(p):
     [
         ("Bewohner_A17 bekommt Ramipril", False),
         ("Rückfrage zu Testfeld", True),
+        ("rückfrage zu testfeld", True),  # lower case (Codex review phase 7)
         ("geboren 12.09.1938", True),
         ("eine Blutprobe", False),
     ],

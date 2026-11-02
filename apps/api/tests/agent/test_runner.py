@@ -6,6 +6,7 @@ tested in tests/rls/test_agent_runner.py.
 """
 
 import asyncio
+import json
 from datetime import date
 
 import pytest
@@ -91,6 +92,24 @@ async def test_the_model_sees_the_rules_and_the_task_only_pseudonymised():
     assert result.answer == "Hr. Muster-Bauer hat keine offenen Wiedervorlagen."
     assert result.tools_used == [] and result.proposals == [] and not result.stopped
     assert rec.booked == 1 and result.model_calls == 1
+
+
+async def test_an_own_resident_typed_in_lower_case_reaches_the_model_only_as_placeholder(
+    monkeypatch,
+):
+    # Codex review phase 7: "muster-bauer" went to the model unchanged - in the task and
+    # in a tool result alike.
+    async def tool_result(ctx, name, arguments):
+        return {"wiedervorlagen": [{"titel": "Blutdruck messen", "bewohner": "muster-bauer"}]}
+
+    monkeypatch.setattr("app.agent.runner.call_tool", tool_result)
+    llm = FakeLlm(turns=[call("wiedervorlagen_auflisten"), ChatTurn("ok")])
+    await agent(llm, "was steht für muster-bauer an?")
+
+    sent = json.dumps(llm.chats, ensure_ascii=False, default=str).lower()
+    assert "muster-bauer" not in sent
+    assert "Bewohner_K42" in llm.chats[0][1]["content"]
+    assert "Bewohner_K42" in llm.chats[1][-1]["content"]  # the tool result
 
 
 async def test_the_model_is_told_todays_date():

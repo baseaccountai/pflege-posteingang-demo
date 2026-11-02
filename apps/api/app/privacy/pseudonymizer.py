@@ -5,9 +5,10 @@ What gets replaced, in this order:
 1. Residents (all of the home, also other wards): "Hr. Muster-Bauer", "Herrn Muster-Bauer",
    "Muster-Bauer" -> "Bewohner_A17". The code is stored per resident (residents.pseudonym)
    and stays the same everywhere, so stored chunks and a later question use the same code.
-   The bare surname counts only when written with a capital letter: "Probe" is Hr. Probe,
-   "eine probe Aufnahme" is not. Some surnames are ordinary words ("Vorlage"); replacing
-   such a word by mistake costs a little meaning, missing a name would cost privacy.
+   The bare surname counts in any case: "Probe", "probe" and "PROBE" are all Hr. Probe
+   (Codex review phase 7: "medikation von testfeld?" reached the model). Some surnames
+   are ordinary words ("Vorlage", "eine probe Aufnahme"); replacing such a word by mistake
+   costs a little meaning, missing a name would cost privacy.
 2. Their birth dates in the usual spellings -> "Geburtsdatum_A17". Other dates stay: the
    date of a letter or of a check-up is needed to answer questions.
 3. Other people after a title or a form of address ("Dr. med. Lorem", "Frau Lindner")
@@ -103,7 +104,7 @@ class Pseudonymizer:
         for r in ordered:
             name = re.escape(_surname(r.display_name))
             titled = re.compile(rf"{TITLE}\s*{name}{NO_WORD_AFTER}", re.IGNORECASE)
-            bare = re.compile(rf"{NO_WORD_BEFORE}{name}{NO_WORD_AFTER}")  # capital letter only
+            bare = re.compile(rf"{NO_WORD_BEFORE}{name}{NO_WORD_AFTER}", re.IGNORECASE)
             self._names.append((titled, bare, r.pseudonym))
             if r.birth_date:
                 forms = sorted(birth_date_forms(r.birth_date), key=len, reverse=True)
