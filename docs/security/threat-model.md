@@ -36,12 +36,20 @@ Stand: 01.11.2026 · Orientierung: **OWASP Top 10 für LLM-Anwendungen (2025)** 
 | LLM07 System Prompt Leakage | niedrig | keine Geheimnisse im System-Prompt | F05 | offen |
 | LLM08 Vector and Embedding Weaknesses | hoch – RAG | RLS auf Chunks, Metadaten-Filter | F05 | offen |
 | LLM09 Misinformation | mittel | Quellen in jeder Antwort, Mensch prüft | F03, F05 | offen |
-| LLM10 Unbounded Consumption | mittel – Kosten | Upload-Limit, Tagesobergrenze | F10 | offen |
+| LLM10 Unbounded Consumption | mittel – Kosten | Upload-Limit, Tagesobergrenze | F10 | umgesetzt: fünf Uploads je Sitzung, globale Tageskontingente je Aufrufart (`quota_limits`), Länge jedes Aufrufs begrenzt – auch beim Agenten: Werkzeugergebnis höchstens 4 000 Zeichen, Eingabe je Modellaufruf höchstens 33 000 Zeichen (Codex-Review Phase 7); die Tagesrechnung (`app/costs.py`) ergibt höchstens 0,50 € (`tests/rls/test_daily_cost.py`). Grenze: 3 Zeichen je Token ist eine Schätzung, die harte Grenze ist das Monatslimit im Mistral-Konto (ADR 0003) |
 
 ## Offene Grenzen (ehrlich benannt)
 
 - Cloud-OCR sieht Rohdaten; nur der lokale Modus vermeidet das.
 - Kein Filter erkennt Prompt-Injection zuverlässig; Ziel ist begrenzte Wirkung, nicht perfekte Erkennung.
+- Agent (F08-AC10, Codex-Review Phase 7): Ein **Nachname ohne Anrede** aus dem anderen
+  Wohnbereich („Medikation von Testfeld?“) wird sofort mit „Dazu gibt es in deinem
+  Wohnbereich nichts …“ beantwortet, ein Wort, das kein Bewohner ist („… von Niemand?“), geht
+  dagegen ans Modell. Wer beides vergleicht, erfährt, dass es den Nachnamen in der Einrichtung
+  gibt – keine Daten dazu, und nur als angemeldete Pflegekraft. Ganz schließen ließe sich das
+  nur, wenn unbekannte Wörter als Namen erkannt würden (NER, nicht im Umfang); einen fremden
+  Namen ans Modell zu geben, wäre der größere Schaden. Mit Anrede („Fr. Niemand“) sind beide
+  Fälle gleich.
 - Protokoll (F12): Akteur und Wohnbereich setzt die Datenbank aus den Claims, Zusatzangaben
   sind nur Kennungen. Das Backend kann aber falsche, eigene Modell-Ereignisse schreiben, und
   der Modellname ist freier Text aus seiner Konfiguration – das Protokoll vertraut dem Backend

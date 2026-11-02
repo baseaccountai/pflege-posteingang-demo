@@ -124,8 +124,9 @@ der Agent die Wiedervorlage an.
 | Agent | höchstens, was die beauftragende Pflegekraft sieht | lesen, Wiedervorlage **vorschlagen**; anlegen erst nach Bestätigung |
 
 Ein fremder Bewohner und einer, den es nicht gibt, ergeben dieselbe Antwort. So verrät die Demo
-nicht einmal, dass es einen Datensatz gibt. Das gilt auch für den Agenten: Fragt man ihn nach
-einer Person aus dem anderen Wohnbereich, antwortet er, ohne ein Modell aufzurufen.
+in aller Regel nicht einmal, dass es einen Datensatz gibt. Das gilt auch für den Agenten: Fragt
+man ihn nach einer Person aus dem anderen Wohnbereich, antwortet er, ohne ein Modell aufzurufen
+(eine Ausnahme steht unter „Offene Grenzen“).
 
 **Was der Agent nicht kann:** Medikation ändern, Daten löschen, Nachrichten nach außen senden,
 andere Wohnbereiche lesen. Diese Aktionen gibt es nicht als Werkzeug, und die Datenbank würde sie
@@ -172,6 +173,9 @@ nicht schlechter werden.
   einem Menschen zur Prüfung gezeigt.
 - Die Pseudonymisierung arbeitet mit dem Verzeichnis der Bewohner und mit Regeln. Ein Name ohne
   Anrede, der nicht im Verzeichnis steht, kann durchrutschen.
+- Beim Agenten verrät ein bloßer Nachname ohne Anrede, ob es ihn im anderen Wohnbereich gibt:
+  Er wird sofort abgewiesen, ein unbekanntes Wort geht ans Modell. Daten werden dabei nicht
+  sichtbar; schließen ließe sich das erst mit Namenserkennung (NER).
 
 ## Vorgehen
 
