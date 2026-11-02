@@ -1,6 +1,9 @@
 .PHONY: setup test test-api test-web test-db db-start db-stop db-reset reset e2e lint up down samples sample-record seed-chunks rag-probe security-report up-test smoke db-local-roles project-description screens keycloak-realm reindex up-local smoke-local
 
 SUPABASE := pnpm dlx supabase@2.122.0
+# Docker network whose published ports bind to 127.0.0.1 only: by default `supabase start`
+# publishes the database (postgres:postgres), Studio and the gateway on every interface.
+SUPABASE_NETWORK := pflege-posteingang-loopback
 
 # One-time install of all dependencies (incl. Playwright browser)
 setup:
@@ -21,7 +24,11 @@ test-db:
 	cd apps/web && pnpm test:db
 
 db-start:
-	$(SUPABASE) start
+	@docker network inspect $(SUPABASE_NETWORK) >/dev/null 2>&1 || docker network create \
+	  -o com.docker.network.bridge.host_binding_ipv4=127.0.0.1 $(SUPABASE_NETWORK) >/dev/null
+	@docker network inspect -f '{{index .Options "com.docker.network.bridge.host_binding_ipv4"}}' \
+	  $(SUPABASE_NETWORK) | grep -qx 127.0.0.1 || { echo "Netz $(SUPABASE_NETWORK) bindet nicht an 127.0.0.1 - bitte löschen: docker network rm $(SUPABASE_NETWORK)"; exit 1; }
+	$(SUPABASE) start --network-id $(SUPABASE_NETWORK)
 
 db-stop:
 	$(SUPABASE) stop
