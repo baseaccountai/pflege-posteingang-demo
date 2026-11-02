@@ -35,6 +35,14 @@ from app.security.delimiters import defuse
 from app.security.output import unsafe_output
 
 MAX_OUTPUT_TOKENS = 500  # per model call; a tool call or a short answer
+# Input of one model call (F10-AC11, Codex review phase 7): rules, tool descriptions, task,
+# the tool calls and results so far. app/costs.py counts every agent call with this budget,
+# so it must not cost more than a field extraction - the daily quota is planned with that.
+AGENT_MAX_INPUT_CHARS = 33_000
+# One tool result. Worst case: rules + tools ~3 700, task with 40 residents ~3 500,
+# 4 tool calls of 500 tokens (~2 000 chars) and 4 results = ~31 000 < 33 000.
+MAX_TOOL_RESULT_CHARS = 4_000
+CUT_HINT = " … (gekürzt)"
 MAX_RESIDENTS_SHOWN = 40  # the own residents the model may refer to (a PDL sees all wards)
 RESULT_TAG = "werkzeugergebnis"
 NOT_ALLOWED = "nicht erlaubt"
@@ -146,6 +154,8 @@ async def run_agent(
 async def _loop(ctx, messages, pseudonymizer, mapping, visible, result, limits, book, log) -> str:
     steps = 0
     for _ in range(limits.model_calls):
+        if input_chars(messages, tool_schemas()) > AGENT_MAX_INPUT_CHARS:
+            raise _LimitReached  # a safety net: the cuts below keep the input smaller
         await book()  # every model call counts against llm_call (F10), before it is made
         result.model_calls += 1
         turn = await ctx.gateway.chat_with_tools(messages, tool_schemas(), MAX_OUTPUT_TOKENS)
@@ -194,8 +204,22 @@ async def _run_tool(ctx, tool_call: ToolCall, pseudonymizer, mapping, visible, r
             }
         )
     text = json.dumps(output, ensure_ascii=False, default=str)
-    text = defuse(pseudonymizer.pseudonymize(text, mapping).text, (RESULT_TAG,))
+    text = pseudonymizer.pseudonymize(text, mapping).text
+    if len(text) > MAX_TOOL_RESULT_CHARS:
+        # Cut only after pseudonymisation: a name cut in half would not be found any more.
+        text = text[:MAX_TOOL_RESULT_CHARS] + CUT_HINT
+    text = defuse(text, (RESULT_TAG,))
     return f'<{RESULT_TAG} name="{tool_call.name}">\n{text}\n</{RESULT_TAG}>'
+
+
+def input_chars(messages: list[Message], tools: list[dict]) -> int:
+    """What one model call sends: every message, the tool calls in it and the tool list."""
+    total = len(json.dumps(tools, ensure_ascii=False))
+    for message in messages:
+        total += len(message.get("content") or "")
+        for call in message.get("tool_calls") or []:
+            total += len(call.name) + len(json.dumps(call.arguments, ensure_ascii=False))
+    return total
 
 
 def _restore(value: object, pseudonymizer: Pseudonymizer, mapping, visible) -> object:

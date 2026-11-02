@@ -37,6 +37,16 @@ def test_guard_calls_are_counted_with_prompt_schema_and_their_input_limit() -> N
     assert costs.guard_question_call().output_tokens == c.QUESTION_MAX_TOKENS
 
 
+def test_an_agent_call_is_counted_with_its_input_budget() -> None:
+    # Codex review phase 7: agent calls carry tool results and the conversation so far.
+    from app.agent.runner import AGENT_MAX_INPUT_CHARS
+    from app.agent.runner import MAX_OUTPUT_TOKENS as AGENT_OUTPUT
+
+    call = costs.agent_call()
+    assert call.input_tokens >= math.ceil(AGENT_MAX_INPUT_CHARS / costs.CHARS_PER_TOKEN)
+    assert call.output_tokens == AGENT_OUTPUT == 500
+
+
 def test_the_daily_maximum_adds_ocr_llm_guard_and_embeddings() -> None:
     limits = {
         "ocr_page": 10,
@@ -45,7 +55,7 @@ def test_the_daily_maximum_adds_ocr_llm_guard_and_embeddings() -> None:
         "guard_question": 10,
         "embed_chunk": 10,
     }
-    worst = max(costs.extraction_call().eur, costs.question_call().eur)
+    worst = max(costs.extraction_call().eur, costs.question_call().eur, costs.agent_call().eur)
     expected = (
         10 * costs.OCR_EUR_PER_PAGE
         + 10 * worst

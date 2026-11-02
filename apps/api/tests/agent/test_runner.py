@@ -213,6 +213,50 @@ async def test_after_the_time_limit_the_agent_stops_with_a_hint():
     assert len(llm.chats) == 3
 
 
+async def test_a_long_tool_result_is_cut_after_pseudonymisation(monkeypatch):
+    # Codex review phase 7: a record with a huge diagnosis went to the model in full.
+    from app.agent.runner import MAX_TOOL_RESULT_CHARS
+
+    async def tool_result(ctx, name, arguments):
+        return {"diagnosen": ["Muster-Bauer " * 50_000]}
+
+    monkeypatch.setattr("app.agent.runner.call_tool", tool_result)
+    llm = FakeLlm(turns=[call("bewohnerakte_lesen"), ChatTurn("ok")])
+    await agent(llm, "Akte lesen")
+
+    content = llm.chats[1][-1]["content"]
+    assert len(content) <= MAX_TOOL_RESULT_CHARS + 200  # tags and the hint
+    assert "(gekürzt)" in content and "Muster-Bauer" not in content
+
+
+async def test_no_model_call_gets_more_input_than_the_cost_calculation_assumes(monkeypatch):
+    # Four maximal tool results plus long tool calls: every call stays within the budget
+    # that app/costs.py counts for an agent call (F10-AC11).
+    from app.agent.runner import AGENT_MAX_INPUT_CHARS, input_chars
+    from app.agent.tools import tool_schemas
+
+    async def tool_result(ctx, name, arguments):
+        return {"text": "x" * 100_000}
+
+    monkeypatch.setattr("app.agent.runner.call_tool", tool_result)
+    # 500 output tokens are at most about 2 000 characters: text and arguments together.
+    long_call = ChatTurn("y" * 1_000, [ToolCall("c1", "bewohnerakte_lesen", {"z": "z" * 1_000})])
+    llm = FakeLlm(turns=[long_call] * 4 + [ChatTurn("ok")])
+    await agent(llm, "Was steht an? " * 35)
+
+    assert len(llm.chats) == 5
+    for messages in llm.chats:
+        assert input_chars(messages, tool_schemas()) <= AGENT_MAX_INPUT_CHARS
+
+
+async def test_an_input_above_the_budget_stops_the_agent_before_the_call(monkeypatch):
+    monkeypatch.setattr("app.agent.runner.AGENT_MAX_INPUT_CHARS", 100)
+    llm = FakeLlm(turns=[ChatTurn("ok")])
+    result, rec = await agent(llm, "Was steht an?")
+    assert result.answer == LIMIT_ANSWER and result.stopped
+    assert llm.chats == [] and rec.booked == 0
+
+
 async def test_every_model_call_is_booked_before_it_is_made():
     class Exhausted(Recorder):
         async def book(self):

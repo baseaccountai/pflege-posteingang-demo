@@ -12,7 +12,8 @@ Everything is counted on the safe side:
 - prices are the highest public list prices found (ADR 0003), USD counted as EUR,
 - 3 characters per token (German text needs more tokens than English) - an estimate,
   not a hard bound (accepted, ADR 0003; the monthly limit in the Mistral account is),
-- every LLM call is counted as the more expensive kind (field extraction or question),
+- every LLM call is counted as the most expensive kind (field extraction, question or a
+  step of the agent),
 - an injection check (F07) is counted at the chat model's prices, though its model is smaller,
 - a retry is a call of its own (it is booked against the quota, too).
 """
@@ -73,6 +74,14 @@ def question_call() -> CallCost:
     )
 
 
+def agent_call() -> CallCost:
+    """One model call of the agent (F08): its whole input is capped (Codex review phase 7)."""
+    from app.agent.runner import AGENT_MAX_INPUT_CHARS
+    from app.agent.runner import MAX_OUTPUT_TOKENS as AGENT_OUTPUT_TOKENS
+
+    return CallCost(math.ceil(AGENT_MAX_INPUT_CHARS / CHARS_PER_TOKEN), AGENT_OUTPUT_TOKENS)
+
+
 def _guard_call(input_chars: int, output_tokens: int) -> CallCost:
     from app.security.classifier import SCHEMA as GUARD_SCHEMA
     from app.security.classifier import SYSTEM_PROMPT as GUARD_PROMPT
@@ -98,7 +107,7 @@ def guard_question_call() -> CallCost:
 
 def daily_maximum_eur(limits: dict[str, int]) -> float:
     """Cost of one day with every global quota used up (`limits` from quota_limits)."""
-    worst_call = max(extraction_call().eur, question_call().eur)
+    worst_call = max(extraction_call().eur, question_call().eur, agent_call().eur)
     return (
         limits["ocr_page"] * OCR_EUR_PER_PAGE
         + limits["llm_call"] * worst_call
