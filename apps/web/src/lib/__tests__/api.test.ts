@@ -10,6 +10,7 @@ import {
   READ_TIMEOUT_MS,
   SessionEnded,
   apiAgentTokenWay,
+  apiModelStatus,
   apiGet,
   apiReady,
   apiFile,
@@ -329,5 +330,23 @@ describe("apiAgentTokenWay", () => {
   it("is unknown when the API does not answer or answers something else", async () => {
     expect(await apiAgentTokenWay({ env, fetch: vi.fn().mockRejectedValue(new TypeError("down")) })).toBeNull();
     expect(await apiAgentTokenWay({ env, fetch: health({ agent_token: "magic" }) })).toBeNull();
+  });
+});
+
+describe("apiModelStatus", () => {
+  const env = { API_BASE_URL: "http://api.test" };
+  const answer = (body: unknown) => vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }));
+
+  // F10-AC16: /projekt shows whether the AI provider is reachable, from /health/models.
+  it("reads the state of the AI provider", async () => {
+    const fetch = answer({ llm: "ok" });
+    expect(await apiModelStatus({ env, fetch })).toBe("ok");
+    expect(fetch.mock.calls[0][0]).toBe("http://api.test/health/models");
+    expect(await apiModelStatus({ env, fetch: answer({ llm: "unavailable" }) })).toBe("unavailable");
+  });
+
+  it("is unknown when the API does not answer or answers something else", async () => {
+    expect(await apiModelStatus({ env, fetch: vi.fn().mockRejectedValue(new TypeError("down")) })).toBeNull();
+    expect(await apiModelStatus({ env, fetch: answer({ llm: "great" }) })).toBeNull();
   });
 });

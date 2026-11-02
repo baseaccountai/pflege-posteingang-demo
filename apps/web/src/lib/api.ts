@@ -209,6 +209,25 @@ export async function apiAgentTokenWay(deps: Deps = {}): Promise<AgentTokenWay |
   }
 }
 
+export type ModelStatus = "ok" | "unavailable";
+
+/**
+ * Whether the AI provider answers (F10-AC16), from the API's public /health/models - which
+ * asks the provider at most once a minute. null: the API does not answer (yet).
+ */
+export async function apiModelStatus(deps: Deps = {}): Promise<ModelStatus | null> {
+  try {
+    const response = await (deps.fetch ?? fetch)(new URL("/health/models", apiBase(deps)).toString(), {
+      cache: "no-store",
+      signal: readSignal(deps),
+    });
+    const state = (await response.json())?.llm;
+    return state === "ok" || state === "unavailable" ? state : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Like apiFile, but the file is only released if the session still exists afterwards (F01-AC13). */
 export async function apiFileForSession(
   path: string,

@@ -31,6 +31,7 @@ Die öffentliche Demo arbeitet nur mit erfundenen, sichtbar markierten Musterdat
 | F10-AC13 | WENN die API nicht antwortet, 502/503 liefert oder länger als 5 Sekunden braucht, DANN soll die App „Demo startet gerade … (bis zu 30 Sekunden)“ mit automatischem Neuversuch und einem Link „Musterakte ansehen“ zeigen statt einer leeren Seite. |
 | F10-AC14 | Das System soll unter `/muster` eine öffentliche, statische Musterakte (ein Bewohner mit Medikation, Herkunft und Musterdokument) ohne Anmeldung und ohne API anzeigen; sie stammt aus einer im Repo erzeugten Datei aus dem Seed, nie aus zuvor geladenen Nutzerdaten. |
 | F10-AC15 | Das System soll im Footer bzw. auf `/projekt` den Hinweis zeigen, dass Daten jede Nacht zurückgesetzt werden. |
+| F10-AC16 | `GET /health/models` (öffentlich, ohne Anmeldung) soll melden, ob der KI-Anbieter erreichbar ist und den Schlüssel annimmt (`{"llm": "ok" \| "unavailable"}`), ohne ein Modell aufzurufen (Mistral: Modellliste) und höchstens einmal je 60 Sekunden beim Anbieter nachfragen; `/projekt` soll den Zustand als „KI-Anbieter: erreichbar“ bzw. „KI-Anbieter: gestört“ zeigen. (Ergänzt 02.11.2026) |
 
 ## Nicht im Umfang
 

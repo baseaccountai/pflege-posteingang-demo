@@ -24,6 +24,7 @@ from app.extraction.service import Extractor
 from app.privacy.gateway import create_gateway
 from app.providers.embeddings.base import EmbeddingProvider
 from app.providers.llm.base import LlmProvider
+from app.providers.llm.reachability import create_provider_check
 from app.providers.ocr import OcrProvider, create_ocr_provider
 from app.quotas import consume
 from app.rag.indexer import Indexer
@@ -60,6 +61,8 @@ def create_app(
                 settings.oidc_issuer, settings.oidc_audience
             )
         app.state.agent_tokens = None  # F08: without it the agent route answers 503
+        if getattr(app.state, "provider_check", None) is None:  # tests set their own
+            app.state.provider_check = create_provider_check(settings)  # F10-AC16
         if app.state.verifier is not None:
             try:
                 app.state.agent_tokens = create_agent_tokens(settings, app.state.verifier)
@@ -136,6 +139,11 @@ def create_app(
             "ocr_provider": settings.ocr_provider,
             "agent_token": settings.agent_token_mode if agent_ready else "off",
         }
+
+    @app.get("/health/models")
+    async def models(request: Request) -> dict[str, str]:
+        # F10-AC16: is the AI provider reachable? Asks it at most once a minute, no model call.
+        return {"llm": await request.app.state.provider_check.status()}
 
     @app.get("/health/ready")
     async def ready(request: Request) -> JSONResponse:
