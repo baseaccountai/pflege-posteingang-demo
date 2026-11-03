@@ -182,6 +182,10 @@ nicht schlechter werden.
 **Offene Grenzen, ehrlich benannt** ([Bedrohungsmodell](security/threat-model.md)):
 
 - Die Cloud-OCR sieht das Originaldokument mit Namen; nur der lokale Betrieb mit Docling vermeidet das.
+- Die öffentliche Demo nutzt den kostenlosen Mistral-Tarif, der Eingaben zum Training verwenden
+  darf – unkritisch, weil nur erfundene Musterdaten verarbeitet werden. Für echte Pflegedaten wären
+  ein Tarif ohne Trainingsnutzung und ein Auftragsverarbeitungsvertrag nötig – oder der komplett
+  lokale Betrieb.
 - Etwa jeder zehnte Angriff kommt durch die Erkennung, am häufigsten Rollenspiele (Jailbreaks,
   64,7 % erkannt). Die Schichten 3 bis 5 begrenzen dann die Wirkung: Nichts geht ohne Freigabe in
   die Akte, und der Agent kann nur vorschlagen.
