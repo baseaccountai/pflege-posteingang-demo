@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   // F11-AC1: Safari/iOS reads these instead of the manifest.
   appleWebApp: { capable: true, title: "Posteingang", statusBarStyle: "default" },
   icons: { apple: "/icons/apple-touch-icon.png" },
+  // F11-AC22: the demo stays out of search engines (the header in next.config.ts covers
+  // files as well; this tag is for crawlers that only read the page).
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = { themeColor: THEME_COLOR };

@@ -116,6 +116,13 @@ def create_app(
             )
         return await call_next(request)
 
+    @app.middleware("http")
+    async def no_index(request: Request, call_next):
+        # F11-AC22: no search engine may index the API, error answers included.
+        response = await call_next(request)
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
+        return response
+
     # F11-AC12: no browser origin may call the API; only the BFF does, server to server.
     # Spelled out on purpose, so nobody "fixes" a CORS error by allowing an origin here.
     app.add_middleware(CORSMiddleware, allow_origins=[], allow_credentials=False)

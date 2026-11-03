@@ -25,3 +25,14 @@ test("the offline page has a fixed CSP without scripts", async ({ request }) => 
   expect(csp).toContain("default-src 'none'");
   expect(csp).not.toMatch(/script-src/);
 });
+
+// F11-AC22: no search engine may index the demo - header and meta tag, also on the public
+// sample record; deliberately no robots.txt block (a crawler would never see the noindex).
+test("pages forbid indexing by header and meta tag", async ({ request }) => {
+  for (const path of ["/", "/muster"]) {
+    const response = await request.get(path);
+    expect(response.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+    expect(await response.text()).toMatch(/<meta name="robots" content="noindex, nofollow"/);
+  }
+  expect((await request.get("/robots.txt")).status()).toBe(404);
+});

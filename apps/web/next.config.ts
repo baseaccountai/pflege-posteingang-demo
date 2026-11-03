@@ -18,6 +18,9 @@ const nextConfig: NextConfig = {
           // Camera only for this app (photo upload); nothing else.
           { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(), payment=(), usb=()" },
           { key: "X-Frame-Options", value: "DENY" },
+          // F11-AC22: no search engine indexes the demo, sample PDFs and icons included.
+          // No robots.txt block on purpose: a crawler would then never read this header.
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
       {

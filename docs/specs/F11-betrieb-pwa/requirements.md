@@ -49,6 +49,7 @@ Status: **freigegeben 01.11.2026** · Grundlage: Design 3 („komplett lokal bet
 | F11-AC19 | `make reindex` soll alle freigegebenen Dokumente mit dem konfigurierten Embedding-Modell neu indizieren (erfüllt F05-AC13); `make up-local` ruft es nach dem Seed auf, weil die Seed-Chunks mit `mistral-embed` berechnet sind. Es läuft nur gegen die lokale Datenbank. |
 | F11-AC20 | `make smoke-local` soll prüfen: Startseite, `/health` meldet `ollama`/`docling`, OIDC-Discovery von Keycloak, und eine Probe gegen die echten lokalen Dienste – Docling liest den Musterbrief `arztbrief_muster-bauer.pdf` (enthält „Ramipril“), Ollama liefert einen gültigen Feldvorschlag, einen Werkzeugaufruf und einen 1024er-Vektor. |
 | F11-AC21 | README und Projektbeschreibung (Abschnitt Betrieb) sollen den lokalen Start in wenigen Befehlen nennen, mit Speicherbedarf und Modellen. |
+| F11-AC22 | Das System soll Suchmaschinen die Aufnahme untersagen: Die Web-App soll auf allen Pfaden den Header `X-Robots-Tag: noindex, nofollow` senden und jede Seite `<meta name="robots" content="noindex, nofollow">` tragen; die API soll auf jeder Antwort `X-Robots-Tag: noindex, nofollow` senden. Eine `robots.txt`-Sperre gibt es bewusst nicht, weil ein Crawler das `noindex` sonst nie liest. (Bewerber-Entscheidung 03.11.2026) |
 
 ## Nicht im Umfang
 
