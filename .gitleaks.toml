@@ -11,4 +11,6 @@ regexes = [
   '''^local-bff-api-secret-at-least-32-bytes$''',
   '''^local-client-secret$''',
   '''^e2e-client-secret$''',
+  # stand-ins for the DEMO_PASSWORD_* secrets in tests/infra/test_zitadel_setup.py
+  '''^secret-(wb1|wb2|pdl)-0123456789$''',
 ]
