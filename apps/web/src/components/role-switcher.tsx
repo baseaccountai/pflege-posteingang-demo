@@ -1,5 +1,5 @@
 "use client";
-// Role buttons with the public demo credentials (F01-AC2). A switch is a plain form POST to
+// Role buttons with the demo user names (F01-AC2); the password is never shown (F01-AC22). A switch is a plain form POST to
 // /auth/logout?next=/auth/login?role=…: the old session is revoked and deleted on the server,
 // then the IdP asks for the new credentials (F01-AC13). No client-side routing.
 import { useState } from "react";
@@ -43,7 +43,7 @@ export function RoleSwitcher() {
           >
             <h3 className="font-semibold">{role.label}</h3>
             <CopyField label="Benutzername" value={role.username} />
-            <CopyField label="Passwort" value={role.password} />
+            <p className="text-muted-foreground">Passwort: steht in der Bewerbung (lokal: README)</p>
             <form
               method="post"
               action={`/auth/logout?next=${encodeURIComponent(next)}`}

@@ -1,4 +1,5 @@
-"""F01-AC16, F01-AC17, F01-AC18: demo users as code, without admin rights, passwords reset.
+"""F01-AC16, F01-AC17, F01-AC18, F01-AC22: demo users as code, without admin rights,
+passwords reset - and the passwords of the public demo only from secrets, never the file.
 
 The Zitadel Management API is replaced by a recording fake; the tests check which calls
 the setup script makes for a given demo-users.json.
@@ -11,6 +12,7 @@ from pathlib import Path
 import pytest
 from zitadel.setup import (
     ConfigError,
+    demo_passwords,
     load_config,
     reset_passwords,
     setup,
@@ -67,6 +69,19 @@ class FakeZitadel:
         return [body for _, p, body in self.calls if p == path]
 
 
+# Stand-ins for the GitHub secrets; the real ones exist only there and in the .env.
+SECRETS = {
+    "DEMO_PASSWORD_WB1": "secret-wb1-0123456789",
+    "DEMO_PASSWORD_WB2": "secret-wb2-0123456789",
+    "DEMO_PASSWORD_PDL": "secret-pdl-0123456789",
+}
+PASSWORDS = {
+    "pflege-wb1": "secret-wb1-0123456789",
+    "pflege-wb2": "secret-wb2-0123456789",
+    "pdl": "secret-pdl-0123456789",
+}
+
+
 @pytest.fixture
 def config() -> dict:
     return load_config(CONFIG_PATH)
@@ -82,7 +97,7 @@ def test_demo_file_defines_three_demo_users_with_one_project_role_each(config):
 
 def test_fresh_setup_creates_project_roles_app_and_users(config):
     api = FakeZitadel()
-    result = setup(api, config)
+    result = setup(api, config, PASSWORDS)
 
     assert api.bodies("/projects") == [{"name": "pflege-posteingang", "projectRoleAssertion": True}]
     assert [b["roleKey"] for b in api.bodies("/projects/p1/roles")] == [
@@ -106,33 +121,33 @@ def test_fresh_setup_creates_project_roles_app_and_users(config):
 def test_rerun_keeps_client_secret_and_resets_passwords(config):
     users = {"pflege-wb1": "u1", "pflege-wb2": "u2", "pdl": "u3"}
     api = FakeZitadel(existing_users=users, app_exists=True)
-    result = setup(api, config)
+    result = setup(api, config, PASSWORDS)
 
     assert "/projects" not in api.paths("POST")
     assert "/projects/p1/apps/oidc" not in api.paths()
     assert not [p for p in api.paths() if p.endswith("_generate_client_secret")]
     assert "/users/human/_import" not in api.paths()
     assert api.bodies("/users/u1/password") == [
-        {"password": "Pflege-WB1-Demo!", "noChangeRequired": True}
+        {"password": "secret-wb1-0123456789", "noChangeRequired": True}
     ]
     assert result == {"client_id": "c1", "client_secret": None, "project_id": "p1"}
 
 
 def test_rotate_secret_generates_a_new_one(config):
     api = FakeZitadel(app_exists=True)
-    assert setup(api, config, rotate_secret=True)["client_secret"] == "rotated"
+    assert setup(api, config, PASSWORDS, rotate_secret=True)["client_secret"] == "rotated"
 
 
 def test_spike_user_is_removed(config):
     api = FakeZitadel(existing_users={"spike-wb1": "spike"})
-    setup(api, config)
+    setup(api, config, PASSWORDS)
     assert ("DELETE", "/users/spike", None) in api.calls
 
 
 def test_setup_never_touches_admin_memberships(config):
     # F01-AC17: no organization/instance member roles for demo users, ever.
     api = FakeZitadel()
-    setup(api, config)
+    setup(api, config, PASSWORDS)
     writes = [p for m, p, _ in api.calls if m in ("POST", "PUT", "DELETE") and "_search" not in p]
     assert not [p for p in writes if "/members" in p or p.startswith("/admin")]
 
@@ -140,7 +155,7 @@ def test_setup_never_touches_admin_memberships(config):
 def test_setup_fails_if_a_demo_user_has_an_admin_membership(config):
     api = FakeZitadel(memberships={"id-pdl": ["ORG_OWNER"]})
     with pytest.raises(ConfigError, match="pdl"):
-        setup(api, config)
+        setup(api, config, PASSWORDS)
 
 
 ADMIN_PDL = {"pflege-wb1": "u1", "pflege-wb2": "u2", "pdl": "u3"}
@@ -154,14 +169,14 @@ def test_setup_checks_existing_accounts_before_publishing_any_password(config):
     # An existing admin account must never receive the public demo password.
     api = FakeZitadel(existing_users=ADMIN_PDL, memberships={"u3": ["ORG_OWNER"]})
     with pytest.raises(ConfigError, match="pdl"):
-        setup(api, config)
+        setup(api, config, PASSWORDS)
     assert password_writes(api) == []
 
 
 def test_password_reset_refuses_admin_accounts_without_writing(config):
     api = FakeZitadel(existing_users=ADMIN_PDL, memberships={"u3": ["ORG_OWNER"]})
     with pytest.raises(ConfigError, match="pdl"):
-        reset_passwords(api, config)
+        reset_passwords(api, config, PASSWORDS)
     assert password_writes(api) == []
 
 
@@ -188,7 +203,7 @@ def test_password_reset_only_sets_passwords(config):
     # F01-AC18: the 15-minute workflow; it must not create, grant or delete anything.
     users = {"pflege-wb1": "u1", "pflege-wb2": "u2", "pdl": "u3"}
     api = FakeZitadel(existing_users=users)
-    reset_passwords(api, config)
+    reset_passwords(api, config, PASSWORDS)
     writes = [(m, p) for m, p, _ in api.calls if "_search" not in p]
     assert writes == [
         ("POST", "/users/u1/password"),
@@ -200,4 +215,57 @@ def test_password_reset_only_sets_passwords(config):
 def test_password_reset_fails_if_a_demo_user_is_missing(config):
     api = FakeZitadel(existing_users={"pflege-wb1": "u1"})
     with pytest.raises(ConfigError, match="pflege-wb2"):
-        reset_passwords(api, config)
+        reset_passwords(api, config, PASSWORDS)
+
+
+# --- F01-AC22: passwords of the public demo only from secrets ------------------------------
+
+
+def test_the_file_holds_only_local_passwords_and_the_names_of_the_secrets(config):
+    for user in config["users"]:
+        assert "password" not in user
+        assert user["local_password"]  # Keycloak and tests on the own machine
+        assert user["password_env"].startswith("DEMO_PASSWORD_")
+
+
+def test_passwords_are_read_from_the_environment(config):
+    assert demo_passwords(config, SECRETS) == PASSWORDS
+
+
+def test_setup_and_reset_set_the_passwords_from_the_secrets(config):
+    api = FakeZitadel()
+    setup(api, config, PASSWORDS)
+    assert [b["password"] for b in api.bodies("/users/human/_import")] == list(PASSWORDS.values())
+    api = FakeZitadel(existing_users={"pflege-wb1": "u1", "pflege-wb2": "u2", "pdl": "u3"})
+    reset_passwords(api, config, PASSWORDS)
+    assert api.bodies("/users/u3/password") == [
+        {"password": "secret-pdl-0123456789", "noChangeRequired": True}
+    ]
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(None, id="missing"),
+        pytest.param("", id="empty"),
+        pytest.param("short-0123456", id="shorter-than-16"),
+        pytest.param("Pflege-WB2-Demo!", id="the-old-public-one"),
+    ],
+)
+def test_a_missing_short_or_old_password_stops_everything(config, value):
+    env = dict(SECRETS)
+    if value is None:
+        del env["DEMO_PASSWORD_WB2"]
+    else:
+        env["DEMO_PASSWORD_WB2"] = value
+    with pytest.raises(ConfigError, match="DEMO_PASSWORD_WB2"):
+        demo_passwords(config, env)
+
+
+def test_a_user_without_the_name_of_its_secret_is_rejected(tmp_path):
+    data = json.loads(CONFIG_PATH.read_text())
+    del data["users"][0]["password_env"]
+    path = tmp_path / "demo-users.json"
+    path.write_text(json.dumps(data))
+    with pytest.raises(ConfigError, match="pflege-wb1"):
+        load_config(path)

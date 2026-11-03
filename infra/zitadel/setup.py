@@ -1,12 +1,14 @@
 """Zitadel as code: project, roles, OIDC web app and demo users from infra/demo-users.json.
 
 F01-AC16 (users and roles as code, idempotent), F01-AC17 (demo users never get admin
-rights), F01-AC18 (passwords are reset every 15 minutes by a GitHub workflow).
+rights), F01-AC18 (passwords are reset every 15 minutes by a GitHub workflow), F01-AC22
+(the passwords come only from secrets: DEMO_PASSWORD_WB1/_WB2/_PDL, never from the file).
 Standard library only, so the GitHub workflow needs no installation step.
 
-Developer, once and after changes to demo-users.json (writes client id/secret into .env):
+Developer, once and after changes to demo-users.json (writes client id/secret into .env;
+the DEMO_PASSWORD_* values are read from the same .env):
     python3 infra/zitadel/setup.py setup .env [--rotate-secret]
-GitHub workflow demo-passwords.yml (env: OIDC_ISSUER, ZITADEL_ADMIN_PAT):
+GitHub workflow demo-passwords.yml (env: OIDC_ISSUER, ZITADEL_ADMIN_PAT, DEMO_PASSWORD_*):
     python3 infra/zitadel/setup.py reset-passwords
 
 The admin token belongs to the service user `pp-setup` (role ORG_OWNER of the demo
@@ -19,10 +21,13 @@ import re
 import sys
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Protocol
 
 CONFIG_PATH = Path(__file__).parents[1] / "demo-users.json"
+PASSWORD_ENV = re.compile(r"DEMO_PASSWORD_[A-Z0-9_]+")
+MIN_PASSWORD_LENGTH = 16
 EQUALS = "TEXT_QUERY_METHOD_EQUALS"
 # Demo e-mail addresses must not be deliverable (reserved TLD .invalid, RFC 2606).
 DEMO_EMAIL = re.compile(r"[a-z0-9.-]+@example\.invalid")
@@ -55,7 +60,27 @@ def load_config(path: Path = CONFIG_PATH) -> dict:
             raise ConfigError(f"{user['username']}: nur Projektrollen {sorted(role_keys)} erlaubt")
         if not DEMO_EMAIL.fullmatch(user["email"]):
             raise ConfigError(f"{user['username']}: E-Mail muss auf @example.invalid enden")
+        if not PASSWORD_ENV.fullmatch(str(user.get("password_env", ""))):
+            raise ConfigError(f"{user['username']}: password_env (DEMO_PASSWORD_…) fehlt")
     return config
+
+
+def demo_passwords(config: dict, env: Mapping[str, str]) -> dict[str, str]:
+    """username -> password of the public demo, from the secrets named in the file (F01-AC22).
+
+    Read before any call to Zitadel: a missing, short or old password stops the run before
+    anything is written. The local passwords of the file are in the git history - one of
+    them as a password of the public demo would make the accounts public again."""
+    passwords = {}
+    for user in config["users"]:
+        name = user["password_env"]
+        value = env.get(name, "")
+        if len(value) < MIN_PASSWORD_LENGTH:
+            raise ConfigError(f"{name} fehlt oder ist kürzer als {MIN_PASSWORD_LENGTH} Zeichen")
+        if value == user["local_password"]:
+            raise ConfigError(f"{name} ist das alte, öffentliche Passwort – bitte ein neues setzen")
+        passwords[user["username"]] = value
+    return passwords
 
 
 # --- setup steps ---------------------------------------------------------------------------
@@ -129,13 +154,13 @@ def ensure_app(api: Api, project_id: str, app: dict, rotate_secret: bool) -> tup
     return client_id, secret["clientSecret"]
 
 
-def ensure_user(api: Api, user: dict, project_id: str) -> str:
+def ensure_user(api: Api, user: dict, project_id: str, password: str) -> str:
     user_id = find_user(api, user["username"])
     if user_id:
         api.call(
             "POST",
             f"/users/{user_id}/password",
-            {"password": user["password"], "noChangeRequired": True},
+            {"password": password, "noChangeRequired": True},
         )
     else:
         user_id = api.call(
@@ -145,7 +170,7 @@ def ensure_user(api: Api, user: dict, project_id: str) -> str:
                 "userName": user["username"],
                 "profile": {"firstName": user["first_name"], "lastName": user["last_name"]},
                 "email": {"email": user["email"], "isEmailVerified": True},
-                "password": user["password"],
+                "password": password,
                 "passwordChangeRequired": False,
             },
         )["userId"]
@@ -178,13 +203,13 @@ def check_existing_accounts(api: Api, users: list[dict]) -> dict[str, str | None
     return ids
 
 
-def setup(api: Api, config: dict, rotate_secret: bool = False) -> dict:
+def setup(api: Api, config: dict, passwords: dict[str, str], rotate_secret: bool = False) -> dict:
     check_existing_accounts(api, config["users"])
     project_id = ensure_project(api, config["project"])
     ensure_roles(api, project_id, config["roles"])
     client_id, client_secret = ensure_app(api, project_id, config["app"], rotate_secret)
     for user in config["users"]:
-        user_id = ensure_user(api, user, project_id)
+        user_id = ensure_user(api, user, project_id, passwords[user["username"]])
         assert_no_admin_membership(api, user["username"], user_id)
     for username in config.get("remove_users", []):
         if user_id := find_user(api, username):
@@ -192,8 +217,8 @@ def setup(api: Api, config: dict, rotate_secret: bool = False) -> dict:
     return {"client_id": client_id, "client_secret": client_secret, "project_id": project_id}
 
 
-def reset_passwords(api: Api, config: dict) -> None:
-    """Only sets the published passwords again (F01-AC18); creates and grants nothing."""
+def reset_passwords(api: Api, config: dict, passwords: dict[str, str]) -> None:
+    """Only sets the demo passwords again (F01-AC18); creates and grants nothing."""
     ids = check_existing_accounts(api, config["users"])
     for user in config["users"]:
         user_id = ids[user["username"]]
@@ -202,7 +227,7 @@ def reset_passwords(api: Api, config: dict) -> None:
         api.call(
             "POST",
             f"/users/{user_id}/password",
-            {"password": user["password"], "noChangeRequired": True},
+            {"password": passwords[user["username"]], "noChangeRequired": True},
         )
 
 
@@ -258,8 +283,10 @@ def main(argv: list[str]) -> None:
     if command == "setup" and len(argv) >= 2:
         env_path = Path(argv[1])
         env = read_env(env_path)
+        config = load_config()
+        passwords = demo_passwords(config, env)  # before any call: fail early
         api = Management(env["OIDC_ISSUER"], env["ZITADEL_ADMIN_PAT"])
-        result = setup(api, load_config(), rotate_secret="--rotate-secret" in argv)
+        result = setup(api, config, passwords, rotate_secret="--rotate-secret" in argv)
         updates = {
             "OIDC_CLIENT_ID": result["client_id"],
             "OIDC_AUDIENCE": result["project_id"],
@@ -272,8 +299,10 @@ def main(argv: list[str]) -> None:
         if result["client_secret"]:
             print("Neues Client-Secret: auch in Vercel (OIDC_CLIENT_SECRET) eintragen.")
     elif command == "reset-passwords":
+        config = load_config()
+        passwords = demo_passwords(config, os.environ)  # before any call: fail early
         api = Management(os.environ["OIDC_ISSUER"], os.environ["ZITADEL_ADMIN_PAT"])
-        reset_passwords(api, load_config())
+        reset_passwords(api, config, passwords)
         print("Demo-Passwörter zurückgesetzt.")
     else:
         sys.exit("Aufruf: setup.py setup <.env> [--rotate-secret] | setup.py reset-passwords")

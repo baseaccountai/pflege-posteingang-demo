@@ -21,7 +21,7 @@ Browser ──(Cookie __Host-pp_sid = zufällige ID)──▶ Next.js BFF ──
 | Route-Handler | `apps/web/src/app/auth/{login,callback,logout}/route.ts` | Login (`?role=wb1|wb2|pdl`; beendet per GET **keine aktive** Sitzung, sondern leitet zur Startseite – sonst könnte ein fremder Link abmelden; abgelaufene Reste räumt er auf), Rücksprung, Logout (POST): Sitzungszeile löschen (`delete … returning`, wartet auf einen laufenden Refresh und liefert dessen neue Tokens) → diese Refresh- und Access-Token serverseitig widerrufen (best effort; IdP nicht erreichbar → Abmeldung trotzdem, Redirect zur Startseite) → Redirect zu `end_session?client_id=…&post_logout_redirect_uri=…` (**kein** `id_token_hint`, damit kein Token den Browser berührt; laut Spike S2 unterstützt, Zitadel zeigt dabei eine eigene Logout-Seite mit Klick). Mit `next=/auth/login?role=…` (Rollenwechsel) **ohne** `end_session` direkt zum neuen Login; `next` nur aus fester Liste (`/auth/login?role=wb1|wb2|pdl`), sonst ignoriert (keine offene Weiterleitung) |
 | CSRF-Schutz | `apps/web/src/proxy.ts` | schreibende Methoden: `Origin` muss `APP_ORIGIN` sein, sonst 403 (AC15) |
 | API-Client | `apps/web/src/lib/api.ts` | serverseitig: `Authorization: Bearer <access>`, `X-Bff-Assertion`: JWS (HS256, `BFF_API_SECRET`) mit `{sid_hash, aud: "pflege-api", iat, exp: +60 s}` |
-| Rollenwechsel-UI | `apps/web/src/components/role-switcher.tsx` | drei Knöpfe + Zugangsdaten mit Kopieren; Wechsel = POST `/auth/logout?next=/auth/login?role=…` → **harter Seitenwechsel** (kein Client-Routing) |
+| Rollenwechsel-UI | `apps/web/src/components/role-switcher.tsx` | drei Knöpfe + Benutzername mit Kopieren, Hinweis auf das Passwort; Wechsel = POST `/auth/logout?next=/auth/login?role=…` → **harter Seitenwechsel** (kein Client-Routing) |
 | Token-Prüfung | `apps/api/app/auth/tokens.py` | PyJWT + `PyJWKClient` (Cache 10 min), erlaubte Algorithmen `RS256`, `ES256`; `iss`, `aud`, `exp`, `nbf`, Leeway 30 s |
 | BFF-Nachweis | `apps/api/app/auth/bff.py` | prüft `X-Bff-Assertion` (Signatur, `aud`, `exp`), liefert `sid_hash` für Zähler (F02) |
 | Claim-Mapping | `apps/api/app/auth/claims.py` | Rollen-Claim (konfigurierbar) → `Principal(sub, app_role, ward_ids, actor_type, display_name)` |
@@ -41,7 +41,7 @@ Browser ──(Cookie __Host-pp_sid = zufällige ID)──▶ Next.js BFF ──
 | `aud` | enthält die Projekt-ID (`OIDC_AUDIENCE`) |
 | Redirect-URIs | `https://pflege-posteingang-demo.vercel.app/auth/callback`, `http://localhost:3000/auth/callback` |
 | Post-Logout-URI | `https://pflege-posteingang-demo.vercel.app/`, `http://localhost:3000/` |
-| Demo-Nutzer | `pflege-wb1`, `pflege-wb2`, `pdl` (Passwörter öffentlich auf der Startseite) |
+| Demo-Nutzer | `pflege-wb1`, `pflege-wb2`, `pdl`; Passwörter der öffentlichen Demo nur als Secrets (`DEMO_PASSWORD_*`, mit der Bewerbung verschickt), lokale in `infra/demo-users.json` (F01-AC22) |
 
 Das Setup-Skript nutzt die Management-API mit dem Personal Access Token eines Service-Users (`ZITADEL_ADMIN_PAT`, nur in `.env` und GitHub-Secrets).
 

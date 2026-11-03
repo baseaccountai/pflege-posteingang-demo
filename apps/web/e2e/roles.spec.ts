@@ -7,18 +7,19 @@ import { APP_ORIGIN, MOCK_OIDC_ISSUER, WB1_RESIDENT, WB2_RESIDENT } from "./supp
 
 const NO_ACCESS = "Nicht gefunden oder kein Zugriff";
 
-test("start page offers the three roles with their credentials (AC2)", async ({ page }) => {
+test("start page offers the three roles with user names, never a password (AC2, F01-AC22)", async ({ page }) => {
   await page.goto("/");
-  for (const [label, username, password] of [
-    ["Pflegekraft WB1", "pflege-wb1", "Pflege-WB1-Demo!"],
-    ["Pflegekraft WB2", "pflege-wb2", "Pflege-WB2-Demo!"],
-    ["Pflegedienstleitung", "pdl", "Pflege-PDL-Demo1!"],
+  for (const [label, username] of [
+    ["Pflegekraft WB1", "pflege-wb1"],
+    ["Pflegekraft WB2", "pflege-wb2"],
+    ["Pflegedienstleitung", "pdl"],
   ]) {
     const card = page.getByRole("group", { name: label });
     await expect(card).toContainText(username);
-    await expect(card).toContainText(password);
+    await expect(card).toContainText("Passwort: steht in der Bewerbung (lokal: README)");
     await expect(card.getByRole("button", { name: `Als ${label} anmelden` })).toBeVisible();
   }
+  await expect(page.locator("body")).not.toContainText("Demo!");
   await expect(page.getByRole("banner")).toContainText("Nicht angemeldet");
 });
 

@@ -31,7 +31,7 @@ def test_exactly_the_three_roles_of_the_demo():
     assert {r["name"] for r in REALM["roles"]["realm"]} == {"nurse_wb1", "nurse_wb2", "pdl"}
 
 
-def test_the_demo_users_with_their_public_passwords_and_roles():
+def test_the_demo_users_with_their_local_passwords_and_roles():
     users = {u["username"]: u for u in REALM["users"]}
     assert set(users) == {"pflege-wb1", "pflege-wb2", "pdl"}
     for wanted in CONFIG["users"]:
@@ -40,7 +40,7 @@ def test_the_demo_users_with_their_public_passwords_and_roles():
         # the scope the BFF asks for its refresh token (found in the first local run).
         assert user["realmRoles"] == [*wanted["roles"], "offline_access"]
         assert user["credentials"] == [
-            {"type": "password", "value": wanted["password"], "temporary": False}
+            {"type": "password", "value": wanted["local_password"], "temporary": False}
         ]
         assert user["enabled"] and user["emailVerified"]
 

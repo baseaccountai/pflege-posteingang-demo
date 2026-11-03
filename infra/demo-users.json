@@ -1,5 +1,5 @@
 {
-  "_comment": "Demo users, roles and OIDC app for Zitadel (infra/zitadel/setup.py) and later Keycloak. Invented people only. Passwords are PUBLIC on purpose: the start page shows them (F01-AC2).",
+  "_comment": "Demo users, roles and OIDC app for Zitadel (infra/zitadel/setup.py) and Keycloak (infra/keycloak/build_realm.py). Invented people only. local_password is for the own machine only (Keycloak, tests). The public demo (Zitadel) takes each password from the secret named in password_env, never from this file (F01-AC22); the local ones are in the git history and must never be valid there.",
   "project": "pflege-posteingang",
   "app": {
     "name": "pflege-posteingang-web",
@@ -23,7 +23,8 @@
       "first_name": "Paula",
       "last_name": "Beispiel",
       "email": "pflege-wb1@example.invalid",
-      "password": "Pflege-WB1-Demo!",
+      "local_password": "Pflege-WB1-Demo!",
+      "password_env": "DEMO_PASSWORD_WB1",
       "roles": ["nurse_wb1"]
     },
     {
@@ -31,7 +32,8 @@
       "first_name": "Ben",
       "last_name": "Beispiel",
       "email": "pflege-wb2@example.invalid",
-      "password": "Pflege-WB2-Demo!",
+      "local_password": "Pflege-WB2-Demo!",
+      "password_env": "DEMO_PASSWORD_WB2",
       "roles": ["nurse_wb2"]
     },
     {
@@ -39,7 +41,8 @@
       "first_name": "Petra",
       "last_name": "Leitung",
       "email": "pdl@example.invalid",
-      "password": "Pflege-PDL-Demo1!",
+      "local_password": "Pflege-PDL-Demo1!",
+      "password_env": "DEMO_PASSWORD_PDL",
       "roles": ["pdl"]
     }
   ],

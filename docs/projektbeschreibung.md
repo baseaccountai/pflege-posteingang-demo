@@ -250,14 +250,10 @@ nicht schlechter werden.
 ## Betrieb
 
 **Öffentliche Demo:** <https://pflege-posteingang-demo.vercel.app>. Auf der Startseite gibt es
-einen Knopf je Rolle. Die Zugangsdaten sind absichtlich öffentlich und werden alle 15 Minuten
-zurückgesetzt:
-
-| Rolle | Benutzername | Passwort |
-|---|---|---|
-| Pflegekraft WB1 | `pflege-wb1` | `Pflege-WB1-Demo!` |
-| Pflegekraft WB2 | `pflege-wb2` | `Pflege-WB2-Demo!` |
-| Pflegedienstleitung | `pdl` | `Pflege-PDL-Demo1!` |
+einen Knopf je Rolle mit dem Benutzernamen (`pflege-wb1`, `pflege-wb2`, `pdl`). Die Passwörter
+stehen in der Bewerbung und nicht im Repository: Mit öffentlichen Zugangsdaten könnte jeder die
+Tageskontingente aufbrauchen, und die Demo wäre ausgerechnet bei der Begutachtung ohne KI. Sie
+liegen nur als Secrets vor und werden alle 15 Minuten zurückgesetzt, falls jemand sie ändert.
 
 Ohne Anmeldung zeigt `/muster` eine Musterakte. Jede Nacht um 3 Uhr werden alle Daten auf die
 Musterdaten zurückgesetzt. Uploads sind auf fünf pro Sitzung begrenzt. **Bitte keine echten
@@ -282,7 +278,7 @@ freier Arbeitsspeicher):
 
 ```bash
 ollama pull qwen3:8b && ollama pull bge-m3
-make up-local      # anmelden wie öffentlich, z. B. pflege-wb1
+make up-local      # anmelden mit den lokalen Passwörtern, z. B. pflege-wb1 (siehe README)
 make smoke-local   # prüft alle Dienste und ruft die echten Modelle einmal auf
 ```
 

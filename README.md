@@ -3,7 +3,7 @@
 > Unabhängige Bewerbungsdemo, inspiriert von KLARA — kein Produkt der Hochschule Anhalt.
 > **Alle Personen und Dokumente sind erfundene Musterdaten.**
 
-**Demo:** <https://pflege-posteingang-demo.vercel.app> · **Projektbeschreibung:** [`docs/projektbeschreibung.md`](docs/projektbeschreibung.md) (auch in der App unter „Über das Projekt“)
+**Demo:** <https://pflege-posteingang-demo.vercel.app> (Passwörter der Demo-Konten stehen in der Bewerbung; ohne Anmeldung: Musterakte unter `/muster`) · **Projektbeschreibung:** [`docs/projektbeschreibung.md`](docs/projektbeschreibung.md) (auch in der App unter „Über das Projekt“)
 
 Digitaler Posteingang einer Pflegeeinrichtung mit generativer KI und sichtbarer Sicherheitsarchitektur:
 Papierdokumente werden per OCR erfasst, die KI schlägt Felder vor, **ein Mensch gibt frei**. Pflegekräfte
@@ -53,7 +53,10 @@ make smoke-local # prüft alle Dienste und ruft die echten Modelle einmal auf
 make down
 ```
 
-Anmelden wie öffentlich, etwa mit `pflege-wb1` / `Pflege-WB1-Demo!`. Speicherbedarf: etwa 10 GB frei. Gemessen am 01.11.2026 auf einem Laptop ohne GPU (8 Kerne, 15 GB):
+Anmelden mit den **lokalen** Passwörtern aus `infra/demo-users.json` (`local_password`):
+`pflege-wb1` / `Pflege-WB1-Demo!`, `pflege-wb2` / `Pflege-WB2-Demo!`, `pdl` / `Pflege-PDL-Demo1!`.
+Sie gelten nur auf dem eigenen Rechner; die öffentliche Demo nimmt ihre Passwörter aus
+GitHub-Secrets (`DEMO_PASSWORD_WB1`, `_WB2`, `_PDL`), die alten öffentlichen gelten dort nicht mehr. Speicherbedarf: etwa 10 GB frei. Gemessen am 01.11.2026 auf einem Laptop ohne GPU (8 Kerne, 15 GB):
 
 | Schritt | Dauer |
 |---|---|

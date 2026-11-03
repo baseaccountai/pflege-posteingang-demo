@@ -22,7 +22,8 @@ export default function Home({ searchParams }: PageProps<"/">) {
         </h2>
         <p className="text-sm text-muted-foreground">
           Alle Personen und Dokumente sind erfundene Musterdaten. Die Anmeldung läuft über einen
-          echten Identity Provider (OIDC); die Zugangsdaten der Demo-Konten sind öffentlich.
+          echten Identity Provider (OIDC). Die Passwörter der Demo-Konten stehen in der
+          Bewerbung, damit nicht jeder die Tageskontingente der Demo aufbrauchen kann.
         </p>
         <RoleSwitcher />
         <Link href="/muster" className="text-sm underline">

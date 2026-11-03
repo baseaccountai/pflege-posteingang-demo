@@ -203,7 +203,7 @@ case "$MODE" in
       -e HOSTNAME=127.0.0.1 \
       -e SESSION_ENC_KEY=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc= "$PREFIX-web"
     echo "Web: http://localhost:3000  Keycloak: $KEYCLOAK_ISSUER (alles nur auf diesem Rechner)"
-    echo "Anmelden wie öffentlich: pflege-wb1 / Pflege-WB1-Demo! (Liste auf der Startseite)"
+    echo "Anmelden (nur lokal): pflege-wb1 / Pflege-WB1-Demo! (alle in infra/demo-users.json, local_password)"
     ;;
   down)
     down
