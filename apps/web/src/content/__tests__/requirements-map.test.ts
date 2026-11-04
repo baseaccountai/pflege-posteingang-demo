@@ -69,7 +69,7 @@ describe("requirements map data", () => {
 
   it("has no app link for what is still in Stufe 2", () => {
     const later = REQUIREMENTS.filter((r) => r.status === "stufe2");
-    expect(later.map((r) => r.id).sort()).toEqual(["local-models"]); // F07 live since 29.10.
+    expect(later.map((r) => r.id)).toEqual([]); // local operation (F12) is done, too
     for (const entry of later) expect(entry.appHref).toBeUndefined();
   });
 

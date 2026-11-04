@@ -2,7 +2,7 @@
 
 > **Unabhängige Bewerbungsdemo, inspiriert von KLARA — kein Produkt der Hochschule Anhalt.**
 > Bewerbung auf Stelle Nr. 479 (Wissenschaftliche Mitarbeit Web Engineering). Alle Personen und
-> Dokumente sind erfundene Musterdaten. Stand: 02.11.2026.
+> Dokumente sind erfundene Musterdaten. Stand: 04.11.2026.
 
 Demo: <https://pflege-posteingang-demo.vercel.app> · Repository: <https://github.com/baseaccountai/pflege-posteingang-demo>
 
@@ -202,14 +202,15 @@ nicht schlechter werden.
 ## Vorgehen
 
 - **Spec vor Code:** 13 Funktionen (F01–F13), jede mit Anforderungen, Design und Aufgaben im
-  Kiro-Stil ([ADR 0006](architecture/adr/0006-kiro-spec-format.md)), zusammen 180
+  Kiro-Stil ([ADR 0006](architecture/adr/0006-kiro-spec-format.md)), zusammen 176
   Akzeptanzkriterien in EARS-Form („WENN …, DANN soll das System …“). Code entstand erst nach
   Freigabe der Spec ([`docs/specs/`](specs/)).
-- **Testgetrieben:** Zu jedem Akzeptanzkriterium gibt es mindestens einen Test, und jeder Test
-  wurde zuerst rot gesehen. Stand: rund 1 030 API-Tests (pytest, davon 433 gegen eine echte
-  Postgres-Datenbank mit RLS), 373 Web-Tests (Vitest, davon 20 gegen die Datenbank) und
-  86 End-to-End-Abläufe (Playwright), jeweils auf Desktop und Handy – zusammen rund 1 600 Tests. Sprachmodelle sind in den Tests Attrappen. Echte
-  Modelle prüft ein kleiner, getrennter Satz von Realtests.
+- **Testgetrieben:** Akzeptanzkriterien und Tests sind über ihre Kennungen verknüpft; die Regel
+  lautet: erst der Test, dann sein Fehlschlag, dann der Code. Stand: rund 1 040 API-Tests (pytest,
+  davon 433 gegen eine echte Postgres-Datenbank mit RLS), 377 Web-Tests (Vitest, davon 20 gegen die
+  Datenbank) und 87 End-to-End-Abläufe (Playwright), jeweils auf Desktop und Handy – zusammen rund
+  1 600 Tests. Sprachmodelle sind in den Tests Attrappen. Echte Modelle prüft ein kleiner, getrennter
+  Satz von Realtests.
 - **Phasen mit Halte-Punkt:** Jede Phase endet mit grünen Tests, einem unabhängigen Code-Review
   (Codex) und einer Entscheidung des Bewerbers, ob und wie es weitergeht.
 - **KI-gestützt entwickelt:** Der Code entstand mit Claude Code als Coding-Agent. Feste Regeln
@@ -223,12 +224,11 @@ nicht schlechter werden.
 - Die Sicherheitsarchitektur ist in einer laufenden Anwendung sichtbar: Rollen, RLS, Agenten-Token
   und Pseudonymisierung kann man ausprobieren, ebenso Angriffe über die Musterdokumente im Posteingang.
 - Messwerte statt Behauptungen: Erkennungs- und Fehlalarmrate je Schicht und Kategorie.
-- Kosten: Tageskontingente begrenzen die öffentliche Demo auf Modellaufrufe im Wert von höchstens
-  0,50 € pro Tag (zu Mistral-Listenpreisen) – auch als Schutz vor Missbrauch der öffentlichen Demo.
+- Missbrauchsschutz: Tageskontingente begrenzen die öffentliche Demo, zum Beispiel auf 50 OCR-Seiten
+  und 100 Modellaufrufe pro Tag; die Länge jedes Aufrufs ist ebenfalls begrenzt.
 - Realtest des Agenten gegen Mistral und Zitadel: Er brachte zwei Fehler ans Licht, die die
   Attrappen nicht zeigen konnten (Fehlalarme des Prüfmodells bei normalen Aufträgen, Rückfragen
   des Agenten, obwohl ein Auftrag nur einen Durchgang hat). Beide sind behoben und mit Tests belegt.
-
 - Komplett lokal läuft dieselbe Anwendung ohne Cloud-Dienst (Keycloak, Docling, Ollama). Auf einem
   Laptop ohne GPU ist das langsam: `qwen3:8b` schreibt etwa 1,3 Tokens/s, ein Feldvorschlag dauert
   rund 13 Minuten. Der lokale Modus zeigt, dass es geht und dass kein Text den Rechner verlässt;

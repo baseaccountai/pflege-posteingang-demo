@@ -42,10 +42,19 @@ describe("RequirementsMap", () => {
   });
 
   it("says 'in Arbeit (Stufe 2)' instead of an app link for what is still to come", () => {
+    const local = REQUIREMENTS.find((r) => r.id === "local-models")!;
+    render(<RequirementsMap entries={[{ ...local, status: "stufe2", appHref: "/fragen", appLabel: "Fragen" }]} />);
+    const entry = screen.getByTestId("requirement-local-models");
+    expect(entry).toHaveTextContent("in Arbeit (Stufe 2)");
+    expect(within(entry).queryByRole("link", { name: /In der App/ })).not.toBeInTheDocument();
+  });
+
+  it("shows local operation as done, with the command to start it (F12)", () => {
     render(<RequirementsMap />);
     const local = screen.getByTestId("requirement-local-models");
-    expect(local).toHaveTextContent("in Arbeit (Stufe 2)");
-    expect(within(local).queryByRole("link", { name: /In der App/ })).not.toBeInTheDocument();
+    expect(local).not.toHaveTextContent("in Arbeit");
+    expect(local).not.toHaveTextContent("Stufe 2");
+    expect(local).toHaveTextContent("make up-local");
   });
 });
 

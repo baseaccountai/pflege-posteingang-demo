@@ -2,18 +2,18 @@
 // the phone, a grid on wider screens. Data: content/requirements-map.ts.
 import Link from "next/link";
 
-import { REQUIREMENTS, SECURITY_REPORT, repoHref } from "@/content/requirements-map";
+import { REQUIREMENTS, type RequirementEntry, SECURITY_REPORT, repoHref } from "@/content/requirements-map";
 
 const LEVEL = { gefordert: "gefordert", wuenschenswert: "wünschenswert" } as const;
 
-export function RequirementsMap() {
+export function RequirementsMap({ entries = REQUIREMENTS }: { entries?: RequirementEntry[] }) {
   return (
     <section aria-labelledby="requirements-heading" className="flex flex-col gap-3">
       <h2 id="requirements-heading" className="text-lg font-semibold">
         Anforderungen der Stelle – und wo sie hier umgesetzt sind
       </h2>
       <ul className="grid gap-3 md:grid-cols-2">
-        {REQUIREMENTS.map((entry) => (
+        {entries.map((entry) => (
           <li
             key={entry.id}
             data-requirement={entry.id}

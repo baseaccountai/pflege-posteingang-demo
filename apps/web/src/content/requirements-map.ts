@@ -89,10 +89,10 @@ export const REQUIREMENTS: RequirementEntry[] = [
     text: "Lokale Modelle",
     level: "wuenschenswert",
     how:
-      "Ollama (Chat und Embeddings) und Docling (OCR) sind als Anbieter angelegt und per " +
-      "Konfiguration umschaltbar; der lokale Betrieb mit Docker folgt in Stufe 2.",
-    repoPaths: ["apps/api/app/providers/llm/ollama.py", "apps/api/app/providers/embeddings/ollama.py"],
-    status: "stufe2",
+      "Komplett lokaler Betrieb mit `make up-local`: Ollama (Chat und Embeddings), Docling (OCR) " +
+      "und Keycloak, ohne Cloud-Dienst; nur per Konfiguration umgeschaltet.",
+    repoPaths: ["apps/api/app/providers/llm/ollama.py", "apps/api/app/providers/embeddings/ollama.py", "infra/local-stack.sh"],
+    status: "live",
   },
   {
     id: "docker-cicd",
